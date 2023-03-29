@@ -1,0 +1,21 @@
+Package: Yano
+Type: Package
+Title: Yet ANother package for single cell Omics data analysis
+Version: 0.0.0.9999
+Author: Quan Shi
+Maintainer: Quan Shi <shiquan.biomed@gmail.com>
+Description: More about what it does (maybe more than one line)
+    Use four spaces when indenting paragraphs within the Description.
+License: What license is it under?
+Encoding: UTF-8
+LazyData: true
+RoxygenNote: 7.1.2
+LinkingTo: Rhtslib (>= 1.13.1), testthat
+Depends:
+    R(>= 4.0.0),
+    Matrix,
+    SingleCellExperiment
+Imports:
+    data.table
+NeedsCompilation: yes
+SystemRequirements: GNU make

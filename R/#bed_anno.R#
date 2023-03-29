@@ -1,0 +1,45 @@
+file2gr <- function(file = NULL) {
+  bed1 <- fread(file)
+  gr <- GRanges(seqnames=bed1$V1, IRanges(bed1$V2, end = bed1$V3), strand=bed1$V6)
+  rm(bed1)
+  gr <- reduce(gr)
+  gr$name <- paste(seqnames(gr), start(gr), end(gr), strand(gr), sep="_")
+  gr
+}
+
+reganno <- function(gr = NULL, dat = NULL) {
+  if (is.null(gr)) stop("No gr set.")
+  if (is.null(dat)) stop("No databses set.")
+
+  gene <- dat$gene
+  coding <- gene[which(gene$biotype %in% c("protein_coding"))]
+  exon <- dat$exon[which(dat$exon$gene_name %in% coding$gene_name)]
+  lncRNA <- gene[which(gene$biotype %in% c("lncRNA"))]
+  coding <- reduce(coding)
+  exon <- reduce(exon)
+  lncRNA <- reduce(lncRNA)
+  
+  chr <- intersect(levels(seqnames(gr)),levels(seqnames(coding)))
+  gr <- gr[which(as.character(seqnames(gr)) %in% chr)]
+  
+  gr$anno <- "intergenic"
+  ol <- findOverlaps(gr, coding, ignore.strand=FALSE)
+  gr[queryHits(ol)]$anno <- "intron"
+
+  ol2 <- findOverlaps(gr, exon, ignore.strand=FALSE)
+  gr[queryHits(ol2)]$anno <- "exon"
+  
+  ol3 <- findOverlaps(gr, lncRNA, ignore.strand=FALSE)
+  new <- gr[queryHits(ol3)]$anno 
+  new[which(new == "intergenic")] <- "lncRNA"
+  gr[queryHits(ol3)]$anno  <- new
+  
+  ol4 <- findOverlaps(gr, coding, ignore.strand=TRUE)
+  new <- gr[queryHits(ol4)]$anno 
+  
+  new[which(new == "intergenic")] <- "antisense"
+  table(new)
+  gr[queryHits(ol4)]$anno  <- new
+  gr$name <- paste(seqnames(gr), start(gr), end(gr), strand(gr), sep="_")
+  gr
+}
