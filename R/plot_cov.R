@@ -197,13 +197,27 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1, strand = c("both
 
 #' @import patchwork
 #' @export
-plotTracks <-  function(bamfile=NULL, chr=NULL, start=-1, end =-1, strand = c("both", "forward", "reverse", "ignore"),
+plotTracks <-  function(bamfile=NULL, chr=NULL, start=-1, end =-1, gene=NULL,
+                        strand = c("both", "forward", "reverse", "ignore"),
                         split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB", genome=c("Mm10","Hg38"),
-                        cell.group=NULL, genes = NULL, toUCSC=FALSE, peaks =NULL, log.scaled = FALSE, upstream = 1000, downstream = 1000)
+                        cell.group=NULL, display.genes = NULL, toUCSC=FALSE, peaks =NULL,
+                        log.scaled = FALSE, upstream = 1000, downstream = 1000)
                         
 {
   start0 <- start
   end0 <- end
+
+  if (!is.null(gene)) {
+    if (!(genome %in% c("Mm10", "Hg38"))) stop(paste0("Unsupport genome ", genome, "\n"))
+    genome="Mm10"
+    geneAnno = eval(parse(text=paste0("geneRegion",genome)))
+    if (is.null(geneAnno)) stop(paste0("No database found, ", genome))
+    genes1 <- geneAnno$gene
+    start <- start(genes1[which(genes1$gene_name == gene)][1])
+    end <- end(genes1[which(genes1$gene_name == gene)])
+
+    if (start0 < start | end0 > end) stop("Conflict target region and gene.")
+  }
   
   start <- start - upstream
   end <- end + downstream
@@ -223,7 +237,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=-1, end =-1, strand = c("b
     
     if (toUCSC) chr <- paste0("chr",chr)
     gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
-    p3 <- plot.genes(gr, genome=genome, genes=genes)
+    p3 <- plot.genes(gr, genome=genome, genes=display.genes)
     if (start0 > start & end0 < end) {
       p3 <- p3 + annotate("rect", xmin = start0, xmax = end0, ymin = 0, ymax = 1, alpha = .1,fill = "blue")
     }

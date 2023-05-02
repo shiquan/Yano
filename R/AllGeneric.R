@@ -1,3 +1,6 @@
+setGeneric("QuickRecipe", function(counts = NULL, meta.data = NULL, min.cells = 20, min.features = 200,
+                                   nvar = 2000, ...) standardGeneric("QuickRecipe"))
+
 setGeneric("SMerge", function(A = NULL, B = NULL, ..., intersect = c("none", "row", "column", "both")) standardGeneric("SMerge"))
 
 setMethod("SMerge", signature(A = "MatrixOrNull", B = "MatrixOrNull"),function(A, B, ..., intersect = "none") {
