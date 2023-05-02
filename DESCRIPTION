@@ -1,5 +1,4 @@
 Package: Yano
-Type: Package
 Title: Yet ANother package for single cell Omics data analysis
 Version: 0.0.0.9999
 Author: Quan Shi
@@ -10,11 +9,16 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.1.2
-LinkingTo: Rhtslib (>= 1.13.1), testthat
+LinkingTo: Rhtslib (>= 1.13.1), S4Vectors, Biostrings, XVector, IRanges
 Depends:
-    R(>= 4.0.0),
+    R (>= 4.0.0),
+    methods,
     Matrix,
-    SingleCellExperiment
+    Seurat,
+    SingleCellExperiment,
+    Biostrings,
+    S4Vectors,
+    XVector
 Imports:
     data.table
 NeedsCompilation: yes

@@ -1,4 +1,12 @@
-import(Rhtslib)
-exportPattern("^[[:alpha:]]+")
-useDynLib(Yano, .registration=TRUE)
+useDynLib(Yano)
 
+import(Rhtslib)
+import(Biostrings)
+
+import(BiocGenerics)
+import(S4Vectors)
+import(IRanges)
+import(XVector)
+import(GenomeInfoDb)
+
+exportPattern("^[[:alpha:]]+")
