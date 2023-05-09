@@ -199,7 +199,8 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1, strand = c("both
 #' @export
 plotTracks <-  function(bamfile=NULL, chr=NULL, start=-1, end =-1, gene=NULL,
                         strand = c("both", "forward", "reverse", "ignore"),
-                        split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB", genome=c("Mm10","Hg38"),
+                        split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
+                        genome=c("Mm10","Hg38"),
                         cell.group=NULL, display.genes = NULL, toUCSC=FALSE, peaks =NULL,
                         log.scaled = FALSE, upstream = 1000, downstream = 1000)
                         
@@ -250,4 +251,28 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=-1, end =-1, gene=NULL,
   p2 <- plot.genes(gr, genome=genome, genes=genes)
 
   return(p1 / p2 + plot_layout(heights = c(8, 2)))  
+}
+
+#' @import RColorBrewer
+#' @import pheatmap
+#' @export
+plotModHeatmap <- function(lc = NULL,
+                           cluster_rows = FALSE,
+                           cluster_cols =FALSE,
+                           show_rownames = FALSE,
+                           show_colnames = FALSE,
+                           ...
+                           )
+{
+  ann <- lc$module
+  k <- length(unique(ann[['module']]))
+  
+  fig <- pheatmap(lc$LC,
+                  annotation_row = ann,
+                  cluster_rows = cluster_rows,
+                  cluster_cols = cluster_cols,
+                  show_rownames = show_rownames,
+                  show_colnames = show_colnames,
+                  ...)
+  fig
 }

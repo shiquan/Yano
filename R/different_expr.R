@@ -1,3 +1,0 @@
-RunDUTest <- function()
-{
-}
