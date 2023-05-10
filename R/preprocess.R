@@ -2,9 +2,11 @@
 setMethod(f = "QuickRecipe0",
           signature = signature(counts = "SMatrix"),
           definition = function(counts = NULL, meta.data = NULL, min.cells = 20, min.features = 200,
-                                nvar = 2000, assay = "RNA",
+                                nvar = 2000, assay = NULL,
                                 ...
-                                ) {            
+                                ) {
+
+            assay <- assay %||% "RNA"
             counts <- CreateSeuratObject(counts = counts, min.cells = min.cells,
                                          min.features = min.features, assay = assay)
             return(QuickRecipe0(counts, assay = assay, nvar=nvar, ...))
@@ -13,7 +15,8 @@ setMethod(f = "QuickRecipe0",
 #' @export
 setMethod(f = "QuickRecipe0",
           signature = signature(counts = "Seurat"),
-          definition = function(counts = NULL, nvar = 2000, assay = NULL, scale.factor = 1e4,
+          definition = function(counts = NULL, nvar = 2000, scale.factor = 1e4,
+                                assay = NULL,
                                 ...
                                 ) {
             assay <- assay %||% DefaultAssay(counts)
@@ -64,13 +67,13 @@ ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, features =
 setMethod(f = "QuickRecipe",
           signature = signature(counts = "Seurat"),
           definition = function(counts = NULL, meta.data = NULL, min.cells = 20, min.features = 200,
-                                nvar = 3000, resolution = 0.5, assay = "RNA",
+                                nvar = 3000, resolution = 0.5, assay = NULL,
                                 ndim = 20, ...
                                 ) {
             
             object <- QuickRecipe0(counts=counts, meta.data = meta.data,
                                    min.cells =min.cells, min.features = min.features,
-                                   nvar = nvar, assay = assay, ...)
+                                   nvar = nvar, assay = NULL, ...)
 
             ProcessDimReduc(object, ndim=ndim, resolution=resolution)
           })
@@ -78,7 +81,7 @@ setMethod(f = "QuickRecipe",
 setMethod(f = "QuickRecipe",
           signature = signature(counts = "SMatrix"),
           definition = function(counts = NULL, meta.data = NULL, min.cells = 20, min.features = 200,
-                                nvar = 3000, resolution = 0.5, assay = "RNA",
+                                nvar = 3000, resolution = 0.5, assay = NULL,
                                 ndim = 20, ...
                                 ) {
             
@@ -136,6 +139,7 @@ RunAutoCorr <- function(object = NULL,
                         features = NULL,
                         verbose = TRUE)
 {
+  message(paste0("Working on assay : ", assay))
   cells <- cells %||% colnames(object)
   cells <- intersect(colnames(object), cells)
 
@@ -143,6 +147,7 @@ RunAutoCorr <- function(object = NULL,
   features <- intersect(rownames(object),features)
   
   if (is.null(weights)) {
+    message(paste0("Build weights on ", reduction))
     W <- GetWeights(object=object, reduction=reduction,dims=dims,k.nn=k.nn,kernel.method=kernel.method,
                     cells=cells)
   } else {
@@ -156,7 +161,6 @@ RunAutoCorr <- function(object = NULL,
     }
   }
   
-  message(paste0("Working on assay : ", assay))
   x <- GetAssayData(object, assay = assay, slot = slot)[,cells]
 
   # in case some features missing in scaled matrix
@@ -168,6 +172,7 @@ RunAutoCorr <- function(object = NULL,
   names(coverage) <- features
   
   if (!scaled) {
+    # todo: performance improve
     x <- t(scale(t(x)))
   }
   
@@ -277,6 +282,9 @@ LocalCorr <- function(object = NULL,
   cells <- intersect(cells, colnames(object))
   
   mtx <- GetAssayData(object, assay = assay, slot = slot)
+  ## in case some features no coverage
+  mtx <- mtx[which(rowSums(mtx) > 0),]
+
   features <- intersect(rownames(mtx), features)
   mtx <- mtx[features,]
 
@@ -301,6 +309,7 @@ LocalCorr <- function(object = NULL,
 
   # smoothed by weights for logcounts, then scaled 
   if (!scaled) {
+    ## todo, performance improvement
     mtx <- t(scale(t(mtx)))
   }
 
@@ -321,16 +330,18 @@ LocalCorr <- function(object = NULL,
 }
 #'
 #' @import RColorBrewer
-#' @import pheatmap
+#' @importFrom pheatmap pheatmap
+#' @importFrom gtools mixedsort
 #' @export
-GroupLocalCorr <- function(lc = NULL, k = 10, plot = TRUE, name="module")
+GroupLocalCorr <- function(lc = NULL, k = 10, plot = TRUE, name = "module")
 {
   ## todo
   mod <- cutree(lc$hclust,k=k)
   mod.names <- names(mod)
-  groups <- paste0(name,mod)
-
-  ann <- data.frame(module=groups, row.names = mod.names)
+  nm <- paste0(name,mod)
+  nm <- factor(nm, levels = mixedsort(unique(nm)))
+  ann <- data.frame(module=nm, row.names = mod.names)
+  
   lc$module <- ann
   if (plot) {
     # require(RColorBrewer)
@@ -355,7 +366,7 @@ GroupLocalCorr <- function(lc = NULL, k = 10, plot = TRUE, name="module")
   lc
 }
 #'@export
-AddLCModule <- function(object = NULL, lc = NULL, min.features.per.module = 10)
+AddLCModule <- function(object = NULL, lc = NULL, min.features.per.module = 10, module.prefix.name = "module")
 {
   #lc$module[["name"]] <- paste0(name, lc$module[,1])
   ml <- split(rownames(lc$module), lc$module[['module']])
@@ -367,11 +378,11 @@ AddLCModule <- function(object = NULL, lc = NULL, min.features.per.module = 10)
   ## remove old modules
   object@meta.data <- object@meta.data[,meta]
   
-  object <- AddModuleScore(object, features=ml, name=name)
+  object <- AddModuleScore(object, features=ml, name=module.prefix.name)
   object
 }
 #'
-#' @import data.table
+#' @importFrom data.table fread
 #' @export
 LoadEPAnno <- function(file = NULL, object = NULL, assay = DefaultAssay(object))
 {
@@ -452,7 +463,12 @@ RunEPBlockCorr <- function(object = NULL,
   tab <- subset(tab, tab[[block.name]] %in% blocks)
   
   features <- intersect(rownames(tab), features)
-  blocks <- unique(tab[features,][[block.name]])
+
+  if (length(features) == 0) {
+    stop("No features found.")
+  }
+  
+  ## blocks <- unique(blocks)
   
   ## all.features <- rownames(tab)
   if (block.assay %ni% names(obj)) {
@@ -467,7 +483,7 @@ RunEPBlockCorr <- function(object = NULL,
     # cell sizes
     cs <- colSums(x)
 
-    x <- x[rownames(tab),]
+    x <- x[rownames(tab),]    
     x <- as(x, "TsparseMatrix")
     
     # Aggregate features in the same block
@@ -477,8 +493,6 @@ RunEPBlockCorr <- function(object = NULL,
     
     rownames(y) <- blocks
     colnames(y) <- cells
-    
-    object[[block.assay]] <- CreateAssayObject(counts = y, assay = block.assay)
 
     if (alter.splice.mode) {
       ## expand matrix of block features for calculating with EP matrix
@@ -486,12 +500,13 @@ RunEPBlockCorr <- function(object = NULL,
       rownames(y) <- rownames(x)
       y <- y - x
     }
+
+    object[[block.assay]] <- CreateAssayObject(counts = y, assay = block.assay)
     
     x <- log1p(t(t(x)/cs) * scale.factor)
     y <- log1p(t(t(y)/cs) * scale.factor)
     
     SetAssayData(object = object, slot = "data", new.data = y, assay=block.assay)
-
   } else {
     if (slot != "data") {
       warning("Reset block.assay to \"data\".")
