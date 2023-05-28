@@ -97,6 +97,8 @@ GetWeights <- function(object= NULL,
     if (!is.null(dims)) emb <- emb[,dims]
   }
 
+  emb <- emb[cells,]
+  
   knn.rlt <- nabor::knn(data=emb, query = emb, k=k.nn)
   if (kernel.method == "average") x = 1
   else x = 1/c(knn.rlt$nn.dists)
@@ -448,7 +450,7 @@ RunBlockCorr <- function(object = NULL,
                     k.nn = k.nn,
                     kernel.method = kernel.method,
                     cells = cells,
-                    self.weight = 1)
+                    self.weight = self.weight)
   } else {
     dims <- dim(weights)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
