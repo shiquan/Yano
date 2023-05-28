@@ -29,21 +29,7 @@ setMethod(f = "QuickRecipe0",
             counts <- FindVariableFeatures(counts, selection.method = "vst", nfeatures = nvar)
             counts
           })
-#'
-#' @export
-CreateEPAssay <- function(counts = NULL,
-                          assay = 'EP',
-                          meta.data = NULL,
-                          min.cells = 100) 
-{
-  counts <- CreateAssayObject(counts = counts, assay = assay, min.cells = min.cells)
 
-  message(paste0("Set default assay to ", assay))
-  DefaultAssay(counts) <- assay
-
-  counts
-}
-#'
 #' @export
 ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, features = NULL)
 {
@@ -94,15 +80,22 @@ setMethod(f = "QuickRecipe",
 
 #'
 #' @export
-GetWeights <- function(object= NULL,
+GetWeights <- function(object= NULL,                       
                        reduction = "pca",
                        dims = NULL,
-                       k.nn = 20,
-                       kernel.method = "dist",
+                       k.nn = 10,
+                       spatial = FALSE,
+                       kernel.method = "average",
+                       self.weight = 0,
                        cells = NULL)
 {
-  emb <- Embeddings(object,reduction = reduction)
-  if (!is.null(dims)) emb <- emb[,dims]
+  if (spatial) {
+    emb <- GetTissueCoordinates(object)
+    kernel.method <- "average"
+  } else {
+    emb <- Embeddings(object,reduction = reduction)
+    if (!is.null(dims)) emb <- emb[,dims]
+  }
 
   knn.rlt <- nabor::knn(data=emb, query = emb, k=k.nn)
   if (kernel.method == "average") x = 1
@@ -114,8 +107,8 @@ GetWeights <- function(object= NULL,
                     j = c(knn.rlt$nn.idx),
                     x = x,
                     dims = c(ncell, ncell))
-  if (kernel.method == "dist") diag(W) <- 0
-  else diag(W) <- 1
+
+  diag(W) <- self.weight
   
   W <- W/rowSums(W)
   W
@@ -133,7 +126,7 @@ RunAutoCorr <- function(object = NULL,
                         weights.scaled = FALSE,
                         reduction = "pca",
                         dims = NULL,
-                        k.nn = 20,
+                        k.nn = 10,
                         kernel.method = "dist",
                         cells = NULL,
                         features = NULL,
@@ -148,8 +141,12 @@ RunAutoCorr <- function(object = NULL,
   
   if (is.null(weights)) {
     message(paste0("Build weights on ", reduction))
-    W <- GetWeights(object=object, reduction=reduction,dims=dims,k.nn=k.nn,kernel.method=kernel.method,
-                    cells=cells)
+    W <- GetWeights(object=object, reduction=reduction,
+                    dims=dims,
+                    k.nn=k.nn,
+                    kernel.method=kernel.method,
+                    cells=cells,
+                    self.weight = 0)
   } else {
     dims <- dim(weights)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
@@ -263,9 +260,10 @@ LocalCorr <- function(object = NULL,
                       weights.scaled = FALSE,
                       reduction = "pca",
                       dims=NULL,
-                      k.nn = 20,
+                      k.nn = 10,
                       kernel.method = "dist",                      
                       method="average",
+                      self.weight = 1,
                       verbose = TRUE
                       ) {
 
@@ -293,6 +291,7 @@ LocalCorr <- function(object = NULL,
                     dims = dims,
                     k.nn = k.nn,
                     kernel.method = kernel.method,
+                    self.weight = self.weight,
                     cells = cells)
   } else {
     dims <- dim(weights)
@@ -384,7 +383,7 @@ AddLCModule <- function(object = NULL, lc = NULL, min.features.per.module = 10, 
 #'
 #' @importFrom data.table fread
 #' @export
-LoadEPAnno <- function(file = NULL, object = NULL, assay = DefaultAssay(object))
+LoadEPTanno <- function(file = NULL, object = NULL, assay = DefaultAssay(object))
 {
   bed <- fread(file)[,c(1:9)]
   colnames(bed) <- c("chr","start","end","name","score","strand","n_gene","gene_name","type")
@@ -409,33 +408,37 @@ LoadEPAnno <- function(file = NULL, object = NULL, assay = DefaultAssay(object))
 
 #'
 #' @export
-RunEPBlockCorr <- function(object = NULL,
-                           block.name = "gene_name",
-                           name = "altDisp",
-                           assay = "EP",
-                           slot = "data",
-                           features = AutoCorrFeatures(object),
-                           alter.splice.mode = FALSE,
-                           block.assay = "RNA",
-                           block.force.replace = FALSE,
-                           cells = NULL,                           
-                           min.features.per.block = 2,
-                           scale.factor = 1e4,
-                           weights = NULL,
-                           weights.scaled = FALSE,
-                           reduction = "pca",
-                           dims=NULL,
-                           k.nn = 20,
-                           kernel.method = "dist",
-                           verbose = TRUE
-                           )
+RunBlockCorr <- function(object = NULL,
+                         block.name = "gene_name",
+                         name = "AltExp",
+                         assay = "EPT",
+                         slot = "data",
+                         features = AutoCorrFeatures(object),
+                         alter.splice.mode = FALSE,
+                         block.assay = "RNA",
+                         block.force.replace = FALSE,
+                         cells = NULL,                           
+                         min.features.per.block = 2,
+                         scale.factor = 1e4,
+                         weights = NULL,
+                         weights.scaled = FALSE,
+                         reduction = "pca",
+                         dims = NULL,
+                         k.nn = 20,
+                         kernel.method = "average",
+                         keep.matrix = FALSE,
+                         verbose = TRUE
+                         )
 {
   cells <- cells %||% colnames(object)
   cells <- intersect(colnames(object), cells)
 
   # Make weights
   if (is.null(weights)) {
-    W <- GetWeights(object = object, reduction = reduction, dims=dims, k.nn = k.nn,
+    W <- GetWeights(object = object,
+                    reduction = reduction,
+                    dims=dims,
+                    k.nn = k.nn,
                     kernel.method = kernel.method,
                     cells = cells)
   } else {
@@ -455,7 +458,7 @@ RunEPBlockCorr <- function(object = NULL,
   tab <- object[[assay]]@meta.features
   
   if (block.name %ni% colnames(tab)) {
-    stop(paste0("No block.name found in the feature table of assay ", assay, ". Run LoadEPAnno first."))
+    stop(paste0("No block.name found in the feature table of assay ", assay, ". Run LoadEPTanno first."))
   }
   
   tab <- tab[tab[[block.name]] != ".",] # skip unannotated records  
@@ -495,7 +498,7 @@ RunEPBlockCorr <- function(object = NULL,
     colnames(y) <- cells
 
     if (alter.splice.mode) {
-      ## expand matrix of block features for calculating with EP matrix
+      ## expand matrix of block features for calculating with EPT matrix
       y <- y[tab[[block.name]],]
       rownames(y) <- rownames(x)
       y <- y - x
@@ -505,8 +508,9 @@ RunEPBlockCorr <- function(object = NULL,
     
     x <- log1p(t(t(x)/cs) * scale.factor)
     y <- log1p(t(t(y)/cs) * scale.factor)
-    
-    SetAssayData(object = object, slot = "data", new.data = y, assay=block.assay)
+    if (keep.matrix) {
+      SetAssayData(object = object, slot = "data", new.data = y, assay=block.assay)
+    }
   } else {
     if (slot != "data") {
       warning("Reset block.assay to \"data\".")
@@ -535,7 +539,7 @@ RunEPBlockCorr <- function(object = NULL,
   y <- t(scale(t(y)))
 
   if (!alter.splice.mode) {
-    ## expand matrix of block features for calculating with EP matrix
+    ## expand matrix of block features for calculating with EPT matrix
     y <- y[tab[[block.name]],]
   }
   
@@ -563,7 +567,7 @@ RunEPBlockCorr <- function(object = NULL,
 #' @export
 RunTwoAssayCorr <- function(object = NULL,
                             assay1 = "RNA",
-                            assay2 = "EP",
+                            assay2 = "EPT",
                             features1 = VariableFeatures(object, assay = RNA),
                             features2 = AutoCorrFeatures(object, assay = assay2),
                             cells = NULL,
@@ -572,8 +576,8 @@ RunTwoAssayCorr <- function(object = NULL,
                             weights.scaled = FALSE,
                             reduction = "pca",
                             dims=NULL,
-                            k.nn = 20,
-                            kernel.method = "dist",
+                            k.nn = 10,
+                            kernel.method = "average",
                             verbose = TRUE
                             )
 {
