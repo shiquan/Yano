@@ -426,6 +426,7 @@ RunBlockCorr <- function(object = NULL,
                          dims = NULL,
                          k.nn = 20,
                          kernel.method = "average",
+                         self.weight = 1,
                          keep.matrix = FALSE,
                          verbose = TRUE
                          )
@@ -440,7 +441,8 @@ RunBlockCorr <- function(object = NULL,
                     dims=dims,
                     k.nn = k.nn,
                     kernel.method = kernel.method,
-                    cells = cells)
+                    cells = cells,
+                    self.weight = 1)
   } else {
     dims <- dim(weights)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
@@ -456,17 +458,21 @@ RunBlockCorr <- function(object = NULL,
   features <- intersect(rownames(object),features)
   
   tab <- object[[assay]]@meta.features
-  
+
   if (block.name %ni% colnames(tab)) {
     stop(paste0("No block.name found in the feature table of assay ", assay, ". Run LoadEPTanno first."))
   }
   
-  tab <- tab[tab[[block.name]] != ".",] # skip unannotated records  
+  tab <- tab[tab[[block.name]] != ".",] # skip unannotated records
+  
   blocks <- names(which(table(tab[[block.name]]) >= min.features.per.block))
+  
+  tab0 <- tab[features,]
+  blocks <- intersect(unique(tab0[[block.name]]), blocks)
+
+  message(paste0("Processing ", length(blocks), " blocks.."))
   tab <- subset(tab, tab[[block.name]] %in% blocks)
   
-  features <- intersect(rownames(tab), features)
-
   if (length(features) == 0) {
     stop("No features found.")
   }
@@ -503,8 +509,9 @@ RunBlockCorr <- function(object = NULL,
       rownames(y) <- rownames(x)
       y <- y - x
     }
-
-    object[[block.assay]] <- CreateAssayObject(counts = y, assay = block.assay)
+    if (keep.matrix) {
+      object[[block.assay]] <- CreateAssayObject(counts = y, assay = block.assay)
+    }
     
     x <- log1p(t(t(x)/cs) * scale.factor)
     y <- log1p(t(t(y)/cs) * scale.factor)
