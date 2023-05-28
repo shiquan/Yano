@@ -89,6 +89,8 @@ GetWeights <- function(object= NULL,
                        self.weight = 0,
                        cells = NULL)
 {
+  cells <- cells %||% colnames(object)
+  
   if (spatial) {
     emb <- GetTissueCoordinates(object)
     kernel.method <- "average"
@@ -103,7 +105,6 @@ GetWeights <- function(object= NULL,
   if (kernel.method == "average") x = 1
   else x = 1/c(knn.rlt$nn.dists)
 
-  if (is.null(cells)) cells <- colnames(object)
   ncell <- length(cells)
   W <- sparseMatrix(i = rep(c(1:ncell), k.nn), 
                     j = c(knn.rlt$nn.idx),
@@ -113,6 +114,8 @@ GetWeights <- function(object= NULL,
   diag(W) <- self.weight
   
   W <- W/rowSums(W)
+  colnames(W) <- cells
+  rownames(W) <- cells
   W
 }
 
@@ -436,12 +439,6 @@ RunBlockCorr <- function(object = NULL,
   cells <- cells %||% colnames(object)
   cells <- intersect(colnames(object), cells)
 
-  x <- GetAssayData(object, assay = assay, slot = slot)
-
-  # cell sizes
-  cs <- colSums(x)
-  cells <- intersect(cells,names(which(cs > 0)))
-
   # Make weights
   if (is.null(weights)) {
     W <- GetWeights(object = object,
@@ -494,8 +491,23 @@ RunBlockCorr <- function(object = NULL,
       warning("Automatic set slot to \"counts\", because new assay requires sum up counts by block.")
       slot <- "counts"
     }
+
+    x <- GetAssayData(object, assay = assay, slot = "counts")
+  
+    # cell sizes
+    cs <- colSums(x)
+    cells <- intersect(cells,names(which(cs > 0)))
+    W <- W[cells, cells]
     
-    x <- x[rownames(tab),]    
+    ncell <- length(cells)
+  
+    if (ncell != ncol(object) && keep.matrix) {
+      warnings("Inconsistance cells, set keep.matrix to FALSE.")
+      keep.matrix <- FALSE
+    }
+
+    x <- GetAssayData(object, assay = assay, slot = slot)
+    x <- x[rownames(tab), cells]
     x <- as(x, "TsparseMatrix")
     
     # Aggregate features in the same block
