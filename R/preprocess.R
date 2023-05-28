@@ -498,7 +498,7 @@ RunBlockCorr <- function(object = NULL,
     cs <- colSums(x)
     cells <- intersect(cells,names(which(cs > 0)))
     W <- W[cells, cells]
-    
+    cs <- cs[cells]
     ncell <- length(cells)
   
     if (ncell != ncol(object) && keep.matrix) {
