@@ -434,6 +434,12 @@ RunBlockCorr <- function(object = NULL,
   cells <- cells %||% colnames(object)
   cells <- intersect(colnames(object), cells)
 
+  x <- GetAssayData(object, assay = assay, slot = slot)
+
+  # cell sizes
+  cs <- colSums(x)
+  cells <- intersect(cells,names(which(cs > 0)))
+
   # Make weights
   if (is.null(weights)) {
     W <- GetWeights(object = object,
@@ -486,12 +492,7 @@ RunBlockCorr <- function(object = NULL,
       warning("Automatic set slot to \"counts\", because new assay requires sum up counts by block.")
       slot <- "counts"
     }
-
-    x <- GetAssayData(object, assay = assay, slot = slot)
-
-    # cell sizes
-    cs <- colSums(x)
-
+    
     x <- x[rownames(tab),]    
     x <- as(x, "TsparseMatrix")
     
