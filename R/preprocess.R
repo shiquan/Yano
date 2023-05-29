@@ -91,7 +91,7 @@ GetWeights <- function(object= NULL,
 {
   cells <- cells %||% colnames(object)
   
-  if (spatial) {
+  if (isTRUE(spatial)) {
     emb <- GetTissueCoordinates(object)
     kernel.method <- "average"
   } else {
@@ -126,6 +126,7 @@ GetWeights <- function(object= NULL,
 RunAutoCorr <- function(object = NULL, 
                         assay = DefaultAssay(object = object),
                         slot = "data",
+                        spatial = FALSE,
                         scaled = FALSE,
                         weights = NULL,                              
                         weights.scaled = FALSE,
@@ -151,7 +152,8 @@ RunAutoCorr <- function(object = NULL,
                     k.nn=k.nn,
                     kernel.method=kernel.method,
                     cells=cells,
-                    self.weight = 0)
+                    self.weight = 0,
+                    spatial=spatial)
   } else {
     dims <- dim(weights)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
@@ -205,7 +207,8 @@ RunAutoCorr <- function(object = NULL,
   idx <- which(tab[["MoransI.value"]] > 0)
   tab[idx,][["AutoCorrFeature"]] <- TRUE
 
-  object[[assay]]@meta.features <- cbind(tab0,tab)
+  nm <- setdiff(colnames(tab0), colnames(tab))
+  object[[assay]]@meta.features <- cbind(tab0[,nm],tab)
   object
 }
 
@@ -215,16 +218,28 @@ SetAutoCorrFeatures <- function(object = NULL,
                                 moransi.min = 0,
                                 top.n = 500,
                                 assay = DefaultAssay(object),
-                                plot = TRUE
+                                sd = 3,
+                                degree=2,
+                                plot = TRUE,
+                                return.plot = FALSE
                                 )
 {
   tab <- object[[assay]]@meta.features
 
-  if ("MoransI.value" %ni% colnames(tab) | "MoransI.rank" %ni% colnames(tab)) {
+  cn <- colnames(tab)
+  if ("MoransI.value" %ni% cn | "MoransI.rank" %ni% cn | "coverage" %ni% cn) {
     stop("No Morans'I value found, use RunAutoCorr first.")
   }
 
   idx <- which(tab[["MoransI.value"]] > moransi.min & tab[["MoransI.rank"]] <= top.n)
+
+  n1 <- length(idx)
+  
+  los <- loess.smooth(tab$coverage, tab$MoransI.value, degree=degree)
+  func <- approxfun(los$x, los$y * sd)
+  
+  idx <- intersect(which(tab[['MoransI.value']] > f1(tab[['coverage']])),idx)
+  n2 <- length(idx)
   
   tab[["AutoCorrFeature"]] <- FALSE
   tab[idx,][["AutoCorrFeature"]] <- TRUE
@@ -232,8 +247,22 @@ SetAutoCorrFeatures <- function(object = NULL,
 
   if (plot) {
     v <- min(tab[idx,][["MoransI.value"]])
-    plot(density(tab[['MoransI.value']], na.rm = TRUE))
-    abline(v=v, col="red")
+    
+    p1 <- ggplot(tab, aes(x=MoransI.value)) + geom_density(size=1) + theme_pubr()
+    p1 <- p1 + geom_vline(aes(xintercept=v),color="red", linetype="dashed", size=1)
+    p1 <- p1 + ggtitle(paste0("n = ",n1))
+    p2 <- ggplot() + geom_point(data=tab.ept,aes(x=coverage,y=MoransI.value),color="grey")
+    p2 <- p2 + geom_line(data=as.data.frame(los),aes(x,y),size=1, color="black") + theme_pubr()
+    p2 <- p2 + geom_line(data=as.data.frame(los),aes(x,y*sd),size=1, linetype="dashed", color="blue")    
+    p2 <- p2 + geom_point(data=tab[idx,], aes(coverage, MoransI.value), shape=21,size=3)
+    p2 <- p2 + geom_hline(aes(yintercept=v),color="red", linetype="dashed", size=1)
+    p2 <- p2 + theme_pubr()
+    p2 <- p2 + ggtitle(paste0("n = ",n2))
+    p <- cowplot::plot_grid(p1,p2)
+    print(p)
+    if (isTRUE(return.plot)) {
+      return(p)
+    }
   }
   
   object
@@ -266,8 +295,8 @@ LocalCorr <- function(object = NULL,
                       reduction = "pca",
                       dims=NULL,
                       k.nn = 10,
-                      kernel.method = "dist",                      
-                      method="average",
+                      kernel.method = "average",
+                      clust.method = "ward.D2",
                       self.weight = 1,
                       verbose = TRUE
                       ) {
@@ -327,7 +356,7 @@ LocalCorr <- function(object = NULL,
   rm(hm)
   gc()
   d <- dist(H)
-  hc <- hclust(d, method = method)
+  hc <- hclust(d, method = clust.method)
   H <- H[hc$order, hc$order]
   r <- SimpleList(LC = H, dist = d, hclust = hc)
   r
@@ -415,13 +444,13 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = DefaultAssay(object)
 #' @export
 RunBlockCorr <- function(object = NULL,
                          block.name = "gene_name",
-                         name = "AltExp",
-                         assay = "EPT",
-                         slot = "data",
+                         assay = NULL,
+                         name = NULL,
+                         slot = "counts",
                          features = AutoCorrFeatures(object),
-                         alter.splice.mode = FALSE,
-                         block.assay = "RNA",
-                         block.force.replace = FALSE,
+                         sensitive.mode = TRUE,
+                         block.assay = NULL,
+                         block.assay.replace = FALSE,
                          cells = NULL,                           
                          min.features.per.block = 2,
                          scale.factor = 1e4,
@@ -439,6 +468,16 @@ RunBlockCorr <- function(object = NULL,
   cells <- cells %||% colnames(object)
   cells <- intersect(colnames(object), cells)
 
+  assay <- assay %||% DefaultAssay(object)
+  message(paste0("Working on assay ", assay))
+  
+  name <- name %||% "AltExp"
+
+  features <- features %||% rownames(object)
+  features <- intersect(rownames(object),features)
+
+  message(paste0("Working on ", length(features), " features."))
+  
   # Make weights
   if (is.null(weights)) {
     W <- GetWeights(object = object,
@@ -459,9 +498,6 @@ RunBlockCorr <- function(object = NULL,
     }
   }  
 
-  features <- features %||% rownames(object)
-  features <- intersect(rownames(object),features)
-  
   tab <- object[[assay]]@meta.features
 
   if (block.name %ni% colnames(tab)) {
@@ -481,12 +517,13 @@ RunBlockCorr <- function(object = NULL,
   if (length(features) == 0) {
     stop("No features found.")
   }
-  
+
+  block.assay <- block.assay %||% "tmp.assay"
   ## blocks <- unique(blocks)
   
   ## all.features <- rownames(tab)
-  if (block.assay %ni% names(obj)) {
-    message("No assay found in object, try to aggregate features in blocks to build a new assay.")
+  if (block.assay %ni% names(obj) || block.assay.replace) {
+    message("Aggregate counts..")
     if (slot != "counts") {
       warning("Automatic set slot to \"counts\", because new assay requires sum up counts by block.")
       slot <- "counts"
@@ -518,30 +555,33 @@ RunBlockCorr <- function(object = NULL,
     rownames(y) <- blocks
     colnames(y) <- cells
 
-    if (alter.splice.mode) {
+    if (sensitive.mode) {
       ## expand matrix of block features for calculating with EPT matrix
       y <- y[tab[[block.name]],]
       rownames(y) <- rownames(x)
       y <- y - x
     }
+    
     if (keep.matrix) {
       object[[block.assay]] <- CreateAssayObject(counts = y, assay = block.assay)
     }
-    
+
     x <- log1p(t(t(x)/cs) * scale.factor)
     y <- log1p(t(t(y)/cs) * scale.factor)
     if (keep.matrix) {
       SetAssayData(object = object, slot = "data", new.data = y, assay=block.assay)
     }
   } else {
+
+    message(paste0("Trying to retrieve data from assay ", block.assay,".."))
     if (slot != "data") {
       warning("Reset block.assay to \"data\".")
       slot <- "data"
     }
 
-    if (alter.splice.mode) {
-      warning("Notice: alter.splice.mode only can be enabled when aggregate counts.")
-      alter.splice.mode <- FALSE
+    if (isTRUE(sensitive.mode)) {
+      warning("Notice: sensitive.mode only can be enabled when aggregate counts.")
+      sensitive.mode <- FALSE
     }
     
     old.assay <- DefaultAssay(object)
@@ -554,13 +594,16 @@ RunBlockCorr <- function(object = NULL,
     DefaultAssay(object) <- old.assay
   }
 
+  fc <- rowMeans(x) - rowMeans(y)
+  names(fc) <- rownames(x)
+  
   x <- x %*% W
   y <- y %*% W
   
   x <- t(scale(t(x)))
   y <- t(scale(t(y)))
 
-  if (!alter.splice.mode) {
+  if (isFALSE(sensitive.mode)) {
     ## expand matrix of block features for calculating with EPT matrix
     y <- y[tab[[block.name]],]
   }
@@ -579,6 +622,7 @@ RunBlockCorr <- function(object = NULL,
 
   tab <- object[[assay]]@meta.features
   tab[[name]] <- ad[rownames(object)]
+  tab[[paste0(name, ".fc")]] <- fc[rownames(object)]
 
   object[[assay]]@meta.features <- tab
 
@@ -600,16 +644,25 @@ RunTwoAssayCorr <- function(object = NULL,
                             dims=NULL,
                             k.nn = 10,
                             kernel.method = "average",
+                            self.weight = 1,
                             verbose = TRUE
                             )
 {
   cells <- cells %||% colnames(object)
   cells <- intersect(colnames(object), cells)
 
+  if (is.null(features1)) {
+    stop("Features1 is empty.")
+  }
+
+  if (is.null(features2)) {
+    stop("Features2 is empty.")
+  }
+
   # Make weights
   if (is.null(weights)) {
     W <- GetWeights(object = object, reduction = reduction, dims=dims, k.nn = k.nn,
-                    kernel.method = kernel.method,
+                    kernel.method = kernel.method, self.weight = self.weight,
                     cells = cells)
   } else {
     dims <- dim(weights)
@@ -621,15 +674,7 @@ RunTwoAssayCorr <- function(object = NULL,
       if (!weights.scaled) W <- W/rowSums(W)
     }
   }  
-
-  if (is.null(features1)) {
-    stop("Features1 is empty.")
-  }
-
-  if (is.null(features2)) {
-    stop("Features2 is empty.")
-  }
-
+  
   old.assay <- DefaultAssay(obj)
   
   DefaultAssay(obj) <- assay1  
