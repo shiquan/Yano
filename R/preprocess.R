@@ -265,7 +265,7 @@ SetAutoCorrFeatures <- function(object = NULL,
     p1 <- ggplot(tab, aes(x=MoransI.value)) + geom_density(size=1) + theme_pubr()
     p1 <- p1 + geom_vline(aes(xintercept=v),color="red", linetype="dashed", size=1)
     p1 <- p1 + ggtitle(paste0("n = ",n1))
-    p2 <- ggplot() + geom_point(data=tab.ept,aes(x=coverage,y=MoransI.value),color="grey")
+    p2 <- ggplot() + geom_point(data=tab,aes(x=coverage,y=MoransI.value),color="grey")
     p2 <- p2 + geom_line(data=as.data.frame(los),aes(x,y),size=1, color="black") + theme_pubr()
     p2 <- p2 + geom_line(data=as.data.frame(los),aes(x,y*sd),size=1, linetype="dashed", color="blue")    
     p2 <- p2 + geom_point(data=tab[idx,], aes(coverage, MoransI.value), shape=21,size=3)
