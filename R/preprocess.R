@@ -136,6 +136,7 @@ RunAutoCorr <- function(object = NULL,
                         kernel.method = "dist",
                         cells = NULL,
                         features = NULL,
+                        batch.size = 10000,
                         verbose = TRUE)
 {
   message(paste0("Working on assay : ", assay))
@@ -165,40 +166,53 @@ RunAutoCorr <- function(object = NULL,
     }
   }
   
-  x <- GetAssayData(object, assay = assay, slot = slot)[,cells]
+  x0 <- GetAssayData(object, assay = assay, slot = slot)[,cells]
 
   # in case some features missing in scaled matrix
-  features <- intersect(rownames(x), features)
+  features <- intersect(rownames(x0), features)
   message(paste0("Run autocorrelation for ", length(features), " features."))
-  x <- x[features,]
+  x0 <- x0[features,]
   
-  coverage <- rowSums(x > 0)/length(cells)
-  names(coverage) <- features
+  segments <- as.integer(length(features)/batch.size) + 1
+  tab1 <- data.frame()
   
-  if (!scaled) {
-    # todo: performance improve
-    x <- t(scale(t(x)))
+  for (i in 1:segments) {
+    start <- (i-1)*batch.size+1
+    end <- ifelse(i*batch.size > length(features), length(features), i*batch.size)
+    message(paste0("Processing ", end - start+1, " features.."))
+    
+    features0 <- features[start:end]
+    x <- x0[features0,]
+
+    coverage <- rowSums(x > 0)/length(cells)
+    names(coverage) <- features0
+
+    if (!scaled) {
+      # todo: performance improve
+      x <- t(scale(t(x)))
+    }
+    
+    y <- Matrix::t(Matrix::tcrossprod(W, x))
+    y <- as.matrix(y)
+    
+    #todo
+    corr <- lineup::corbetw2mat(t(y),t(x))
+    vals <- corr * rowSds(y)/rowSds(x)
+    rm(x)
+    rm(y)
+  
+    vals <- sort(vals,decreasing = TRUE)
+    tab <- data.frame(MoransI.value=vals,
+                      MoransI.rank=1:length(vals),
+                      coverage = coverage[names(vals)],
+                      row.names=names(vals))
+    rm(vals)
+    gc()
+    tab1 <- rbind(tab1, tab)
   }
   
-  y <- Matrix::t(Matrix::tcrossprod(W, x))
-  y <- as.matrix(y)
-
-  #todo
-  corr <- lineup::corbetw2mat(t(y),t(x))
-  vals <- corr * rowSds(y)/rowSds(x)
-  rm(x)
-  rm(y)
-  
-  vals <- sort(vals,decreasing = TRUE)
-  tab <- data.frame(MoransI.value=vals,
-                    MoransI.rank=1:length(vals),
-                    coverage = coverage[names(vals)],
-                    row.names=names(vals))
-  rm(vals)
-  gc()
-  
   tab0 <- object[[assay]]@meta.features
-  tab <- tab[rownames(object),]
+  tab <- tab1[rownames(object),]
   # remove NAs in rownames
   rownames(tab) <- rownames(object) 
 
