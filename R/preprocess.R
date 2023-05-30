@@ -252,7 +252,7 @@ SetAutoCorrFeatures <- function(object = NULL,
   los <- loess.smooth(tab$coverage, tab$MoransI.value, degree=degree)
   func <- approxfun(los$x, los$y * sd)
   
-  idx <- intersect(which(tab[['MoransI.value']] > f1(tab[['coverage']])),idx)
+  idx <- intersect(which(tab[['MoransI.value']] > func(tab[['coverage']])),idx)
   n2 <- length(idx)
   
   tab[["AutoCorrFeature"]] <- FALSE
