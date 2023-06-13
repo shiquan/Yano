@@ -90,7 +90,7 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
 #' @import dplyr
 #' @export
 plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE,
-                       max.overlaps = 5, collapse=TRUE)
+                       max.overlaps = 5, collapse=TRUE, ...)
 {
   if (is.null(db)) stop(paste0("No database found, ", genome))
   
@@ -112,11 +112,17 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE,
   trans0 <- trans0[which(trans0$gene_name %in% genes),]
 
   txcnt <- table(trans0$gene_name)
+  if (nrow(trans0) == 0) {
+    p <- ggplot()
+    p <- p + ylab("") + xlab("") +scale_x_continuous(limits=c(start(region), end(region)))
+    p <- p + ylim(0,1) + theme_void()
+    return(p)
+  }
   trans0$idx = 1:nrow(trans0)
   tx = trans0$idx
   names(tx) = trans0$transcript_id
 
-  exons0$idx = tx[exons0$transcript_id]
+    exons0$idx = tx[exons0$transcript_id]
 
   trans0$start0 <- ifelse(trans0$strand == "-", trans0$end, trans0$start)
   trans0$end0 <- ifelse(trans0$strand == "-", trans0$start, trans0$end)
@@ -132,18 +138,18 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE,
   offset <- as.integer(max(trans0$idx)/5)
   offset <- ifelse(offset < 1, 1, offset)
   if (label & sum(as.character(trans0$strand) == '-') > 0) {
-    p = p + ggrepel::geom_label_repel(
+    p = p + ggrepel::geom_text_repel(
       data=trans0[which(as.character(trans0$strand)=="-"),], 
       aes(x = end, y = idx, label = gene_name), max.overlaps = max.overlaps,
-      nudge_y = -trans0[which(as.character(trans0$strand)=="-"),]$idx-offset-1, size = 5, direction = "x")
+      nudge_y = -trans0[which(as.character(trans0$strand)=="-"),]$idx-offset-1, size = 5, direction = "x", ...)
   }
     
   
   if (label & sum(as.character(trans0$strand) == '+') > 0) {
-    p = p + ggrepel::geom_label_repel(
+    p = p + ggrepel::geom_text_repel(
       data=trans0[which(as.character(trans0$strand)=="+"),], 
       aes(x = start, y = idx, label = gene_name), max.overlaps = max.overlaps,
-      nudge_y = -trans0[which(as.character(trans0$strand)=="+"),]$idx-offset, size = 5, direction = "x")
+      nudge_y = -trans0[which(as.character(trans0$strand)=="+"),]$idx-offset, size = 5, direction = "x", ...)
   }
 
   p = p + theme_void()  #+ facet_grid(gene_name~.) 
@@ -156,15 +162,24 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE,
   p + ylim(offset,max(trans0$idx+1)) + scale_color_manual(values = c("+" = "red", "-" = "blue"))
 }
 
-plot.bed <- function(region = NULL, peaks = NULL)
+plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL)
 {
   r <- subsetByOverlaps(peaks, region, ignore.strand = TRUE)
   tab <- data.frame(r)
   
-  p <- ggplot() + geom_segment(data = subset(tab, strand=="+"),aes(x = start, xend = end, y = 1, yend = 1, color=strand), size = 3)
-  p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
+  p <- ggplot()
+  if ("type" %in% colnames(tab) & !is.null(type.col)) {
+    p <- p + geom_segment(data = subset(tab, strand=="+"),aes(x = start, xend = end, y = 1, yend = 1, color=type), size = 3)
+    p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=type), size = 3)
+    p <- p + scale_color_manual(values = type.col)
+  } else {
+    p <- p + geom_segment(data = subset(tab, strand=="+"),aes(x = start, xend = end, y = 1, yend = 1, color=strand), size = 3)
+    p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
+    p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
+  }
   p <- p + ylab("") + xlab("") + theme_void() + scale_x_continuous(limits=c(start(region), end(region)))
-  p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
+  p <- p + ylim(c(0,3))
+
   return(p)
 }
 #' @import patchwork
@@ -203,12 +218,12 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
 #' @import patchwork
 #' @export
 plotTracks <-  function(bamfile=NULL, chr=NULL, start=-1, end =-1, gene=NULL,
-                        strand = c("both", "forward", "reverse", "ignore"),
+                        strand = "both",
                         split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
                         db = NULL, max.overlaps = 5, max.depth = 0,
                         cell.group=NULL, display.genes = NULL, toUCSC=FALSE, peaks =NULL,
                         log.scaled = FALSE, upstream = 1000, downstream = 1000, start0 = NULL,
-                        end0 = NULL, anno.col = "blue", collapse = TRUE)
+                        end0 = NULL, anno.col = "blue", collapse = TRUE, type.col = NULL, ...)
                         
 {
   start0 <- start0 %||% start
@@ -220,6 +235,10 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=-1, end =-1, gene=NULL,
     start <- start(genes1[which(genes1$gene_name == gene)][1])
     end <- end(genes1[which(genes1$gene_name == gene)])
 
+    ## allow some overhang 
+    if (start - start0 < 2000) start <- start0
+    if (end0 - end < 2000) end <- end0
+    
     if (start0 < start | end0 > end) stop("Conflict target region and gene.")
   }
   
@@ -230,29 +249,29 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=-1, end =-1, gene=NULL,
   
   p1 <- plot.cov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag, cell.group=cell.group, log.scaled=log.scaled, start0 = start0, end0 = end0, max.depth = max.depth)
   p1 <- p1 + theme_pubr()# + theme(panel.spacing = unit(1, "lines"))
-  
+  p1 <- p1 + theme(panel.spacing.y = unit(0, "lines"))
   if (!is.null(peaks)) {
-    
     gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
-    p2 <- plot.bed(region = gr, peaks = peaks)
+    p2 <- plot.bed(region = gr, peaks = peaks, type.col=type.col)
+
     if (start0 > start & end0 < end) {
       p2 <- p2 + annotate("rect", xmin = start0, xmax = end0, ymin = 0, ymax = 1, alpha = .1,fill = anno.col)
     }
     
     if (toUCSC) chr <- paste0("chr",chr)
     gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
-    p3 <- plot.genes(gr, db=db, genes=display.genes, max.overlaps = max.overlaps)
-    p3 <- p3 + theme_pubr()
+    p3 <- plot.genes(gr, db=db, genes=display.genes, max.overlaps = max.overlaps, ...)
+    #p3 <- p3 + theme_pubr()
     if (start0 > start & end0 < end) {
       p3 <- p3 + annotate("rect", xmin = start0, xmax = end0, ymin = 0, ymax = 1, alpha = .1,fill = anno.col)
     }
     
-    return(p2/p1/p3 + plot_layout(heights = c(1,8,2)))
+    return(p2/p1/p3 + plot_layout(heights = c(1,16,2)))
   } 
 
   if (toUCSC) chr <- paste0("chr",chr)
   gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
-  p2 <- plot.genes(gr, db=db, genes=display.genes, collapse=collapse)
+  p2 <- plot.genes(gr, db=db, genes=display.genes, collapse=collapse, ...)
   
   return(p1 / p2 + plot_layout(heights = c(8, 2)))  
 }

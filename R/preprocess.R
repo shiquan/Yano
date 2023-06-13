@@ -2,20 +2,20 @@
 setMethod(f = "QuickRecipe0",
           signature = signature(counts = "SMatrix"),
           definition = function(counts = NULL, meta.data = NULL, min.cells = 20, min.features = 200,
-                                nvar = 2000, assay = NULL,
+                                assay = NULL,
                                 ...
                                 ) {
 
             assay <- assay %||% "RNA"
             counts <- CreateSeuratObject(counts = counts, min.cells = min.cells,
                                          min.features = min.features, assay = assay)
-            return(QuickRecipe0(counts, assay = assay, nvar=nvar, ...))
+            return(QuickRecipe0(counts, assay = assay, ...))
           })
 
 #' @export
 setMethod(f = "QuickRecipe0",
           signature = signature(counts = "Seurat"),
-          definition = function(counts = NULL, nvar = 2000, scale.factor = 1e4,
+          definition = function(counts = NULL, scale.factor = 1e4,
                                 assay = NULL,
                                 ...
                                 ) {
@@ -25,14 +25,30 @@ setMethod(f = "QuickRecipe0",
 
             counts <- NormalizeData(counts, normalization.method = "LogNormalize",
                                     scale.factor = scale.factor)
-            
-            counts <- FindVariableFeatures(counts, selection.method = "vst", nfeatures = nvar)
+
+            #RNA.assay <- intersect("RNA", names(counts))
+            #RNA.assay <- RNA.assay %||% assay
+            #message(paste0("Use assay ", RNA.assay, " to evaluate cell size.." ))
+            #x <- GetAssayData(counts, assay = RNA.assay, slot = "counts")
+            #cs <- colSums(x)
+            #cells <- intersect(colnames(counts),names(which(cs > 0)))
+            #cs <- cs[cells]
+            #counts <- counts[,cells]
+            #x <- GetAssayData(counts, assay=assay, slot = "counts")
+            #x <- log1p(t(t(x)/cs) * scale.factor)
+            #rownames(x) <- rownames(counts)
+            #colnames(x) <- cells
+            #SetAssayData(object = counts, slot = "data", new.data = x, assay= assay)
+            #rm(x)
+            #gc()
             counts
           })
 
 #' @export
-ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, features = NULL)
+ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, nvar= 3000, features = NULL)
 {
+  object <- FindVariableFeatures(object, selection.method = "vst", nfeatures = nvar)
+  
   features <- features %||% VariableFeatures(object)
   features <- intersect(features,rownames(object))
   
@@ -59,9 +75,9 @@ setMethod(f = "QuickRecipe",
             
             object <- QuickRecipe0(counts=counts, meta.data = meta.data,
                                    min.cells =min.cells, min.features = min.features,
-                                   nvar = nvar, assay = NULL, ...)
+                                   assay = NULL, ...)
 
-            ProcessDimReduc(object, ndim=ndim, resolution=resolution)
+            ProcessDimReduc(object, ndim=ndim, resolution=resolution, nvar=nvar)
           })
 
 setMethod(f = "QuickRecipe",
@@ -73,9 +89,9 @@ setMethod(f = "QuickRecipe",
             
             object <- QuickRecipe0(counts=counts, meta.data = meta.data,
                                    min.cells =min.cells, min.features = min.features,
-                                   nvar = nvar, assay = assay, ...)
+                                   assay = assay, ...)
 
-            ProcessDimReduc(object, ndim=ndim, resolution=resolution)
+            ProcessDimReduc(object, ndim=ndim, resolution=resolution, nvar=nvar)
           })
 
 #'
@@ -83,7 +99,7 @@ setMethod(f = "QuickRecipe",
 GetWeights <- function(object= NULL,                       
                        reduction = "pca",
                        dims = NULL,
-                       k.nn = 10,
+                       k.nn = 5,
                        spatial = FALSE,
                        kernel.method = "average",
                        self.weight = 0,
@@ -92,9 +108,11 @@ GetWeights <- function(object= NULL,
   cells <- cells %||% colnames(object)
   
   if (isTRUE(spatial)) {
+    message("Build weights on tissue coordiantes")
     emb <- GetTissueCoordinates(object)
     kernel.method <- "average"
   } else {
+    message(paste0("Build weights on ", reduction))
     emb <- Embeddings(object,reduction = reduction)
     if (!is.null(dims)) emb <- emb[,dims]
   }
@@ -132,7 +150,7 @@ RunAutoCorr <- function(object = NULL,
                         weights.scaled = FALSE,
                         reduction = "pca",
                         dims = NULL,
-                        k.nn = 10,
+                        k.nn = 5,
                         kernel.method = "dist",
                         cells = NULL,
                         features = NULL,
@@ -147,7 +165,6 @@ RunAutoCorr <- function(object = NULL,
   features <- intersect(rownames(object),features)
   
   if (is.null(weights)) {
-    message(paste0("Build weights on ", reduction))
     W <- GetWeights(object=object, reduction=reduction,
                     dims=dims,
                     k.nn=k.nn,
@@ -233,7 +250,7 @@ SetAutoCorrFeatures <- function(object = NULL,
                                 top.n = 500,
                                 assay = DefaultAssay(object),
                                 sd = 3,
-                                degree=2,
+                                degree=1,
                                 plot = TRUE,
                                 return.plot = FALSE
                                 )
@@ -262,15 +279,15 @@ SetAutoCorrFeatures <- function(object = NULL,
   if (plot) {
     v <- min(tab[idx,][["MoransI.value"]])
     
-    p1 <- ggplot(tab, aes(x=MoransI.value)) + geom_density(size=1) + theme_pubr()
+    p1 <- ggplot(tab, aes(x=MoransI.value)) + geom_density(size=1) + theme_minimal()
     p1 <- p1 + geom_vline(aes(xintercept=v),color="red", linetype="dashed", size=1)
     p1 <- p1 + ggtitle(paste0("n = ",n1))
     p2 <- ggplot() + geom_point(data=tab,aes(x=coverage,y=MoransI.value),color="grey")
-    p2 <- p2 + geom_line(data=as.data.frame(los),aes(x,y),size=1, color="black") + theme_pubr()
+    p2 <- p2 + geom_line(data=as.data.frame(los),aes(x,y),size=1, color="black") + theme_minimal()
     p2 <- p2 + geom_line(data=as.data.frame(los),aes(x,y*sd),size=1, linetype="dashed", color="blue")    
     p2 <- p2 + geom_point(data=tab[idx,], aes(coverage, MoransI.value), shape=21,size=3)
     p2 <- p2 + geom_hline(aes(yintercept=v),color="red", linetype="dashed", size=1)
-    p2 <- p2 + theme_pubr()
+    p2 <- p2 + theme_minimal()
     p2 <- p2 + ggtitle(paste0("n = ",n2))
     p <- cowplot::plot_grid(p1,p2)
     print(p)
@@ -308,7 +325,7 @@ LocalCorr <- function(object = NULL,
                       weights.scaled = FALSE,
                       reduction = "pca",
                       dims=NULL,
-                      k.nn = 10,
+                      k.nn = 5,
                       kernel.method = "average",
                       clust.method = "ward.D2",
                       self.weight = 1,
@@ -460,9 +477,8 @@ RunBlockCorr <- function(object = NULL,
                          block.name = "gene_name",
                          assay = NULL,
                          name = NULL,
-                         slot = "counts",
-                         features = AutoCorrFeatures(object),
-                         sensitive.mode = TRUE,
+                         features = NULL,
+                         sensitive.mode = FALSE,
                          block.assay = NULL,
                          block.assay.replace = FALSE,
                          cells = NULL,                           
@@ -472,7 +488,7 @@ RunBlockCorr <- function(object = NULL,
                          weights.scaled = FALSE,
                          reduction = "pca",
                          dims = NULL,
-                         k.nn = 20,
+                         k.nn = 5,
                          kernel.method = "average",
                          self.weight = 1,
                          keep.matrix = FALSE,
@@ -485,9 +501,9 @@ RunBlockCorr <- function(object = NULL,
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
   
-  name <- name %||% "AltExp"
+  name <- name %||% block.name
 
-  features <- features %||% rownames(object)
+  features <- features %||% AutoCorrFeatures(object)
   features <- intersect(rownames(object),features)
 
   message(paste0("Working on ", length(features), " features."))
@@ -534,109 +550,118 @@ RunBlockCorr <- function(object = NULL,
 
   block.assay <- block.assay %||% "tmp.assay"
   ## blocks <- unique(blocks)
+
+  x <- GetAssayData(object, assay = assay, slot = "counts")
   
+  # cell sizes
+  cs <- colSums(x)
+  cells <- intersect(cells,names(which(cs > 0)))
+  W <- W[cells, cells]
+  cs <- cs[cells]
+  ncell <- length(cells)
+
   ## all.features <- rownames(tab)
   if (block.assay %ni% names(obj) || block.assay.replace) {
     message("Aggregate counts..")
-    if (slot != "counts") {
-      warning("Automatic set slot to \"counts\", because new assay requires sum up counts by block.")
-      slot <- "counts"
-    }
-
-    x <- GetAssayData(object, assay = assay, slot = "counts")
-  
-    # cell sizes
-    cs <- colSums(x)
-    cells <- intersect(cells,names(which(cs > 0)))
-    W <- W[cells, cells]
-    cs <- cs[cells]
-    ncell <- length(cells)
+    #if (slot != "counts") {
+     # warning("Automatic set slot to \"counts\", because new assay requires sum up counts by block.")
+      #slot <- "counts"
+    #}
   
     if (ncell != ncol(object) && keep.matrix) {
       warnings("Inconsistance cells, set keep.matrix to FALSE.")
       keep.matrix <- FALSE
     }
 
-    x <- GetAssayData(object, assay = assay, slot = slot)
+    #x <- GetAssayData(object, assay = assay, slot = "counts")
     x <- x[rownames(tab), cells]
     x <- as(x, "TsparseMatrix")
     
     # Aggregate features in the same block
     y <- sparseMatrix(i = match(tab[[block.name]][x@i+1], blocks),
                       j = x@j+1,
-                      x = x@x)
+                      x = x@x, dims=c(length(blocks), length(cells)))
     
     rownames(y) <- blocks
     colnames(y) <- cells
 
-    if (sensitive.mode) {
-      ## expand matrix of block features for calculating with EPT matrix
-      y <- y[tab[[block.name]],]
-      rownames(y) <- rownames(x)
-      y <- y - x
-    }
-    
     if (keep.matrix) {
       object[[block.assay]] <- CreateAssayObject(counts = y, assay = block.assay)
     }
 
-    x <- log1p(t(t(x)/cs) * scale.factor)
-    y <- log1p(t(t(y)/cs) * scale.factor)
-    if (keep.matrix) {
-      SetAssayData(object = object, slot = "data", new.data = y, assay=block.assay)
+    y <- y[tab[[block.name]],]
+    rownames(y) <- rownames(x)
+    
+    if (sensitive.mode) {
+      ## expand matrix of block features for calculating with EPT matrix
+      y <- y - x
     }
+
+
   } else {
 
     message(paste0("Trying to retrieve data from assay ", block.assay,".."))
-    if (slot != "data") {
-      warning("Reset block.assay to \"data\".")
-      slot <- "data"
-    }
-
+    
     if (isTRUE(sensitive.mode)) {
-      warning("Notice: sensitive.mode only can be enabled when aggregate counts.")
+      # message("Notice: sensitive.mode only can be enabled when aggregate counts.")
       sensitive.mode <- FALSE
     }
     
     old.assay <- DefaultAssay(object)
     DefaultAssay(object) <- block.assay
     blocks <- intersect(blocks, rownames(object))
-    tab <- subset(tab, tab[[block.name]] %in% blocks)    
-    x <- GetAssayData(object, assay = assay, slot = slot)[rownames(tab),cells]
-    y <- GetAssayData(object, assay = block.assay, slot = slot)[blocks,cells]
+    tab <- subset(tab, tab[[block.name]] %in% blocks)
 
+    x <- x[rownames(tab), cells]
+    #x <- GetAssayData(object, assay = assay, slot = "counts")[rownames(tab),cells]
+    y <- GetAssayData(object, assay = block.assay, slot = "counts")[blocks,cells]    
     DefaultAssay(object) <- old.assay
+
+    y <- y[tab[[block.name]],]
+    rownames(y) <- rownames(tab)
+
   }
 
-  fc <- rowMeans(x) - rowMeans(y)
+  fc <- log1p(rowMeans(x)) - log1p(rowMeans(y))
   names(fc) <- rownames(x)
+
+  x <- log1p(t(t(x)/cs) * scale.factor)
+  y <- log1p(t(t(y)/cs) * scale.factor)
   
+  if (keep.matrix) {
+    SetAssayData(object = object, slot = "data", new.data = y, assay=block.assay)
+  }
+
   x <- x %*% W
   y <- y %*% W
-  
-  x <- t(scale(t(x)))
-  y <- t(scale(t(y)))
 
-  if (isFALSE(sensitive.mode)) {
-    ## expand matrix of block features for calculating with EPT matrix
-    y <- y[tab[[block.name]],]
-  }
-  
-  # Calcuate Co-dispersion coefficient
+  x <- scale(t(x))
+  y <- scale(t(y))
+
+  # Calcuate Correlation coefficient
   # r = sum(X*Y)/sqrt(sum(X*X)*sum(Y*Y))
-  rs <- rowSums(x * y)
-  sq <- sqrt(rowSums(x * x)*rowSums(y * y))
-  
+
+  corr <- lineup::corbetw2mat(x,y)
+  names(corr) <- colnames(x)
+
+  pvalues <- matrixTests::col_wilcoxon_paired(x, y)$pvalue
+  names(pvalues) <- colnames(x)
+
+  #rs <- rowSums(x * y)
+  #sq <- sqrt(rowSums(x * x)*rowSums(y * y))
+
   rm(x)
   rm(y)
 
   gc()
 
-  ad <- rs/sq
+  #ad <- rs/sq
 
   tab <- object[[assay]]@meta.features
-  tab[[name]] <- ad[rownames(object)]
+  #tab[[paste0(name, ".cor")]] <- ad[rownames(object)]
+  tab[[paste0(name, ".cor")]] <- corr[rownames(object)]
   tab[[paste0(name, ".fc")]] <- fc[rownames(object)]
+  tab[[paste0(name, ".pvalue")]] <- pvalues[rownames(object)]
 
   object[[assay]]@meta.features <- tab
 
@@ -656,7 +681,7 @@ RunTwoAssayCorr <- function(object = NULL,
                             weights.scaled = FALSE,
                             reduction = "pca",
                             dims=NULL,
-                            k.nn = 10,
+                            k.nn = 5,
                             kernel.method = "average",
                             self.weight = 1,
                             verbose = TRUE
