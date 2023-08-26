@@ -1,5 +1,5 @@
 RHTSLIB_LIBS=$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript" -e 'Rhtslib::pkgconfig("PKG_LIBS")')
 RHTSLIB_CFLAGS=$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript" -e 'Rhtslib::pkgconfig("PKG_CPPFLAGS")')
 
-PKG_LIBS=$(RHTSLIB_LIBS) -lblas -llapack
-PKG_CPPFLAGS=$(RHTSLIB_CFLAGS)
+PKG_LIBS=$(RHTSLIB_LIBS) -lblas -llapack -lgomp
+PKG_CPPFLAGS=$(RHTSLIB_CFLAGS) -fopenmp

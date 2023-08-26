@@ -30,7 +30,8 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
     cell.names <- names(cell.group)
     if (is.null(cell.names)) stop("Names of cell.group should not be empty.")
     cell.group <- as.character(cell.group)
-    groups <- unique(cell.group)
+    
+    groups <- levels(cell.group) %||% unique(cell.group)
     group.ids <- match(cell.group, groups)
     n <- length(cell.group)
     split.bc <- TRUE    
@@ -84,6 +85,7 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
 
   colnames(tab) <- c("pos","label","depth","strand")
   tab$depth <- as.integer(tab$depth/win)
+
   return(tab)
 }
 
@@ -192,7 +194,9 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
 {
   if (is.null(chr) || start == -1 || end == -1) stop("Require a genomic region.")
 
-  bc <- bamcov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc, cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+  bc <- bamcov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
+               cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+  
   if (isTRUE(log.scaled)) {
     bc$depth <- log(bc$depth+1)
   }
@@ -206,11 +210,19 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   ymax <- max(bc$depth)
   ymin <- min(bc$depth)
   
-  p1 <- ggplot(bc, aes(x=pos,y=depth,fill=strand)) + geom_area(stat = "identity") +  facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)  + ylab("") + theme_bw() + scale_x_continuous(limits=c(start, end))
-  p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue")) + xlab("")
+  p1 <- ggplot(bc, aes(x=pos,y=depth,fill=strand)) + geom_area(stat = "identity")
+  p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
+  p1 <- p1 + xlab("") + ylab("") + theme_bw() + scale_x_continuous(limits=c(start, end))
+  p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue")) 
   
   if (start0 != -1 & start0 > start & end0 != -1 & end0 < end) {
-    p1 <- p1 + annotate("rect", xmin = start0, xmax = end0, ymin = ymin, ymax = ymax, alpha = .1,fill = "blue")
+    p1 <- p1 + annotate("rect",
+                        xmin = start0,
+                        xmax = end0,
+                        ymin = ymin,
+                        ymax = ymax,
+                        alpha = .1,
+                        fill = "blue")
   }
   return(p1)
 }
@@ -247,7 +259,9 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=-1, end =-1, gene=NULL,
   
   if (start0 < 0) start0 <- 1
   
-  p1 <- plot.cov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag, cell.group=cell.group, log.scaled=log.scaled, start0 = start0, end0 = end0, max.depth = max.depth)
+  p1 <- plot.cov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
+                 bin=bin, cell.tag=cell.tag, umi.tag=umi.tag, cell.group=cell.group,
+                 log.scaled=log.scaled, start0 = start0, end0 = end0, max.depth = max.depth)
   p1 <- p1 + theme_pubr()# + theme(panel.spacing = unit(1, "lines"))
   p1 <- p1 + theme(panel.spacing.y = unit(0, "lines"))
   if (!is.null(peaks)) {

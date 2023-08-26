@@ -103,6 +103,7 @@ GetWeights <- function(object= NULL,
                        spatial = FALSE,
                        kernel.method = "average",
                        self.weight = 0,
+                       scale = FALSE,
                        cells = NULL)
 {
   cells <- cells %||% colnames(object)
@@ -131,7 +132,8 @@ GetWeights <- function(object= NULL,
 
   diag(W) <- self.weight
   
-  W <- W/rowSums(W)
+  if (scale) W <- W/rowSums(W)
+  W[is.na(W)] <- 0
   colnames(W) <- cells
   rownames(W) <- cells
   W
@@ -147,14 +149,13 @@ RunAutoCorr <- function(object = NULL,
                         spatial = FALSE,
                         scaled = FALSE,
                         weights = NULL,                              
-                        weights.scaled = FALSE,
+                        scale.weight = FALSE,
                         reduction = "pca",
                         dims = NULL,
                         k.nn = 5,
                         kernel.method = "dist",
                         cells = NULL,
                         features = NULL,
-                        batch.size = 10000,
                         verbose = TRUE)
 {
   message(paste0("Working on assay : ", assay))
@@ -179,67 +180,41 @@ RunAutoCorr <- function(object = NULL,
       cells <- intersect(colnames(weights),cells)
       W <- weights[cells, cells]
       diag(W) <- 0
-      if (!weights.scaled) W <- W/rowSums(W)
+      if (scale.weight) W <- W/rowSums(W)
     }
   }
   
   x0 <- GetAssayData(object, assay = assay, slot = slot)[,cells]
-
-  # in case some features missing in scaled matrix
   features <- intersect(rownames(x0), features)
-  message(paste0("Run autocorrelation for ", length(features), " features."))
   x0 <- x0[features,]
-  
-  segments <- as.integer(length(features)/batch.size) + 1
-  tab1 <- data.frame()
-  
-  for (i in 1:segments) {
-    start <- (i-1)*batch.size+1
-    end <- ifelse(i*batch.size > length(features), length(features), i*batch.size)
-    message(paste0("Processing ", end - start+1, " features.."))
-    
-    features0 <- features[start:end]
-    x <- x0[features0,]
+  x0 <- as(x0, "CsparseMatrix")
+  W <- as(W, "CsparseMatrix")
 
-    coverage <- rowSums(x > 0)/length(cells)
-    names(coverage) <- features0
-
-    if (!scaled) {
-      # todo: performance improve
-      x <- t(scale(t(x)))
-    }
-    
-    y <- Matrix::t(Matrix::tcrossprod(W, x))
-    y <- as.matrix(y)
-    
-    #todo
-    corr <- lineup::corbetw2mat(t(y),t(x))
-    vals <- corr * rowSds(y)/rowSds(x)
-    rm(x)
-    rm(y)
+  message(paste0("Run autocorrelation test for ", length(features), " features."))
+  moransi.vals <- .Call("autocorrelation_test", x0, W, TRUE);
+  ## message(paste0("Run Geary's C for ", length(features), " features."))
+  ## gearysc.vals <- .Call("GearysC_test", x0, W);
+  Ivals <- moransi.vals[[1]]
+  Cvals <- moransi.vals[[2]]
+  IZvals <- moransi.vals[[3]]  
+  CZvals <- moransi.vals[[4]]
   
-    vals <- sort(vals,decreasing = TRUE)
-    tab <- data.frame(MoransI.value=vals,
-                      MoransI.rank=1:length(vals),
-                      coverage = coverage[names(vals)],
-                      row.names=names(vals))
-    rm(vals)
-    gc()
-    tab1 <- rbind(tab1, tab)
-  }
+  names(Ivals) <- features
+  names(Cvals) <- features
+  names(IZvals) <- features
+  names(CZvals) <- features
+  ## names(gearysc.vals) <- features
+
+  object[[assay]]@meta.features[['MoransI']] <- Ivals[rownames(object)]
+  object[[assay]]@meta.features[['MoransI.Z']] <- IZvals[rownames(object)]
+  object[[assay]]@meta.features[['GearyC']] <- Cvals[rownames(object)]
+  object[[assay]]@meta.features[['GearyC.Z']] <- CZvals[rownames(object)]
+
+  rm(W)
+  rm(moransi.vals)
+  ## rm(gearysc.vals)
+  gc()
   
-  tab0 <- object[[assay]]@meta.features
-  tab <- tab1[rownames(object),]
-  # remove NAs in rownames
-  rownames(tab) <- rownames(object) 
-
-  # Set autocorrection features for downstream analysis, here roughtly set Moran's I greater than 0
-  tab[['AutoCorrFeature']] = FALSE
-  idx <- which(tab[["MoransI.value"]] > 0)
-  tab[idx,][["AutoCorrFeature"]] <- TRUE
-
-  nm <- setdiff(colnames(tab0), colnames(tab))
-  object[[assay]]@meta.features <- cbind(tab0[,nm],tab)
   object
 }
 
@@ -316,7 +291,7 @@ AutoCorrFeatures <- function(object = NULL, assay = DefaultAssay(object))
 #' @export
 LocalCorr <- function(object = NULL,
                       moransi.cutoff = 0,
-                      features = AutoCorrFeatures(object),
+                      features = NULL,
                       cells = NULL,
                       assay = DefaultAssay(object),             
                       slot = "data",
@@ -338,7 +313,8 @@ LocalCorr <- function(object = NULL,
     stop("No Morans'I value found, use RunAutoCorr first.")
   }
 
-  features <- features %||% rownames(tab)
+  features <- features %||%  AutoCorrFeatures(object)
+  features <- features %||%  rownames(object)  
   features <- intersect(features, rownames(tab))
 
   cells <- cells %||% colnames(object)
@@ -369,7 +345,8 @@ LocalCorr <- function(object = NULL,
     }
   }
 
-  mtx <- mtx %*% W
+  # mtx <- mtx %*% W
+  mtx <- Matrix::tcrossprod(mtx,W)
 
   # smoothed by weights for logcounts, then scaled 
   if (!scaled) {
@@ -448,11 +425,16 @@ AddLCModule <- function(object = NULL, lc = NULL, min.features.per.module = 10, 
 #'
 #' @importFrom data.table fread
 #' @export
-LoadEPTanno <- function(file = NULL, object = NULL, assay = DefaultAssay(object))
+LoadBEDanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRUE)
 {
   bed <- fread(file)[,c(1:9)]
   colnames(bed) <- c("chr","start","end","name","score","strand","n_gene","gene_name","type")
-  bed$name <- paste(bed$chr,bed$start,bed$end,bed$strand,sep="-")
+  if (isTRUE(stranded)) {
+    bed$name <- paste0(bed$chr,":",bed$start,"-",bed$end,"/",bed$strand)
+  } else {
+    bed$name <-  paste0(bed$chr,":",bed$start,"-",bed$end)
+  }
+  
   bed <- as.data.frame(bed)
   rownames(bed) <- bed$name
 
@@ -461,13 +443,22 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = DefaultAssay(object)
   if (length(features) == 0) {
     stop(paste0("No features found in assay ", assay))
   }
+
+  message(paste0("Intersect ", length(features), " features."))
   
   bed <- bed[rownames(object),]
-  tab <- object[[assay]]@meta.features  
-  nm <- setdiff(colnames(tab), colnames(bed))
-  tab <- tab[,nm]
+
+  assay <- assay %||% DefaultAssay(object)
   
-  object[[assay]]@meta.features <- cbind(tab,bed)
+  object[[assay]]@meta.features[['chr']] <- bed[['chr']]
+  object[[assay]]@meta.features[['start']] <- bed[['start']]
+  object[[assay]]@meta.features[['end']] <- bed[['end']]
+  object[[assay]]@meta.features[['name']] <- bed[['name']]
+  object[[assay]]@meta.features[['strand']] <- bed[['strand']]
+  object[[assay]]@meta.features[['n_gene']] <- bed[['n_gene']]
+  object[[assay]]@meta.features[['gene_name']] <- bed[['gene_name']]
+  object[[assay]]@meta.features[['type']] <- bed[['type']]
+  
   object
 }
 
@@ -481,7 +472,8 @@ RunBlockCorr <- function(object = NULL,
                          sensitive.mode = FALSE,
                          block.assay = NULL,
                          block.assay.replace = FALSE,
-                         cells = NULL,                           
+                         cells = NULL,
+                         feature.types = c("exon","exonintron","intron","multiexons","utr3","utr5"),
                          min.features.per.block = 2,
                          scale.factor = 1e4,
                          weights = NULL,
@@ -491,7 +483,9 @@ RunBlockCorr <- function(object = NULL,
                          k.nn = 5,
                          kernel.method = "average",
                          self.weight = 1,
-                         keep.matrix = FALSE,
+                         #keep.matrix = FALSE,
+                         perm=100,
+                         threads = 1,
                          verbose = TRUE
                          )
 {
@@ -516,7 +510,9 @@ RunBlockCorr <- function(object = NULL,
                     k.nn = k.nn,
                     kernel.method = kernel.method,
                     cells = cells,
-                    self.weight = self.weight)
+                    self.weight = self.weight,
+                    scale=TRUE)
+                   
   } else {
     dims <- dim(weights)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
@@ -535,6 +531,9 @@ RunBlockCorr <- function(object = NULL,
   }
   
   tab <- tab[tab[[block.name]] != ".",] # skip unannotated records
+  if ("type" %in% colnames(tab)) {
+    tab <- subset(tab, type %in% feature.types)
+  }
   
   blocks <- names(which(table(tab[[block.name]]) >= min.features.per.block))
   
@@ -568,10 +567,10 @@ RunBlockCorr <- function(object = NULL,
       #slot <- "counts"
     #}
   
-    if (ncell != ncol(object) && keep.matrix) {
-      warnings("Inconsistance cells, set keep.matrix to FALSE.")
-      keep.matrix <- FALSE
-    }
+    ## if (ncell != ncol(object) && keep.matrix) {
+    ##   warnings("Inconsistance cells, set keep.matrix to FALSE.")
+    ##   keep.matrix <- FALSE
+    ## }
 
     #x <- GetAssayData(object, assay = assay, slot = "counts")
     x <- x[rownames(tab), cells]
@@ -585,9 +584,9 @@ RunBlockCorr <- function(object = NULL,
     rownames(y) <- blocks
     colnames(y) <- cells
 
-    if (keep.matrix) {
-      object[[block.assay]] <- CreateAssayObject(counts = y, assay = block.assay)
-    }
+    ## if (keep.matrix) {
+    ##   object[[block.assay]] <- CreateAssayObject(counts = y, assay = block.assay)
+    ## }
 
     y <- y[tab[[block.name]],]
     rownames(y) <- rownames(x)
@@ -596,7 +595,6 @@ RunBlockCorr <- function(object = NULL,
       ## expand matrix of block features for calculating with EPT matrix
       y <- y - x
     }
-
 
   } else {
 
@@ -622,49 +620,61 @@ RunBlockCorr <- function(object = NULL,
 
   }
 
+  feature.names <- rownames(x)
   fc <- log1p(rowMeans(x)) - log1p(rowMeans(y))
-  names(fc) <- rownames(x)
+  names(fc) <- feature.names
 
   x <- log1p(t(t(x)/cs) * scale.factor)
   y <- log1p(t(t(y)/cs) * scale.factor)
   
-  if (keep.matrix) {
-    SetAssayData(object = object, slot = "data", new.data = y, assay=block.assay)
-  }
-
-  x <- x %*% W
-  y <- y %*% W
-
-  x <- scale(t(x))
-  y <- scale(t(y))
-
-  # Calcuate Correlation coefficient
-  # r = sum(X*Y)/sqrt(sum(X*X)*sum(Y*Y))
-
-  corr <- lineup::corbetw2mat(x,y)
-  names(corr) <- colnames(x)
-
-  pvalues <- matrixTests::col_wilcoxon_paired(x, y)$pvalue
-  names(pvalues) <- colnames(x)
-
-  #rs <- rowSums(x * y)
-  #sq <- sqrt(rowSums(x * x)*rowSums(y * y))
-
-  rm(x)
-  rm(y)
-
+  #if (keep.matrix) {
+  #  SetAssayData(object = object, slot = "data", new.data = y, assay=block.assay)
+  #}
+  gc()
+  message("Smooth data..")
+  rownames(y) <- feature.names
+  
+  ta <- .Call("E_test", x, y, W, perm, threads);
+ 
   gc()
 
-  #ad <- rs/sq
+  Lx <- ta[[1]]
+  Ly <- ta[[2]]
+  r <- ta[[3]]
+  e <- ta[[4]]
+  pval <- ta[[5]]
+  names(Lx) <- feature.names
+  names(Ly) <- feature.names
+  names(r) <- feature.names
+  names(e) <- feature.names
+  names(pval) <- feature.names
 
+  sel.features <- feature.names
+  for (i in c(1:5)) {
+    sel <- sel.features[which(pval==0)]
+    rnd <- perm*(2^i)
+    message(paste0("Round ", i, " .. ", length(sel), " features .. ", rnd, " permutations.."))
+    
+    if (length(sel) > 0) {
+      x <- x[sel,]
+      y <- y[sel,]
+      ta <- .Call("E_test", x, y, W, rnd, threads);
+      sel.pval <- ta[[5]]
+      pval[sel] <- sel.pval
+    }
+  }
   tab <- object[[assay]]@meta.features
-  #tab[[paste0(name, ".cor")]] <- ad[rownames(object)]
-  tab[[paste0(name, ".cor")]] <- corr[rownames(object)]
+  tab[[paste0(name, ".e.coef")]] <- e[rownames(object)]
+  tab[[paste0(name, ".r")]] <- r[rownames(object)]
+  tab[[paste0(name, ".Lx")]] <- Lx[rownames(object)]
+  tab[[paste0(name, ".Ly")]] <- Ly[rownames(object)]
   tab[[paste0(name, ".fc")]] <- fc[rownames(object)]
-  tab[[paste0(name, ".pvalue")]] <- pvalues[rownames(object)]
-
+  tab[[paste0(name, ".pval")]] <- pval[rownames(object)]
   object[[assay]]@meta.features <- tab
 
+  rm(ta)
+  gc()
+  
   object
 }
 
@@ -730,9 +740,11 @@ RunTwoAssayCorr <- function(object = NULL,
   }
   y <- FetchData(obj, vars = features2, cells = cells, slot = slot)
   
-  x <- x %*% W
-  y <- y %*% W
-  
+  #x <- x %*% W
+  #y <- y %*% W
+
+  x <- tcrossprod(x, W)
+  y <- tcrossprod(y, W)
   x <- t(scale(t(x)))
   y <- t(scale(t(y)))
   
@@ -753,7 +765,7 @@ RunTwoAssayCorr <- function(object = NULL,
 }
 
 #' @export
-aggregateGeneSets <- function(object = NULL, name = NULL, features = NULL, assay = DefaultAssay(object), scale.factor = 1e4, scaled=TRUE)
+aggregateGeneSets <- function(object = NULL, name = NULL, features = NULL, assay = NULL, scale.factor=1e6, scaled=TRUE)
 {
   if (is.null(name)) {
     stop("Set up name for the set.")
@@ -762,6 +774,8 @@ aggregateGeneSets <- function(object = NULL, name = NULL, features = NULL, assay
   if (is.null(features)) {
     stop("Set up features for the set.")
   }
+
+  assay <- assay %||%  DefaultAssay(object)
   old.assay <- DefaultAssay(object)
   DefaultAssay(object) <- assay
   features <- intersect(features, rownames(object)) 
@@ -781,4 +795,38 @@ aggregateGeneSets <- function(object = NULL, name = NULL, features = NULL, assay
   DefaultAssay(object) <- old.assay
   
   object
+}
+
+
+#' @export
+aggregateCellByGroup <- function(object = NULL, cell.group = NULL, features = NULL, assay = NULL, avg.by.cells = FALSE)
+{
+  cell.group <- cell.group %||% Idents(object)
+  assay <- assay %||%  DefaultAssay(object)
+  DefaultAssay(object) <- assay
+  features <- features %||% rownames(object)
+  features <- intersect(features, rownames(object)) 
+
+  slot <- "counts"
+
+  dat <- GetAssayData(object, slot=slot)
+  dat <- dat[features,]
+  groups <- unique(cell.group)
+  dat <- as(dat, "dgTMatrix")
+
+  m <- Matrix::sparseMatrix(
+    i = dat@i+1,
+    j = match(cell.group[dat@j+1], groups),
+    x = dat@x,
+    dims = c(length(features), length(groups)))
+  
+  colnames(m) <- groups
+  rownames(m) <- features
+
+  if (avg.by.cells) {
+    cs <- colSums(m)
+    m <- m/cs
+  }
+  
+  m
 }
