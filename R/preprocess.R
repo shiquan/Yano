@@ -156,6 +156,7 @@ RunAutoCorr <- function(object = NULL,
                         kernel.method = "dist",
                         cells = NULL,
                         features = NULL,
+                        perm = 10000,threads=4,
                         verbose = TRUE)
 {
   message(paste0("Working on assay : ", assay))
@@ -189,29 +190,38 @@ RunAutoCorr <- function(object = NULL,
   x0 <- x0[features,]
   x0 <- as(x0, "CsparseMatrix")
   W <- as(W, "CsparseMatrix")
-
+  
   message(paste0("Run autocorrelation test for ", length(features), " features."))
-  moransi.vals <- .Call("autocorrelation_test", x0, W, TRUE);
+  moransi.vals <- .Call("autocorrelation_test", x0, W, TRUE, threads);
+
+  message("Run permutation test.")
+  moransi.vals2 <-  .Call("moransi_mc_test", x0, W, TRUE, perm, threads);
+
   ## message(paste0("Run Geary's C for ", length(features), " features."))
   ## gearysc.vals <- .Call("GearysC_test", x0, W);
   Ivals <- moransi.vals[[1]]
   Cvals <- moransi.vals[[2]]
   IZvals <- moransi.vals[[3]]  
   CZvals <- moransi.vals[[4]]
-  
+  Ivals2 <- moransi.vals2[[1]]
+  Pvals <- moransi.vals2[[2]]
   names(Ivals) <- features
   names(Cvals) <- features
   names(IZvals) <- features
   names(CZvals) <- features
+  names(Ivals2) <- features
+  names(Pvals) <- features
   ## names(gearysc.vals) <- features
 
   object[[assay]]@meta.features[['MoransI']] <- Ivals[rownames(object)]
   object[[assay]]@meta.features[['MoransI.Z']] <- IZvals[rownames(object)]
   object[[assay]]@meta.features[['GearyC']] <- Cvals[rownames(object)]
   object[[assay]]@meta.features[['GearyC.Z']] <- CZvals[rownames(object)]
-
+  object[[assay]]@meta.features[['MoransI.2']] <- Ivals2[rownames(object)]
+  object[[assay]]@meta.features[['MoransI.pval']] <- Pvals[rownames(object)]
   rm(W)
   rm(moransi.vals)
+  rm(moransi.vals2)
   ## rm(gearysc.vals)
   gc()
   

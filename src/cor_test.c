@@ -36,6 +36,37 @@ void progress(int p) {
 // # nocov end
 cholmod_common c;
 
+void shuffle_double_arr(double *a, const int n)
+{
+    int i;
+    for (i = 0; i < n-1; ++i) {
+        int j = i + rand() / (RAND_MAX / (n - i) + 1);
+        double t = a[j];
+        a[j] = a[i];
+        a[i] = t;
+    }
+}
+int *random_idx(const int n)
+{
+    int *idx = R_Calloc(n, int);
+    int i;
+    for (i = 0; i < n; ++i) idx[i] = i;
+    for (i = 0; i < n-1; ++i) {
+        int j = i + rand() / (RAND_MAX / (n - i) + 1);
+        int t = idx[j];
+        idx[j] = idx[i];
+        idx[i] = t;
+    }
+    return idx;
+}
+static void shuffle(double tmp[], int const idx[], const int n)
+{
+    double aux[n];
+    int i;
+    for (i = 0; i < n; i++) aux[idx[i]] = tmp[i];
+    for (i = 0; i < n; i++) tmp[i] = aux[i];
+}
+
 SEXP cor_test(SEXP _A, SEXP _B, SEXP _trans)
 {
     Rboolean tr = asLogical(_trans);
@@ -151,35 +182,137 @@ void smooth_W(double * const a, double *s, const int N, const_CHM_SP W)
     }
 }
 
-void shuffle_double_arr(double *a, const int n)
+SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
 {
-    int i;
-    for (i = 0; i < n-1; ++i) {
-        int j = i + rand() / (RAND_MAX / (n - i) + 1);
-        double t = a[j];
-        a[j] = a[i];
-        a[i] = t;
+    Rboolean tr = asLogical(_trans);
+    int perm = asInteger(_permut);
+    int n_thread = asInteger(_threads);
+    
+    CHM_SP A = AS_CHM_SP__(_A);
+    CHM_SP W = AS_CHM_SP__(_W);
+    
+    if (A->stype) return mkString("A cannot be symmetric");
+    if (W->stype) return mkString("W cannot be symmetric");
+    
+    double one[] = {1, 0};
+
+    if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
+    if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
+    if (A->ncol < 2) return mkString("Too few cells."); // to do
+
+    if (tr) {
+        A = M_cholmod_transpose(A, (int)A->xtype, &c);
     }
-}
-int *random_idx(const int n)
-{
-    int *idx = R_Calloc(n, int);
-    int i;
-    for (i = 0; i < n; ++i) idx[i] = i;
-    for (i = 0; i < n-1; ++i) {
-        int j = i + rand() / (RAND_MAX / (n - i) + 1);
-        int t = idx[j];
-        idx[j] = idx[i];
-        idx[i] = t;
+
+    R_CheckStack();
+    
+    int N_cell = A->nrow;
+    int N_feature = A->ncol;
+
+    SEXP Ival = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Pval = PROTECT(allocVector(REALSXP, N_feature));    
+
+    int *ap = (int*)A->p;
+    int *ai = (int*)A->i;
+    double *ax = (double*)A->x;
+
+    int *wp = (int*)W->p;
+    int *wi = (int*)W->i;
+    double *wx = (double*)W->x;
+
+    int **ris = NULL;
+    if (perm > 1) {
+        ris = R_Calloc(perm,int*);
+        int pi;
+        for (pi = 0; pi < perm; ++pi) {
+            ris[pi] = random_idx(N_cell);
+        }
     }
-    return idx;
-}
-static void shuffle(double tmp[], int const idx[], const int n)
-{
-    double aux[n];
+
     int i;
-    for (i = 0; i < n; i++) aux[idx[i]] = tmp[i];
-    for (i = 0; i < n; i++) tmp[i] = aux[i];
+#pragma omp parallel for num_threads(n_thread)
+    for (i = 0; i < N_feature; ++i) {
+        if (ap[i] == ap[i+1]) {
+            REAL(Ival)[i] = 0;
+            REAL(Pval)[i] = 0;
+            continue;   
+        }
+        double *tmp = R_Calloc(N_cell, double);
+
+        int j;
+        double mn = 0,
+            sd = 0,
+            xix = 0,
+            xij = 0;
+
+        for (j = ap[i]; j < ap[i+1]; ++j) {
+            if (ISNAN(ax[j])) continue;
+            mn += ax[j];
+            tmp[ai[j]] = ax[j];
+        }
+        mn = mn/N_cell;
+
+        for (j = 0; j < N_cell; ++j) {
+            tmp[j] = tmp[j] - mn;
+            xix += pow(tmp[j], 2);
+        }
+
+        int k;
+        for (k = 0; k < N_cell; ++k) {
+            for (j = wp[k]; j < wp[k+1]; ++j) {
+                if (ISNAN(wx[j])) continue;
+                int cid = wi[j];
+                if (k == cid) continue; // i != j
+                xij += wx[j] * tmp[k] * tmp[cid];
+            }
+        }
+        double I = xij/xix;
+        double p = 0;
+        
+        if (perm > 1) {
+            double *Is = R_Calloc(perm, double);
+            xij = 0;
+            
+            int pi;
+            for (pi = 0; pi < perm; ++pi) {
+                shuffle(tmp, ris[pi], N_cell);
+                int k;
+                for (k = 0; k < N_cell; ++k) {
+                    for (j = wp[k]; j < wp[k+1]; ++j) {
+                        if (ISNAN(wx[j])) continue;
+                        int cid = wi[j];
+                        if (k == cid) continue; // i != j
+                        xij += wx[j] * tmp[k] * tmp[cid];
+                    }
+                }
+                Is[pi] = xij/xix;
+            }
+            for (k = 0; k < perm; ++k) {
+                //Rprintf("%f\t%f\n",e, es[k]);
+                if (Is[k]>=I) p+=1;
+            }
+            p = p/(double)perm;
+            R_Free(Is);
+        }
+        R_Free(tmp);
+        
+#pragma omp critical
+        {
+            REAL(Ival)[i] = I;
+            REAL(Pval)[i] = p;
+        }
+    }
+
+    if (tr) {
+        M_cholmod_free_sparse(&A, &c);
+    }
+
+    SEXP ta = PROTECT(allocVector(VECSXP, 5));
+    SET_VECTOR_ELT(ta, 0, Ival);
+    SET_VECTOR_ELT(ta, 1, Pval);
+
+    UNPROTECT(3);
+    return ta;
 }
  
 SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
@@ -443,12 +576,13 @@ double *sp_colsums(CHM_SP A, Rboolean mn)
  *  allocate temporary copy of W' and W + W'
  *
 */
-SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random)
+SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP W = AS_CHM_SP__(_W);
     Rboolean rand = asLogical(_random);
-
+    int n_thread = asInteger(_threads);
+    
     if (A->stype) return mkString("A cannot be symmetric");
     if (W->stype) return mkString("W cannot be symmetric");
     
@@ -483,8 +617,6 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random)
     SEXP IXval = PROTECT(allocVector(REALSXP, nc));
     SEXP CXval = PROTECT(allocVector(REALSXP, nc));    
     
-    double *tmpa = R_Calloc(N, double);
-
     int *ap = (int*)A->p;
     int *ai = (int*)A->i;
     double *ax = (double*)A->x;
@@ -527,15 +659,17 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random)
     double varC_norm = ((2*S1+S2)*N1 - 4 * S02)/(2*(N+1)*S02);
 
     int ci;
+#pragma omp parallel for num_threads(n_thread)
     for (ci = 0; ci < nc; ++ci) { // for each feature
-        progress(nc);
+        double *tmpa = R_Calloc(N, double);
+        // progress(nc);
         
         if (ap[ci] == ap[ci+1]) {
             REAL(Ival)[ci] = 0;
             continue;   
         }
         
-        memset(tmpa, 0, sizeof(double)*N);
+        // memset(tmpa, 0, sizeof(double)*N);
 
         int j;
         double varI = 0,
@@ -604,14 +738,17 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random)
         //Rprintf("wC : %f, sigma : %f, S0 : %f\n", C, sigma2, S0);
         C = C/(2*sigma2*S0);
         //Rprintf("Cvar : %f, %f\n", varC, varC_norm);
-        
-        REAL(Ival)[ci] = I;
-        REAL(Cval)[ci] = C;
-        REAL(IXval)[ci] = rand ? (I - EI)/sqrt(varI) : (I - EI)/sqrt(varI_norm);
-        REAL(CXval)[ci] = rand ? (C - 1)/sqrt(varC) : (C - 1)/sqrt(varC_norm);
+        R_Free(tmpa);
+#pragma omp critical
+        {
+            REAL(Ival)[ci] = I;
+            REAL(Cval)[ci] = C;
+            REAL(IXval)[ci] = rand ? (I - EI)/sqrt(varI) : (I - EI)/sqrt(varI_norm);
+            REAL(CXval)[ci] = rand ? (C - 1)/sqrt(varC) : (C - 1)/sqrt(varC_norm);
+        }
     }
 
-    R_Free(tmpa);
+
     M_cholmod_free_sparse(&A, &c);
     M_cholmod_free_sparse(&W, &c);
     
