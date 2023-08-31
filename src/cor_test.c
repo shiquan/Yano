@@ -595,7 +595,9 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
             }
         }
         N = j;
+
         Rprintf("N : %d\n", N);
+        if (N == 0) break;
     }
 
     for (int i = 0; i < N; ++i) {
