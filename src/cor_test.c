@@ -36,6 +36,9 @@ void progress(int p) {
 // # nocov end
 cholmod_common c;
 
+#define CACHE_PER_BATCH 10000
+#define MIN_HIT 1
+
 void shuffle_double_arr(double *a, const int n)
 {
     int i;
@@ -101,7 +104,6 @@ SEXP cor_test(SEXP _A, SEXP _B, SEXP _trans)
 
     int ci;
     for (ci = 0; ci < nc; ++ci) {
-
         if (ap[ci] == ap[ci+1]) {
             REAL(rval)[ci] = 0;
             continue;   
@@ -212,97 +214,136 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     SEXP Ival = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Pval = PROTECT(allocVector(REALSXP, N_feature));    
 
-    int *ap = (int*)A->p;
-    int *ai = (int*)A->i;
-    double *ax = (double*)A->x;
+    const int const *ap = (int*)A->p;
+    const int const *ai = (int*)A->i;
+    const double const *ax = (double*)A->x;
 
-    int *wp = (int*)W->p;
-    int *wi = (int*)W->i;
-    double *wx = (double*)W->x;
+    const int const *wp = (int*)W->p;
+    const int const *wi = (int*)W->i;
+    const double const *wx = (double*)W->x;
 
-    int **ris = NULL;
-    if (perm > 1) {
-        ris = R_Calloc(perm,int*);
-        int pi;
-        for (pi = 0; pi < perm; ++pi) {
-            ris[pi] = random_idx(N_cell);
-        }
-    }
+    int *hits = R_Calloc(N_feature, int);
+    
+    int *steps = R_Calloc(N_feature, int);
+    int N = N_feature;
 
-    int i;
-#pragma omp parallel for num_threads(n_thread)
-    for (i = 0; i < N_feature; ++i) {
-        if (ap[i] == ap[i+1]) {
-            REAL(Ival)[i] = 0;
-            REAL(Pval)[i] = 0;
-            continue;   
-        }
-        double *tmp = R_Calloc(N_cell, double);
-
-        int j;
-        double mn = 0,
-            sd = 0,
-            xix = 0,
-            xij = 0;
-
-        for (j = ap[i]; j < ap[i+1]; ++j) {
-            if (ISNAN(ax[j])) continue;
-            mn += ax[j];
-            tmp[ai[j]] = ax[j];
-        }
-        mn = mn/N_cell;
-
-        for (j = 0; j < N_cell; ++j) {
-            tmp[j] = tmp[j] - mn;
-            xix += pow(tmp[j], 2);
-        }
-
-        int k;
-        for (k = 0; k < N_cell; ++k) {
-            for (j = wp[k]; j < wp[k+1]; ++j) {
-                if (ISNAN(wx[j])) continue;
-                int cid = wi[j];
-                if (k == cid) continue; // i != j
-                xij += wx[j] * tmp[k] * tmp[cid];
-            }
-        }
-        double I = xij/xix;
-        double p = 0;
-        
+    int n_step = perm/CACHE_PER_BATCH+1;
+    
+    for (int i = 0; i < N; ++i) steps[i] = i;
+    
+    for (int step = 0; step < n_step; ++step) {
+        int **ris = NULL;
         if (perm > 1) {
-            double *Is = R_Calloc(perm, double);
-            xij = 0;
+            ris = R_Calloc(CACHE_PER_BATCH,int*);
             
-            int pi;
-            for (pi = 0; pi < perm; ++pi) {
-                shuffle(tmp, ris[pi], N_cell);
-                int k;
-                for (k = 0; k < N_cell; ++k) {
-                    for (j = wp[k]; j < wp[k+1]; ++j) {
-                        if (ISNAN(wx[j])) continue;
-                        int cid = wi[j];
-                        if (k == cid) continue; // i != j
-                        xij += wx[j] * tmp[k] * tmp[cid];
-                    }
+            for (int pi = 0; pi < CACHE_PER_BATCH; ++pi) {
+                ris[pi] = random_idx(N_cell);
+            }
+        }
+
+        int i;
+#pragma omp parallel for num_threads(n_thread)
+        for (i = 0; i < N; ++i) {
+            int idx = steps[i];
+            if (ap[idx] == ap[idx+1]) {
+                REAL(Ival)[idx] = 0;
+                REAL(Pval)[idx] = 0;
+                continue;
+            }
+            
+            double *tmp = R_Calloc(N_cell, double);
+            
+            int j;
+            double mn = 0,
+                sd = 0,
+                xix = 0,
+                xij = 0;
+            
+            for (j = ap[idx]; j < ap[idx+1]; ++j) {
+                if (ISNAN(ax[j])) continue;
+                mn += ax[j];
+                tmp[ai[j]] = ax[j];
+            }
+            mn = mn/N_cell;
+            
+            for (j = 0; j < N_cell; ++j) {
+                tmp[j] = tmp[j] - mn;
+                xix += pow(tmp[j], 2);
+            }
+            
+            int k;
+            for (k = 0; k < N_cell; ++k) {
+                for (j = wp[k]; j < wp[k+1]; ++j) {
+                    if (ISNAN(wx[j])) continue;
+                    int cid = wi[j];
+                    if (k == cid) continue; // i != j
+                    xij += wx[j] * tmp[k] * tmp[cid];
                 }
-                Is[pi] = xij/xix;
             }
-            for (k = 0; k < perm; ++k) {
-                //Rprintf("%f\t%f\n",e, es[k]);
-                if (Is[k]>=I) p+=1;
+            double I = xij/xix;
+            // double p = 0;
+            
+            if (perm > 1) {
+                double *Is = R_Calloc(CACHE_PER_BATCH, double);
+                xij = 0;
+                
+                int pi;
+                for (pi = 0; pi < CACHE_PER_BATCH; ++pi) {
+                    shuffle(tmp, ris[pi], N_cell);
+                    int k;
+                    for (k = 0; k < N_cell; ++k) {
+                        for (j = wp[k]; j < wp[k+1]; ++j) {
+                            if (ISNAN(wx[j])) continue;
+                            int cid = wi[j];
+                            if (k == cid) continue; // i != j
+                            xij += wx[j] * tmp[k] * tmp[cid];
+                        }
+                    }
+                    Is[pi] = xij/xix;
+                }
+                for (k = 0; k < CACHE_PER_BATCH; ++k) {
+                    //Rprintf("%f\t%f\n",e, es[k]);
+                    if (Is[k]>=I) hits[idx] += 1;
+                }
+                // p = p/(double)perm;
+                R_Free(Is);
             }
-            p = p/(double)perm;
-            R_Free(Is);
-        }
-        R_Free(tmp);
-        
+            R_Free(tmp);
+
 #pragma omp critical
-        {
-            REAL(Ival)[i] = I;
-            REAL(Pval)[i] = p;
+            if (step == 1) {            
+                REAL(Ival)[i] = I;
+                // REAL(Pval)[i] = p;
+            }
         }
+
+        if (perm > 1) {
+            int pi;
+            for (pi = 0; pi < CACHE_PER_BATCH; ++pi) R_Free(ris[pi]);
+            R_Free(ris);
+        }
+
+        int j = 0;
+        for (i = 0; i < N_feature; ++i) {
+            if (hits[i] > MIN_HIT) {
+                if (REAL(Pval)[i] == 0) {
+                    REAL(Pval)[i] == (double)hits[i]/((step+1)*CACHE_PER_BATCH);
+                }
+            } else {
+                steps[j++] = i;
+            }
+        }
+        N = j;
     }
 
+    for (int i = 0; i < N; ++i) {
+        int idx = steps[i];
+        REAL(Pval)[idx] == (double)hits[idx]/(n_step*CACHE_PER_BATCH);
+    }
+
+    R_Free(hits);
+    R_Free(steps);
+    
     if (tr) {
         M_cholmod_free_sparse(&A, &c);
     }
@@ -356,188 +397,218 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
     const int *const bp = (int*)B->p;
     const int *const bi = (int*)B->i;
     const double *const bx = (double*)B->x;
-
-    int **ris = NULL;
-
-    if (perm > 1) {
-        REprintf("Generate weight matrix idx ... ");
-        ris = R_Calloc(perm,int*);
-        int pi;
-        for (pi = 0; pi < perm; ++pi) {
-            ris[pi] = random_idx(N_cell);
-        }
-        REprintf("Finished.\n");
-    }
     
-    int i;
-
+    int *hits = R_Calloc(N_feature, int);
+    for (int i = 0; i < N_feature; ++i) hits[i] = 0;
+    
+    int n_step = perm/CACHE_PER_BATCH;
+    if (n_step < 1) n_step = 1;
+    
+    int *steps = R_Calloc(N_feature, int);
+    for (int i = 0; i < N_feature; ++i) steps[i] = i;
+    
+    int N = N_feature;
+    
+    for (int step = 0; step < n_step; ++step) {
+        int **ris = NULL;
+        if (perm > 1) {
+            REprintf("Generate weight matrix idx ... ");
+            ris = R_Calloc(CACHE_PER_BATCH,int*);
+            int pi;
+            for (pi = 0; pi < CACHE_PER_BATCH; ++pi) {
+                ris[pi] = random_idx(N_cell);
+            }
+            REprintf("Finished.\n");
+        }
+    
+        int i;
 #pragma omp parallel for num_threads(n_thread)
-    for (i = 0; i < N_feature; ++i) {
+        for (i = 0; i < N; ++i) {
+            int idx = steps[i];
+            if (ap[idx] == ap[idx+1] || bp[idx] == bp[idx+1]) {
+                REAL(LXval)[i] = 0;
+                REAL(LYval)[i] = 0;
+                REAL(Rval)[i] = 0;
+                REAL(Eval)[i] = 0;
+                REAL(Pval)[i] = 0;
+                continue;
+            }
 
-        double *tmpa = R_Calloc(N_cell, double);
-        double *tmpb = R_Calloc(N_cell, double);
-    
-        if (ap[i] == ap[i+1] || bp[i] == bp[i+1]) {
-            REAL(LXval)[i] = 0;
-            REAL(LYval)[i] = 0;
-            REAL(Rval)[i] = 0;
-            REAL(Eval)[i] = 0;
-            REAL(Pval)[i] = 0;
-            continue;
+            double *tmpa = R_Calloc(N_cell, double);
+            double *tmpb = R_Calloc(N_cell, double);
+
+            memset(tmpa, 0, sizeof(double)*N_cell);
+            memset(tmpb, 0, sizeof(double)*N_cell);
+            
+            int j;
+            double mna = 0,
+                mnb = 0;
+            
+            for (j = ap[idx]; j < ap[idx+1]; ++j) {
+                if (ISNAN(ax[j])) continue;
+                tmpa[ai[j]] = ax[j];
+                mna += ax[j];
+            }
+            mna = mna/N_cell;
+            
+            for (j = bp[idx]; j < bp[idx+1]; ++j) {
+                if (ISNAN(bx[j])) continue;
+                tmpb[bi[j]] = bx[j];
+                mnb += bx[j];
+            }
+            mnb = mnb/N_cell;
+
+            double *tmpa_s = R_Calloc(N_cell, double);
+            double *tmpb_s = R_Calloc(N_cell, double);
+            
+            smooth_W(tmpa, tmpa_s, N_cell, W);
+            smooth_W(tmpb, tmpb_s, N_cell, W);
+            
+            double mna_s = 0,
+                mnb_s = 0;
+            
+            for (j = 0; j < N_cell; ++j) {
+                mna_s += tmpa_s[j];
+                mnb_s += tmpb_s[j];
+            }
+            mna_s = mna_s/(double)N_cell;
+            mnb_s = mnb_s/(double)N_cell;
+            
+            double Lx1 = 0,
+                Lx2 = 0,
+                Ly1 = 0,
+                Ly2 = 0,
+                ra = 0,
+                rb1 = 0,
+                rb2 = 0;
+            
+            for (j = 0; j < N_cell; ++j) {
+                Lx1 += pow(tmpa_s[j]-mna,2);
+                Lx2 += pow(tmpa[j]-mna,2);
+                Ly1 += pow(tmpb_s[j]-mnb,2);
+                Ly2 += pow(tmpb[j]-mnb,2);
+                
+                tmpa_s[j] = tmpa_s[j] - mna_s;
+                tmpb_s[j] = tmpb_s[j] - mnb_s;
+                
+                ra += tmpa_s[j] * tmpb_s[j];
+                rb1 += pow(tmpa_s[j],2);
+                rb2 += pow(tmpb_s[j],2);
+            }
+            
+            rb1 = sqrt(rb1);
+            rb2 = sqrt(rb2);
+            
+            double Lx = Lx1/Lx2;
+            double Ly = Ly1/Ly2;
+            double r = ra/(rb1*rb2);
+            double e = sqrt(Lx) * (1-r);
+            
+            if (perm > 1) {
+                double *es = R_Calloc(CACHE_PER_BATCH, double);
+                int k;
+                for (k = 0; k < CACHE_PER_BATCH; ++k) {
+                    //shuffle_double_arr(tmpa, N_cell);
+                    shuffle(tmpa, ris[k], N_cell);
+                    //shuffle(tmpb, ris[k], N_cell);
+                    
+                    smooth_W(tmpa, tmpa_s, N_cell, W);
+                    //smooth_W(tmpb, tmpb_s, N_cell, W);
+                    
+                    mna_s = 0;
+                    //mnb_s = 0;
+                    
+                    for (j = 0; j < N_cell; ++j) {
+                        mna_s += tmpa_s[j];
+                        //mnb_s += tmpb_s[j];
+                    }
+                    mna_s = mna_s/(double)N_cell;
+                    //mnb_s = mnb_s/(double)N_cell;
+                    
+                    Lx1 = 0;
+                    //Ly1 = 0;
+                    ra = 0;
+                    rb1 = 0;
+                    //rb2 = 0;
+                    
+                    for (j = 0; j < N_cell; ++j) {
+                        Lx1 += pow(tmpa_s[j]-mna,2);
+                        // Ly1 += pow(tmpb_s[j]-mnb,2);
+                        tmpa_s[j] = tmpa_s[j] - mna_s;
+                        // tmpb_s[j] = tmpb_s[j] - mnb_s;
+                        
+                        ra += tmpa_s[j] * tmpb_s[j];
+                        rb1 += pow(tmpa_s[j],2);
+                        //rb2 += pow(tmpb_s[j],2);
+                    }
+                    
+                    rb1 = sqrt(rb1);
+                    // rb2 = sqrt(rb2);
+                    
+                    Lx = Lx1/Lx2;
+                    //Ly = Ly1/Ly2;
+                    
+                    r = ra/(rb1*rb2);
+                    //es[k] = sqrt(Lx) * sqrt(Ly) *(1-r);
+                    es[k] = sqrt(Lx) *(1-r);
+                    /* Rprintf("Lx1 : %f %f, Lx2 : %f %f, ra : %f %f, r : %f %f, mn : %f %f\n", */
+                    /*         Lx1, Lx1_p, Lx2, Lx2_p, ra, ra_p, r , r_p, mna, mna_p); */
+                }
+                
+                for (k = 0; k < CACHE_PER_BATCH; ++k) {
+                    //Rprintf("%f\t%f\n",e, es[k]);
+                    if (es[k]>=e) hits[idx] +=1;
+                }
+                R_Free(es);
+            }
+
+            R_Free(tmpa_s);
+            R_Free(tmpb_s);
+            R_Free(tmpa);
+            R_Free(tmpb);
+            
+#pragma omp critical
+            if (step == 0) {
+                REAL(LXval)[i] = Lx;
+                REAL(LYval)[i] = Ly;
+                REAL(Rval)[i] = r;
+                REAL(Eval)[i] = e;
+                // REAL(Pval)[i] = p;
+            }
         }
-        
-        memset(tmpa, 0, sizeof(double)*N_cell);
-        memset(tmpb, 0, sizeof(double)*N_cell);
-        
-        int j;
-        double mna = 0,
-            mnb = 0;
-        
-        for (j = ap[i]; j < ap[i+1]; ++j) {
-            if (ISNAN(ax[j])) continue;
-            tmpa[ai[j]] = ax[j];
-            mna += ax[j];
-        }
-        mna = mna/N_cell;
-
-        for (j = bp[i]; j < bp[i+1]; ++j) {
-            if (ISNAN(bx[j])) continue;
-            tmpb[bi[j]] = bx[j];
-            mnb += bx[j];
-        }
-        mnb = mnb/N_cell;
-
-        double *tmpa_s = R_Calloc(N_cell, double);
-        double *tmpb_s = R_Calloc(N_cell, double);
-
-        smooth_W(tmpa, tmpa_s, N_cell, W);
-        smooth_W(tmpb, tmpb_s, N_cell, W);
-        
-        double mna_s = 0,
-            mnb_s = 0;
-
-        for (j = 0; j < N_cell; ++j) {
-            mna_s += tmpa_s[j];
-            mnb_s += tmpb_s[j];
-        }
-        mna_s = mna_s/(double)N_cell;
-        mnb_s = mnb_s/(double)N_cell;
-
-        double Lx1 = 0,
-            Lx2 = 0,
-            Ly1 = 0,
-            Ly2 = 0,
-            ra = 0,
-            rb1 = 0,
-            rb2 = 0;
-        
-        for (j = 0; j < N_cell; ++j) {
-            Lx1 += pow(tmpa_s[j]-mna,2);
-            Lx2 += pow(tmpa[j]-mna,2);
-            Ly1 += pow(tmpb_s[j]-mnb,2);
-            Ly2 += pow(tmpb[j]-mnb,2);
-
-            tmpa_s[j] = tmpa_s[j] - mna_s;
-            tmpb_s[j] = tmpb_s[j] - mnb_s;
-
-            ra += tmpa_s[j] * tmpb_s[j];
-            rb1 += pow(tmpa_s[j],2);
-            rb2 += pow(tmpb_s[j],2);
-        }
-
-        rb1 = sqrt(rb1);
-        rb2 = sqrt(rb2);
-        
-        double Lx = Lx1/Lx2;
-        double Ly = Ly1/Ly2;
-        double r = ra/(rb1*rb2);
-        //double e = sqrt(Lx) * sqrt(Ly) * (1-r);
-        double e = sqrt(Lx) * (1-r);
-        double p = 0;
         
         if (perm > 1) {
-            double *es = R_Calloc(perm, double);
-            int k;
-            for (k = 0; k < perm; ++k) {
-                //shuffle_double_arr(tmpa, N_cell);
-                shuffle(tmpa, ris[k], N_cell);
-                //shuffle(tmpb, ris[k], N_cell);
-                
-                smooth_W(tmpa, tmpa_s, N_cell, W);
-                //smooth_W(tmpb, tmpb_s, N_cell, W);
-                                
-                mna_s = 0;
-                //mnb_s = 0;
-                
-                for (j = 0; j < N_cell; ++j) {
-                    mna_s += tmpa_s[j];
-                    //mnb_s += tmpb_s[j];
-                }
-                mna_s = mna_s/(double)N_cell;
-                //mnb_s = mnb_s/(double)N_cell;
-
-                Lx1 = 0;
-                //Ly1 = 0;
-                ra = 0;
-                rb1 = 0;
-                //rb2 = 0;
-                
-                for (j = 0; j < N_cell; ++j) {
-                    Lx1 += pow(tmpa_s[j]-mna,2);
-                    // Ly1 += pow(tmpb_s[j]-mnb,2);
-                    tmpa_s[j] = tmpa_s[j] - mna_s;
-                    // tmpb_s[j] = tmpb_s[j] - mnb_s;
-                    
-                    ra += tmpa_s[j] * tmpb_s[j];
-                    rb1 += pow(tmpa_s[j],2);
-                    //rb2 += pow(tmpb_s[j],2);
-                }
-
-                rb1 = sqrt(rb1);
-                // rb2 = sqrt(rb2);
-                
-                Lx = Lx1/Lx2;
-                //Ly = Ly1/Ly2;
-                
-                r = ra/(rb1*rb2);
-                //es[k] = sqrt(Lx) * sqrt(Ly) *(1-r);
-                es[k] = sqrt(Lx) *(1-r);
-                /* Rprintf("Lx1 : %f %f, Lx2 : %f %f, ra : %f %f, r : %f %f, mn : %f %f\n", */
-                /*         Lx1, Lx1_p, Lx2, Lx2_p, ra, ra_p, r , r_p, mna, mna_p); */
-            }
-            p = 0;
-            for (k = 0; k < perm; ++k) {
-                //Rprintf("%f\t%f\n",e, es[k]);
-                if (es[k]>=e) p+=1;
-            }
-            p = p/(double)perm;
-            R_Free(es);
+            int pi;
+            for (pi = 0; pi < CACHE_PER_BATCH; ++pi) R_Free(ris[pi]);
+            R_Free(ris);
         }
 
-        R_Free(tmpa_s);
-        R_Free(tmpb_s);
-        R_Free(tmpa);
-        R_Free(tmpb);
-
-#pragma omp critical
-        {
-            REAL(LXval)[i] = Lx;
-            REAL(LYval)[i] = Ly;
-            REAL(Rval)[i] = r;
-            REAL(Eval)[i] = e;
-            REAL(Pval)[i] = p;
+        int j = 0;
+        for (i = 0; i < N_feature; ++i) {
+            if (hits[i] == -1) continue;
+            
+            if (hits[i] > MIN_HIT) {
+                REAL(Pval)[i] == (double)hits[i];///((step+1)*CACHE_PER_BATCH);
+                hits[i] = -1;
+            } else {
+                steps[j++] = i;
+            }
         }
+        N = j;
+        Rprintf("N : %d\n", N);
     }
 
+    for (int i = 0; i < N; ++i) {
+        int idx = steps[i];
+        REAL(Pval)[idx] == (double)hits[idx];///(n_step*CACHE_PER_BATCH);
+    }
+    R_Free(hits);
+    R_Free(steps);
+    
     M_cholmod_free_sparse(&A, &c);
     M_cholmod_free_sparse(&B, &c);
     M_cholmod_free_sparse(&W, &c);
 
-    if (perm > 1) {
-        int pi;
-        for (pi = 0; pi < perm; ++pi) R_Free(ris[pi]);
-        R_Free(ris);
-    }
     SEXP ta = PROTECT(allocVector(VECSXP, 5));
     SET_VECTOR_ELT(ta, 0, LXval);
     SET_VECTOR_ELT(ta, 1, LYval);
