@@ -194,8 +194,8 @@ RunAutoCorr <- function(object = NULL,
   message(paste0("Run autocorrelation test for ", length(features), " features."))
   moransi.vals <- .Call("autocorrelation_test", x0, W, TRUE, threads);
 
-  message("Run permutation test.")
-  moransi.vals2 <-  .Call("moransi_mc_test", x0, W, TRUE, perm, threads);
+  #message("Run permutation test.")
+  #moransi.vals2 <-  .Call("moransi_mc_test", x0, W, TRUE, perm, threads);
 
   ## message(paste0("Run Geary's C for ", length(features), " features."))
   ## gearysc.vals <- .Call("GearysC_test", x0, W);
@@ -203,25 +203,25 @@ RunAutoCorr <- function(object = NULL,
   Cvals <- moransi.vals[[2]]
   IZvals <- moransi.vals[[3]]  
   CZvals <- moransi.vals[[4]]
-  Ivals2 <- moransi.vals2[[1]]
-  Pvals <- moransi.vals2[[2]]
+  #Ivals2 <- moransi.vals2[[1]]
+  #Pvals <- moransi.vals2[[2]]
   names(Ivals) <- features
   names(Cvals) <- features
   names(IZvals) <- features
   names(CZvals) <- features
-  names(Ivals2) <- features
-  names(Pvals) <- features
+  #names(Ivals2) <- features
+  #names(Pvals) <- features
   ## names(gearysc.vals) <- features
 
   object[[assay]]@meta.features[['MoransI']] <- Ivals[rownames(object)]
   object[[assay]]@meta.features[['MoransI.Z']] <- IZvals[rownames(object)]
   object[[assay]]@meta.features[['GearyC']] <- Cvals[rownames(object)]
   object[[assay]]@meta.features[['GearyC.Z']] <- CZvals[rownames(object)]
-  object[[assay]]@meta.features[['MoransI.2']] <- Ivals2[rownames(object)]
-  object[[assay]]@meta.features[['MoransI.pval']] <- Pvals[rownames(object)]
+  #object[[assay]]@meta.features[['MoransI.2']] <- Ivals2[rownames(object)]
+  #object[[assay]]@meta.features[['MoransI.pval']] <- Pvals[rownames(object)]
   rm(W)
   rm(moransi.vals)
-  rm(moransi.vals2)
+  #rm(moransi.vals2)
   ## rm(gearysc.vals)
   gc()
   
@@ -494,7 +494,8 @@ RunBlockCorr <- function(object = NULL,
                          kernel.method = "average",
                          self.weight = 1,
                          #keep.matrix = FALSE,
-                         perm=100,
+                         perm.test = FALSE,
+                         perm=1000,
                          threads = 1,
                          verbose = TRUE
                          )
@@ -643,8 +644,12 @@ RunBlockCorr <- function(object = NULL,
   gc()
   message("Smooth data..")
   rownames(y) <- feature.names
-  
-  ta <- .Call("E_test", x, y, W, perm, threads);
+
+  if (isTRUE(perm.test)) {
+    ta <- .Call("E_test", x, y, W, perm, threads);
+  } else {
+    ta <- .Call("E_test", x, y, W, 0, threads);
+  }
  
   gc()
 
@@ -652,34 +657,25 @@ RunBlockCorr <- function(object = NULL,
   Ly <- ta[[2]]
   r <- ta[[3]]
   e <- ta[[4]]
-  pval <- ta[[5]]
+
   names(Lx) <- feature.names
   names(Ly) <- feature.names
   names(r) <- feature.names
   names(e) <- feature.names
-  names(pval) <- feature.names
 
-  sel.features <- feature.names
-  for (i in c(1:5)) {
-    sel <- sel.features[which(pval==0)]
-    rnd <- perm*(2^i)
-    message(paste0("Round ", i, " .. ", length(sel), " features .. ", rnd, " permutations.."))
-    
-    if (length(sel) > 0) {
-      x <- x[sel,]
-      y <- y[sel,]
-      ta <- .Call("E_test", x, y, W, rnd, threads);
-      sel.pval <- ta[[5]]
-      pval[sel] <- sel.pval
-    }
-  }
   tab <- object[[assay]]@meta.features
   tab[[paste0(name, ".e.coef")]] <- e[rownames(object)]
   tab[[paste0(name, ".r")]] <- r[rownames(object)]
   tab[[paste0(name, ".Lx")]] <- Lx[rownames(object)]
   tab[[paste0(name, ".Ly")]] <- Ly[rownames(object)]
   tab[[paste0(name, ".fc")]] <- fc[rownames(object)]
-  tab[[paste0(name, ".pval")]] <- pval[rownames(object)]
+
+  if (perm.test) {
+    pval <- ta[[5]]
+    names(pval) <- feature.names
+    tab[[paste0(name, ".pval")]] <- pval[rownames(object)]
+  }
+  
   object[[assay]]@meta.features <- tab
 
   rm(ta)
