@@ -12,8 +12,7 @@ void progress(int p) {
 
     count++;
 
-    int r = count*100/p;
-    r/=2;
+    int r = count*50;
     
     if (displayed==-1) {
         if (r>50) return;
@@ -222,20 +221,17 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     const int const *wi = (int*)W->i;
     const double const *wx = (double*)W->x;
 
-    int *hits = R_Calloc(N_feature, int);
-    
+    int *hits = R_Calloc(N_feature, int);    
     int *steps = R_Calloc(N_feature, int);
     int N = N_feature;
-
-    int n_step = perm/CACHE_PER_BATCH+1;
-    
-    for (int i = 0; i < N; ++i) steps[i] = i;
+    for (int i = 0; i < N; ++i) steps[i] = i;    
+    int n_step = perm/CACHE_PER_BATCH;
+    if (n_step < 1) n_step = 1;
     
     for (int step = 0; step < n_step; ++step) {
         int **ris = NULL;
         if (perm > 1) {
             ris = R_Calloc(CACHE_PER_BATCH,int*);
-            
             for (int pi = 0; pi < CACHE_PER_BATCH; ++pi) {
                 ris[pi] = random_idx(N_cell);
             }
@@ -252,7 +248,6 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
             }
             
             double *tmp = R_Calloc(N_cell, double);
-            
             int j;
             double mn = 0,
                 sd = 0,
@@ -271,8 +266,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
                 xix += pow(tmp[j], 2);
             }
             
-            int k;
-            for (k = 0; k < N_cell; ++k) {
+            for (int k = 0; k < N_cell; ++k) {
                 for (j = wp[k]; j < wp[k+1]; ++j) {
                     if (ISNAN(wx[j])) continue;
                     int cid = wi[j];
@@ -287,11 +281,9 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
                 double *Is = R_Calloc(CACHE_PER_BATCH, double);
                 xij = 0;
                 
-                int pi;
-                for (pi = 0; pi < CACHE_PER_BATCH; ++pi) {
+                for (int pi = 0; pi < CACHE_PER_BATCH; ++pi) {
                     shuffle(tmp, ris[pi], N_cell);
-                    int k;
-                    for (k = 0; k < N_cell; ++k) {
+                    for (int k = 0; k < N_cell; ++k) {
                         for (j = wp[k]; j < wp[k+1]; ++j) {
                             if (ISNAN(wx[j])) continue;
                             int cid = wi[j];
@@ -301,7 +293,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
                     }
                     Is[pi] = xij/xix;
                 }
-                for (k = 0; k < CACHE_PER_BATCH; ++k) {
+                for (int k = 0; k < CACHE_PER_BATCH; ++k) {
                     //Rprintf("%f\t%f\n",e, es[k]);
                     if (Is[k]>=I) hits[idx] += 1;
                 }
@@ -318,17 +310,15 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
         }
 
         if (perm > 1) {
-            int pi;
-            for (pi = 0; pi < CACHE_PER_BATCH; ++pi) R_Free(ris[pi]);
+            for (int pi = 0; pi < CACHE_PER_BATCH; ++pi) R_Free(ris[pi]);
             R_Free(ris);
         }
 
         int j = 0;
         for (i = 0; i < N_feature; ++i) {
+            if (hits[i] == -1) continue;
             if (hits[i] > MIN_HIT) {
-                if (REAL(Pval)[i] == 0) {
-                    REAL(Pval)[i] == (double)hits[i]/((step+1)*CACHE_PER_BATCH);
-                }
+                REAL(Pval)[i] == (double)hits[i]/((step+1)*CACHE_PER_BATCH);
             } else {
                 steps[j++] = i;
             }
@@ -340,7 +330,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
         int idx = steps[i];
         REAL(Pval)[idx] == (double)hits[idx]/(n_step*CACHE_PER_BATCH);
     }
-
+    
     R_Free(hits);
     R_Free(steps);
     
@@ -361,16 +351,14 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
     CHM_SP W = AS_CHM_SP__(_W);
-    int perm = asInteger(_permut);
-    int n_thread = asInteger(_threads);
+    const int perm = asInteger(_permut);
+    const int n_thread = asInteger(_threads);
     
     if (A->stype) return mkString("A cannot be symmetric");
     if (B->stype) return mkString("B cannot be symmetric");
     if (W->stype) return mkString("W cannot be symmetric");
     
     double one[] = {1, 0};
-
-    R_CheckStack();
 
     if (A->ncol != B->ncol || A->nrow != B->nrow) return mkString("A and B do not match");
     if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
@@ -380,15 +368,16 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
     A = M_cholmod_transpose(A, (int)A->xtype, &c);
     B = M_cholmod_transpose(B, (int)B->xtype, &c);
     W = M_cholmod_transpose(W, (int)W->xtype, &c);
-    
+
+    R_CheckStack();
     const int N_cell = A->nrow;
     const int N_feature = A->ncol;
 
     SEXP LXval = PROTECT(allocVector(REALSXP, N_feature));
     SEXP LYval = PROTECT(allocVector(REALSXP, N_feature));
-    SEXP Rval = PROTECT(allocVector(REALSXP, N_feature));
-    SEXP Eval = PROTECT(allocVector(REALSXP, N_feature));
-    SEXP Pval = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Eval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Pval  = PROTECT(allocVector(REALSXP, N_feature));
     
     const int * const ap = (int*)A->p;
     const int * const ai = (int*)A->i;
@@ -408,17 +397,14 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
     for (int i = 0; i < N_feature; ++i) steps[i] = i;
     
     int N = N_feature;
-    
     for (int step = 0; step < n_step; ++step) {
+        //progress(step*100/n_step);
         int **ris = NULL;
         if (perm > 1) {
-            REprintf("Generate weight matrix idx ... ");
             ris = R_Calloc(CACHE_PER_BATCH,int*);
-            int pi;
-            for (pi = 0; pi < CACHE_PER_BATCH; ++pi) {
+            for (int pi = 0; pi < CACHE_PER_BATCH; ++pi) {
                 ris[pi] = random_idx(N_cell);
             }
-            REprintf("Finished.\n");
         }
     
         int i;
@@ -428,22 +414,19 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
             if (ap[idx] == ap[idx+1] || bp[idx] == bp[idx+1]) {
                 REAL(LXval)[i] = 0;
                 REAL(LYval)[i] = 0;
-                REAL(Rval)[i] = 0;
-                REAL(Eval)[i] = 0;
-                REAL(Pval)[i] = 0;
+                REAL(Rval)[i]  = 0;
+                REAL(Eval)[i]  = 0;
+                // REAL(Pval)[i] = 0;
                 continue;
             }
 
             double *tmpa = R_Calloc(N_cell, double);
             double *tmpb = R_Calloc(N_cell, double);
-
             memset(tmpa, 0, sizeof(double)*N_cell);
             memset(tmpb, 0, sizeof(double)*N_cell);
-            
-            int j;
             double mna = 0,
                 mnb = 0;
-            
+            int j;
             for (j = ap[idx]; j < ap[idx+1]; ++j) {
                 if (ISNAN(ax[j])) continue;
                 tmpa[ai[j]] = ax[j];
@@ -460,13 +443,10 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
 
             double *tmpa_s = R_Calloc(N_cell, double);
             double *tmpb_s = R_Calloc(N_cell, double);
-            
             smooth_W(tmpa, tmpa_s, N_cell, W);
             smooth_W(tmpb, tmpb_s, N_cell, W);
-            
             double mna_s = 0,
                 mnb_s = 0;
-            
             for (j = 0; j < N_cell; ++j) {
                 mna_s += tmpa_s[j];
                 mnb_s += tmpb_s[j];
@@ -478,27 +458,24 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
                 Lx2 = 0,
                 Ly1 = 0,
                 Ly2 = 0,
-                ra = 0,
+                ra  = 0,
                 rb1 = 0,
                 rb2 = 0;
-            
             for (j = 0; j < N_cell; ++j) {
                 Lx1 += pow(tmpa_s[j]-mna,2);
                 Lx2 += pow(tmpa[j]-mna,2);
                 Ly1 += pow(tmpb_s[j]-mnb,2);
                 Ly2 += pow(tmpb[j]-mnb,2);
-                
                 tmpa_s[j] = tmpa_s[j] - mna_s;
                 tmpb_s[j] = tmpb_s[j] - mnb_s;
-                
-                ra += tmpa_s[j] * tmpb_s[j];
+                ra  += tmpa_s[j] * tmpb_s[j];
                 rb1 += pow(tmpa_s[j],2);
                 rb2 += pow(tmpb_s[j],2);
             }
             
             rb1 = sqrt(rb1);
             rb2 = sqrt(rb2);
-            
+
             double Lx = Lx1/Lx2;
             double Ly = Ly1/Ly2;
             double r = ra/(rb1*rb2);
@@ -508,23 +485,18 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
                 double *es = R_Calloc(CACHE_PER_BATCH, double);
                 int k;
                 for (k = 0; k < CACHE_PER_BATCH; ++k) {
-                    //shuffle_double_arr(tmpa, N_cell);
                     shuffle(tmpa, ris[k], N_cell);
-                    //shuffle(tmpb, ris[k], N_cell);
-                    
+                    //shuffle(tmpb, ris[k], N_cell);                    
                     smooth_W(tmpa, tmpa_s, N_cell, W);
                     //smooth_W(tmpb, tmpb_s, N_cell, W);
-                    
                     mna_s = 0;
                     //mnb_s = 0;
-                    
                     for (j = 0; j < N_cell; ++j) {
                         mna_s += tmpa_s[j];
                         //mnb_s += tmpb_s[j];
                     }
                     mna_s = mna_s/(double)N_cell;
                     //mnb_s = mnb_s/(double)N_cell;
-                    
                     Lx1 = 0;
                     //Ly1 = 0;
                     ra = 0;
@@ -536,29 +508,24 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
                         // Ly1 += pow(tmpb_s[j]-mnb,2);
                         tmpa_s[j] = tmpa_s[j] - mna_s;
                         // tmpb_s[j] = tmpb_s[j] - mnb_s;
-                        
                         ra += tmpa_s[j] * tmpb_s[j];
                         rb1 += pow(tmpa_s[j],2);
                         //rb2 += pow(tmpb_s[j],2);
                     }
-                    
                     rb1 = sqrt(rb1);
                     // rb2 = sqrt(rb2);
-                    
                     Lx = Lx1/Lx2;
                     //Ly = Ly1/Ly2;
-                    
                     r = ra/(rb1*rb2);
                     //es[k] = sqrt(Lx) * sqrt(Ly) *(1-r);
                     es[k] = sqrt(Lx) *(1-r);
                     /* Rprintf("Lx1 : %f %f, Lx2 : %f %f, ra : %f %f, r : %f %f, mn : %f %f\n", */
                     /*         Lx1, Lx1_p, Lx2, Lx2_p, ra, ra_p, r , r_p, mna, mna_p); */
                 }
-                
                 for (k = 0; k < CACHE_PER_BATCH; ++k) {
-                    //Rprintf("%f\t%f\n",e, es[k]);
                     if (es[k]>=e) hits[idx] +=1;
                 }
+                
                 R_Free(es);
             }
 
@@ -571,24 +538,23 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
             if (step == 0) {
                 REAL(LXval)[i] = Lx;
                 REAL(LYval)[i] = Ly;
-                REAL(Rval)[i] = r;
-                REAL(Eval)[i] = e;
+                REAL(Rval)[i]  = r;
+                REAL(Eval)[i]  = e;
                 // REAL(Pval)[i] = p;
             }
+            //Rprintf("%d, %d\n", idx, hits[idx]);
         }
         
         if (perm > 1) {
-            int pi;
-            for (pi = 0; pi < CACHE_PER_BATCH; ++pi) R_Free(ris[pi]);
+            for (int pi = 0; pi < CACHE_PER_BATCH; ++pi) R_Free(ris[pi]);
             R_Free(ris);
         }
 
         int j = 0;
         for (i = 0; i < N_feature; ++i) {
             if (hits[i] == -1) continue;
-            
             if (hits[i] > MIN_HIT) {
-                REAL(Pval)[i] == (double)hits[i];///((step+1)*CACHE_PER_BATCH);
+                REAL(Pval)[i] = (double)hits[i]/((step+1)*CACHE_PER_BATCH);
                 hits[i] = -1;
             } else {
                 steps[j++] = i;
@@ -596,13 +562,13 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
         }
         N = j;
 
-        Rprintf("N : %d\n", N);
+        //Rprintf("N : %d\n", N);
         if (N == 0) break;
     }
 
     for (int i = 0; i < N; ++i) {
         int idx = steps[i];
-        REAL(Pval)[idx] == (double)hits[idx];///(n_step*CACHE_PER_BATCH);
+        REAL(Pval)[idx] = (double)hits[idx]/(n_step*CACHE_PER_BATCH);
     }
     R_Free(hits);
     R_Free(steps);
@@ -624,17 +590,16 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
 double *sp_colsums(CHM_SP A, Rboolean mn)
 {
     double *cs = R_Calloc(A->ncol, double);
-    int *ap = (int*)A->p;
-    int *ai = (int*)A->i;
-    double *ax = (double*)A->x;
-    int i;
-    for (i = 0; i < A->ncol; ++i) {
+    const int *const ap = (int*)A->p;
+    const int *const ai = (int*)A->i;
+    const double *const ax = (double*)A->x;
+
+    for (int i = 0; i < A->ncol; ++i) {
         if (ap[i] == ap[i+1]) {
             cs[i] = 0;
             continue;
         }
-        int j;
-        for (j = ap[i]; j < ap[i+1]; ++j) {
+        for (int j = ap[i]; j < ap[i+1]; ++j) {
             if (ISNAN(ax[i])) continue;
             cs[i] += ax[j];
         }
@@ -690,13 +655,13 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     SEXP IXval = PROTECT(allocVector(REALSXP, nc));
     SEXP CXval = PROTECT(allocVector(REALSXP, nc));    
     
-    int *ap = (int*)A->p;
-    int *ai = (int*)A->i;
-    double *ax = (double*)A->x;
-
-    int *bp = (int*)W->p;
-    int *bi = (int*)W->i;
-    double *bx = (double*)W->x;
+    const int *const ap = (int*)A->p;
+    const int *const ai = (int*)A->i;
+    const double *const ax = (double*)A->x;
+    
+    const int *const bp = (int*)W->p;
+    const int *const bi = (int*)W->i;
+    const double *const bx = (double*)W->x;
 
     double S0 = 0,
         S1 = 0,
@@ -728,8 +693,8 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     R_Free(rs);    
     M_cholmod_free_sparse(&WWt, &c);
 
-    double varI_norm = (NN*S1-N*S2+3*S02)/(S02*(NN-1)) - EI2;
-    double varC_norm = ((2*S1+S2)*N1 - 4 * S02)/(2*(N+1)*S02);
+    const double varI_norm = (NN*S1-N*S2+3*S02)/(S02*(NN-1)) - EI2;
+    const double varC_norm = ((2*S1+S2)*N1 - 4 * S02)/(2*(N+1)*S02);
 
     int ci;
 #pragma omp parallel for num_threads(n_thread)
@@ -767,8 +732,7 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
             tmpa[ai[j]] = ax[j];
         }
         
-        // for (j = 0; j < N; ++j) tmpa[j] = tmpa[j] -mn;
-        
+        // for (j = 0; j < N; ++j) tmpa[j] = tmpa[j] -mn;        
         for (j = 0; j < N; ++j) { // for cells
             xix += pow(tmpa[j]-mn,2);
             m4 += pow(tmpa[j]-mn, 4);
@@ -797,8 +761,7 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
             varC = varC/(N*N2*N3*S02);
         }
         
-        int i;
-        for (i = 0; i < N; ++i) {
+        for (int i = 0; i < N; ++i) {
             for (j = bp[i]; j < bp[i+1]; ++j) {
                 if (ISNAN(bx[j])) continue;
                 int cid = bi[j];
