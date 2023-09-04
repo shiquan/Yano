@@ -489,12 +489,13 @@ RunBlockCorr <- function(object = NULL,
                          weights = NULL,
                          weights.scaled = FALSE,
                          reduction = "pca",
+                         spatial = FALSE,
                          dims = NULL,
                          k.nn = 5,
                          kernel.method = "average",
                          self.weight = 1,
                          #keep.matrix = FALSE,
-                         perm.test = FALSE,
+                         #perm.test = FALSE,
                          perm=1000,
                          threads = 1,
                          verbose = TRUE
@@ -522,6 +523,7 @@ RunBlockCorr <- function(object = NULL,
                     kernel.method = kernel.method,
                     cells = cells,
                     self.weight = self.weight,
+                    spatial=spatial,
                     scale=TRUE)
                    
   } else {
@@ -645,36 +647,31 @@ RunBlockCorr <- function(object = NULL,
   message("Smooth data..")
   rownames(y) <- feature.names
 
-  if (isTRUE(perm.test)) {
-    ta <- .Call("E_test", x, y, W, perm, threads);
-  } else {
-    ta <- .Call("E_test", x, y, W, 0, threads);
-  }
- 
-  gc()
-
+  ta <- .Call("E_test", x, y, W, perm, threads);
+  
   Lx <- ta[[1]]
   Ly <- ta[[2]]
   r <- ta[[3]]
   e <- ta[[4]]
+  tval <- ta[[5]]
 
+  
   names(Lx) <- feature.names
   names(Ly) <- feature.names
   names(r) <- feature.names
   names(e) <- feature.names
-
+  
+  pval <- pt(tval, df = perm - 1, lower.tail = FALSE, log.p = TRUE)
+  names(pval) <- feature.names
+  
   tab <- object[[assay]]@meta.features
   tab[[paste0(name, ".e.coef")]] <- e[rownames(object)]
   tab[[paste0(name, ".r")]] <- r[rownames(object)]
   tab[[paste0(name, ".Lx")]] <- Lx[rownames(object)]
   tab[[paste0(name, ".Ly")]] <- Ly[rownames(object)]
   tab[[paste0(name, ".fc")]] <- fc[rownames(object)]
+  tab[[paste0(name, ".pval")]] <- -1*pval[rownames(object)]
 
-  if (perm.test) {
-    pval <- ta[[5]]
-    names(pval) <- feature.names
-    tab[[paste0(name, ".pval")]] <- pval[rownames(object)]
-  }
   
   object[[assay]]@meta.features <- tab
 
