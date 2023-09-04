@@ -377,6 +377,196 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
     SEXP LYval = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Eval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
+    
+    const int * const ap = (int*)A->p;
+    const int * const ai = (int*)A->i;
+    const double * const ax = (double*)A->x;
+
+    const int *const bp = (int*)B->p;
+    const int *const bi = (int*)B->i;
+    const double *const bx = (double*)B->x;
+    
+    int **ris = NULL;
+    ris = R_Calloc(perm,int*);
+    for (int pi = 0; pi < perm; ++pi) {
+        ris[pi] = random_idx(N_cell);
+    }
+    
+    int idx;
+#pragma omp parallel for num_threads(n_thread)
+    for (idx = 0; idx < N_feature; ++idx) {
+        if (ap[idx] == ap[idx+1] || bp[idx] == bp[idx+1]) {
+            REAL(LXval)[idx] = 0;
+            REAL(LYval)[idx] = 0;
+            REAL(Rval)[idx]  = 0;
+            REAL(Eval)[idx]  = 0;
+            REAL(Tval)[idx]  = 0;
+            continue;
+        }
+        
+        double *tmpa = R_Calloc(N_cell, double);
+        double *tmpb = R_Calloc(N_cell, double);
+        memset(tmpa, 0, sizeof(double)*N_cell);
+        memset(tmpb, 0, sizeof(double)*N_cell);
+        double mna = 0,
+            mnb = 0;
+        int j;
+        for (j = ap[idx]; j < ap[idx+1]; ++j) {
+            if (ISNAN(ax[j])) continue;
+            tmpa[ai[j]] = ax[j];
+            mna += ax[j];
+        }
+        mna = mna/N_cell;
+        
+        for (j = bp[idx]; j < bp[idx+1]; ++j) {
+            if (ISNAN(bx[j])) continue;
+            tmpb[bi[j]] = bx[j];
+            mnb += bx[j];
+        }
+        mnb = mnb/N_cell;
+
+        double *tmpa_s = R_Calloc(N_cell, double);
+        double *tmpb_s = R_Calloc(N_cell, double);
+        smooth_W(tmpa, tmpa_s, N_cell, W);
+        smooth_W(tmpb, tmpb_s, N_cell, W);
+        double mna_s = 0,
+            mnb_s = 0;
+        for (j = 0; j < N_cell; ++j) {
+            mna_s += tmpa_s[j];
+            mnb_s += tmpb_s[j];
+        }
+        mna_s = mna_s/(double)N_cell;
+        mnb_s = mnb_s/(double)N_cell;
+        
+        double Lx1 = 0,
+            Lx2 = 0,
+            Ly1 = 0,
+            Ly2 = 0,
+            ra  = 0,
+            rb1 = 0,
+            rb2 = 0;
+        for (j = 0; j < N_cell; ++j) {
+            Lx1 += pow(tmpa_s[j]-mna,2);
+            Lx2 += pow(tmpa[j]-mna,2);
+            Ly1 += pow(tmpb_s[j]-mnb,2);
+            Ly2 += pow(tmpb[j]-mnb,2);
+            tmpa_s[j] = tmpa_s[j] - mna_s;
+            tmpb_s[j] = tmpb_s[j] - mnb_s;
+            ra  += tmpa_s[j] * tmpb_s[j];
+            rb1 += pow(tmpa_s[j],2);
+            rb2 += pow(tmpb_s[j],2);
+        }
+        
+        rb1 = sqrt(rb1);
+        rb2 = sqrt(rb2);
+        
+        double Lx = Lx1/Lx2;
+        double Ly = Ly1/Ly2;
+        double r = ra/(rb1*rb2);
+        double e = sqrt(Lx) * (1-r);
+        // mean, var
+        double mean = 0,
+            var = 0;
+        
+        double *es = R_Calloc(perm, double);
+        int k;
+        for (k = 0; k < perm; ++k) {
+            shuffle(tmpa, ris[k], N_cell);
+            smooth_W(tmpa, tmpa_s, N_cell, W);
+            mna_s = 0;
+            for (j = 0; j < N_cell; ++j) {
+                mna_s += tmpa_s[j];
+            }
+            mna_s = mna_s/(double)N_cell;
+            Lx1 = 0;
+            ra = 0;
+            rb1 = 0;
+            for (j = 0; j < N_cell; ++j) {
+                Lx1 += pow(tmpa_s[j]-mna,2);
+                tmpa_s[j] = tmpa_s[j] - mna_s;
+                ra += tmpa_s[j] * tmpb_s[j];
+                rb1 += pow(tmpa_s[j],2);
+            }
+            rb1 = sqrt(rb1);
+            Lx = Lx1/Lx2;
+            r = ra/(rb1*rb2);
+            es[k] = sqrt(Lx) *(1-r);
+            mean += es[k];
+        }
+        mean = mean/perm;
+
+        for (k = 0; k < perm; ++k) {
+            var += pow((es[k] -mean),2);
+        }
+        var = sqrt(var/perm);
+
+        double t = (e - mean)/var;
+        
+        R_Free(es);
+        R_Free(tmpa_s);
+        R_Free(tmpb_s);
+        R_Free(tmpa);
+        R_Free(tmpb);
+        
+#pragma omp critical
+        {
+            REAL(LXval)[idx] = Lx;
+            REAL(LYval)[idx] = Ly;
+            REAL(Rval)[idx]  = r;
+            REAL(Eval)[idx]  = e;
+            REAL(Tval)[idx]  = t;
+        }
+    }
+    
+    for (int pi = 0; pi < perm; ++pi) R_Free(ris[pi]);
+    R_Free(ris);
+
+    M_cholmod_free_sparse(&A, &c);
+    M_cholmod_free_sparse(&B, &c);
+    M_cholmod_free_sparse(&W, &c);
+
+    SEXP ta = PROTECT(allocVector(VECSXP, 5));
+    SET_VECTOR_ELT(ta, 0, LXval);
+    SET_VECTOR_ELT(ta, 1, LYval);
+    SET_VECTOR_ELT(ta, 2, Rval);
+    SET_VECTOR_ELT(ta, 3, Eval);
+    SET_VECTOR_ELT(ta, 4, Tval);
+
+    UNPROTECT(6);
+    return ta;
+}
+SEXP E_test_perm(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
+{
+    CHM_SP A = AS_CHM_SP__(_A);
+    CHM_SP B = AS_CHM_SP__(_B);
+    CHM_SP W = AS_CHM_SP__(_W);
+    const int perm = asInteger(_permut);
+    const int n_thread = asInteger(_threads);
+    
+    if (A->stype) return mkString("A cannot be symmetric");
+    if (B->stype) return mkString("B cannot be symmetric");
+    if (W->stype) return mkString("W cannot be symmetric");
+    
+    double one[] = {1, 0};
+
+    if (A->ncol != B->ncol || A->nrow != B->nrow) return mkString("A and B do not match");
+    if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
+    if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
+    if (A->ncol < 2) return mkString("Too few cells."); // to do
+
+    A = M_cholmod_transpose(A, (int)A->xtype, &c);
+    B = M_cholmod_transpose(B, (int)B->xtype, &c);
+    W = M_cholmod_transpose(W, (int)W->xtype, &c);
+
+    R_CheckStack();
+    const int N_cell = A->nrow;
+    const int N_feature = A->ncol;
+
+    SEXP LXval = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP LYval = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Eval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Pval  = PROTECT(allocVector(REALSXP, N_feature));
     
     const int * const ap = (int*)A->p;
