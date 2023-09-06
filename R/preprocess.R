@@ -144,7 +144,7 @@ GetWeights <- function(object= NULL,
 #' @import Matrix
 #' @export
 RunAutoCorr <- function(object = NULL, 
-                        assay = DefaultAssay(object = object),
+                        assay = NULL,
                         slot = "data",
                         spatial = FALSE,
                         scaled = FALSE,
@@ -159,6 +159,7 @@ RunAutoCorr <- function(object = NULL,
                         perm = 10000,threads=4,
                         verbose = TRUE)
 {
+  assay <- assay %||% DefaultAssay(object = object)
   message(paste0("Working on assay : ", assay))
   cells <- cells %||% colnames(object)
   cells <- intersect(colnames(object), cells)
@@ -200,23 +201,26 @@ RunAutoCorr <- function(object = NULL,
   ## message(paste0("Run Geary's C for ", length(features), " features."))
   ## gearysc.vals <- .Call("GearysC_test", x0, W);
   Ivals <- moransi.vals[[1]]
-  Cvals <- moransi.vals[[2]]
+  #Cvals <- moransi.vals[[2]]
   IZvals <- moransi.vals[[3]]  
-  CZvals <- moransi.vals[[4]]
+  #CZvals <- moransi.vals[[4]]
   #Ivals2 <- moransi.vals2[[1]]
   #Pvals <- moransi.vals2[[2]]
   names(Ivals) <- features
-  names(Cvals) <- features
-  names(IZvals) <- features
-  names(CZvals) <- features
+  pvals <- pnorm(IZvals, lower.tail = FALSE)
+  names(pvals) <- features
+  #names(Cvals) <- features
+  #names(IZvals) <- features
+  #names(CZvals) <- features
   #names(Ivals2) <- features
   #names(Pvals) <- features
   ## names(gearysc.vals) <- features
 
   object[[assay]]@meta.features[['MoransI']] <- Ivals[rownames(object)]
-  object[[assay]]@meta.features[['MoransI.Z']] <- IZvals[rownames(object)]
-  object[[assay]]@meta.features[['GearyC']] <- Cvals[rownames(object)]
-  object[[assay]]@meta.features[['GearyC.Z']] <- CZvals[rownames(object)]
+  object[[assay]]@meta.features[['MoransI.pval']] <- pvals[rownames(object)]
+  #object[[assay]]@meta.features[['MoransI.Z']] <- IZvals[rownames(object)]
+  #object[[assay]]@meta.features[['GearyC']] <- Cvals[rownames(object)]
+  #object[[assay]]@meta.features[['GearyC.Z']] <- CZvals[rownames(object)]
   #object[[assay]]@meta.features[['MoransI.2']] <- Ivals2[rownames(object)]
   #object[[assay]]@meta.features[['MoransI.pval']] <- Pvals[rownames(object)]
   rm(W)
@@ -232,54 +236,24 @@ RunAutoCorr <- function(object = NULL,
 #' @export
 SetAutoCorrFeatures <- function(object = NULL,
                                 moransi.min = 0,
-                                top.n = 500,
                                 assay = DefaultAssay(object),
-                                sd = 3,
                                 degree=1,
-                                plot = TRUE,
-                                return.plot = FALSE
+                                p.cutoff = 0.05,
+                                top.n = 5000
                                 )
 {
   tab <- object[[assay]]@meta.features
 
   cn <- colnames(tab)
-  if ("MoransI.value" %ni% cn | "MoransI.rank" %ni% cn | "coverage" %ni% cn) {
+  if ("MoransI" %ni% cn | "MoransI.pval" %ni% cn) {
     stop("No Morans'I value found, use RunAutoCorr first.")
   }
 
-  idx <- which(tab[["MoransI.value"]] > moransi.min & tab[["MoransI.rank"]] <= top.n)
+  idx <- which(tab[["MoransI"]] > moransi.min & tab[["MoransI.pval"]] <= p.cutoff)
 
-  n1 <- length(idx)
-  
-  los <- loess.smooth(tab$coverage, tab$MoransI.value, degree=degree)
-  func <- approxfun(los$x, los$y * sd)
-  
-  idx <- intersect(which(tab[['MoransI.value']] > func(tab[['coverage']])),idx)
-  n2 <- length(idx)
-  
   tab[["AutoCorrFeature"]] <- FALSE
   tab[idx,][["AutoCorrFeature"]] <- TRUE
   object[[assay]]@meta.features <- tab
-
-  if (plot) {
-    v <- min(tab[idx,][["MoransI.value"]])
-    
-    p1 <- ggplot(tab, aes(x=MoransI.value)) + geom_density(size=1) + theme_minimal()
-    p1 <- p1 + geom_vline(aes(xintercept=v),color="red", linetype="dashed", size=1)
-    p1 <- p1 + ggtitle(paste0("n = ",n1))
-    p2 <- ggplot() + geom_point(data=tab,aes(x=coverage,y=MoransI.value),color="grey")
-    p2 <- p2 + geom_line(data=as.data.frame(los),aes(x,y),size=1, color="black") + theme_minimal()
-    p2 <- p2 + geom_line(data=as.data.frame(los),aes(x,y*sd),size=1, linetype="dashed", color="blue")    
-    p2 <- p2 + geom_point(data=tab[idx,], aes(coverage, MoransI.value), shape=21,size=3)
-    p2 <- p2 + geom_hline(aes(yintercept=v),color="red", linetype="dashed", size=1)
-    p2 <- p2 + theme_minimal()
-    p2 <- p2 + ggtitle(paste0("n = ",n2))
-    p <- cowplot::plot_grid(p1,p2)
-    print(p)
-    if (isTRUE(return.plot)) {
-      return(p)
-    }
-  }
   
   object
 }
@@ -288,8 +262,8 @@ AutoCorrFeatures <- function(object = NULL, assay = DefaultAssay(object))
 {
   tab <- object[[assay]]@meta.features
 
-  if ("MoransI.value" %ni% colnames(tab) | "MoransI.rank" %ni% colnames(tab)) {
-    stop("No Morans'I value found, use RunAutoCorr first.")
+  if ('AutoCorrFeature' %ni% colnames(tab)) {
+    stop("No autocorrelation flag found, use SetAutoCorrFeature first.")
   }
   rownames(object)[which(tab[['AutoCorrFeature']])]
 }
@@ -435,7 +409,7 @@ AddLCModule <- function(object = NULL, lc = NULL, min.features.per.module = 10, 
 #'
 #' @importFrom data.table fread
 #' @export
-LoadBEDanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRUE)
+LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRUE)
 {
   bed <- fread(file)[,c(1:9)]
   colnames(bed) <- c("chr","start","end","name","score","strand","n_gene","gene_name","type")
@@ -471,6 +445,52 @@ LoadBEDanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   
   object
 }
+#' @importFrom data.table fread 
+#' @importFrom GenomicRanges GRanges findOverlaps
+#' @importFrom IRanges IRanges
+#' @importFrom S4Vectors queryHits subjectHits
+#' @export
+LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRUE)
+{
+  bed <- fread(file)[,c(1:9)]
+  colnames(bed) <- c("chr","start","end","name","score","strand","n_gene","gene_name","type")
+  if (isTRUE(stranded)) {
+    bed$name <- paste0(bed$chr,":",bed$start,"-",bed$end,"/",bed$strand)
+  } else {
+    bed$name <-  paste0(bed$chr,":",bed$start,"-",bed$end)
+  }
+  
+  bed <- as.data.frame(bed)
+  rownames(bed) <- bed$name
+
+  old.assay <- DefaultAssay(object)
+  assay <- assay %||% DefaultAssay(object)
+  DefaultAssay(object) <- assay
+
+  locs <- gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1/\\3",rownames(object))
+  chrs <- gsub("(.*):.*","\\1",rownames(object))
+  starts <- as.numeric(gsub("(.*):([0-9]+).*","\\2",rownames(object)))
+  strands <- gsub(".*/([-+])","\\1",rownames(object))
+  gv <- GRanges(chrs,IRanges(start=starts,width=1),strand=strands)
+  gv$name <- rownames(object)
+
+  gr <- GRanges(bed$chr,IRanges(start=bed$start,end=bed$end),strand=bed$strand)
+  gr$name <- bed$name
+
+  ov <- findOverlaps(gv, gr)
+  var.sel <- gv[queryHits(ov)]$name
+  ept.sel <- gr[subjectHits(ov)]$name
+  names(ept.sel) <- var.sel
+ 
+  object[[assay]]@meta.features[['chr']] <- chrs
+  object[[assay]]@meta.features[['start']] <- starts
+  object[[assay]]@meta.features[['strand']] <- strands
+  object[[assay]]@meta.features[['gloc']] <- locs
+  object[[assay]]@meta.features[['ept']] <- ept.sel[rownames(object)]
+  
+  object
+}
+
 
 #'
 #' @export
@@ -483,7 +503,8 @@ RunBlockCorr <- function(object = NULL,
                          block.assay = NULL,
                          block.assay.replace = FALSE,
                          cells = NULL,
-                         feature.types = c("exon","exonintron","intron","multiexons","utr3","utr5"),
+                         feature.types = NULL,
+                         #c("exon","exonintron","intron","multiexons","utr3","utr5"),
                          min.features.per.block = 2,
                          scale.factor = 1e4,
                          weights = NULL,
@@ -491,11 +512,9 @@ RunBlockCorr <- function(object = NULL,
                          reduction = "pca",
                          spatial = FALSE,
                          dims = NULL,
-                         k.nn = 5,
+                         k.nn = 8,
                          kernel.method = "average",
                          self.weight = 1,
-                         #keep.matrix = FALSE,
-                         #perm.test = FALSE,
                          perm=1000,
                          threads = 1,
                          verbose = TRUE
@@ -544,7 +563,7 @@ RunBlockCorr <- function(object = NULL,
   }
   
   tab <- tab[tab[[block.name]] != ".",] # skip unannotated records
-  if ("type" %in% colnames(tab)) {
+  if (!is.null(feature.types) & "type" %in% colnames(tab)) {
     tab <- subset(tab, type %in% feature.types)
   }
   
@@ -573,7 +592,7 @@ RunBlockCorr <- function(object = NULL,
   ncell <- length(cells)
 
   ## all.features <- rownames(tab)
-  if (block.assay %ni% names(obj) || block.assay.replace) {
+  if (block.assay %ni% names(object) || block.assay.replace) {
     message("Aggregate counts..")
     #if (slot != "counts") {
      # warning("Automatic set slot to \"counts\", because new assay requires sum up counts by block.")
@@ -655,7 +674,6 @@ RunBlockCorr <- function(object = NULL,
   e <- ta[[4]]
   tval <- ta[[5]]
 
-  
   names(Lx) <- feature.names
   names(Ly) <- feature.names
   names(r) <- feature.names
@@ -671,7 +689,6 @@ RunBlockCorr <- function(object = NULL,
   tab[[paste0(name, ".Ly")]] <- Ly[rownames(object)]
   tab[[paste0(name, ".fc")]] <- fc[rownames(object)]
   tab[[paste0(name, ".pval")]] <- -1*pval[rownames(object)]
-
   
   object[[assay]]@meta.features <- tab
 
@@ -832,4 +849,72 @@ aggregateCellByGroup <- function(object = NULL, cell.group = NULL, features = NU
   }
   
   m
+}
+#'@importFrom dplyr %>%
+#'@import ggplot2
+#'@export
+FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, ylab = "-log10(pval)", xlab = "", ...)
+{
+  assay <- assay %||% DefaultAssay(object)
+  tab0 <- object[[assay]]@meta.features
+  cols <- cols %||% c("#131313","blue",RColorBrewer::brewer.pal(12, "Paired"))
+    
+  if (is.null(val)) stop("No value name specified.")  
+  if (chr %ni% colnames(tab0)) stop("No chr name found.")
+  if (start %ni% colnames(tab0)) stop("No start name found.")
+  if (val %ni% colnames(tab0)) stop("No val name found.")
+  
+  if (!is.null(sel.chrs)) {
+    tab0 <- tab0 %>% filter (chr %in% sel.chrs)
+  }
+  
+  lv <- gtools::mixedsort(unique(tab0[[chr]]))
+  
+  tab <- data.frame(chr = factor(tab0[[chr]], levels = lv),
+                    start = as.numeric(tab0[[start]]),
+                    pval = as.numeric(tab0[[val]]))
+  
+  if (!is.null(col.by)) {
+    tab[[col.by]] <- tab0[[col.by]]
+  }
+
+  tab <- subset(tab, !is.na(pval))
+  data_cum <- tab %>% group_by(chr) %>% summarise(max_bp = max(start)) %>%
+    mutate(bp_add = lag(cumsum(max_bp), default = 0)) %>% select(chr, bp_add)
+  
+  data <- tab %>% inner_join(data_cum, by = "chr") %>% mutate(bp_cum = start + bp_add)
+  axis_set <- data %>%   group_by(chr) %>%  summarize(center = mean(bp_cum))
+
+  fbt_theme <- function() {
+    theme(
+      legend.text = element_text(face = "italic",colour = "black",family = "Helvetica",size = rel(1)),
+      axis.title = element_text(colour = "black",family = "Helvetica",size = rel(1.5)),
+      axis.text = element_text(family = "Helvetica",colour = "black",size = rel(1.5)),
+      axis.line = element_blank(),
+      axis.ticks = element_line(size = rel(1), colour = "black"),
+      panel.border = element_rect(colour = "black", fill = NA, size= rel(2), linetype = "solid"),
+      panel.grid.major = element_blank(),#element_line(colour = "grey", size = rel(0.5)),
+      panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = "whitesmoke"),
+      legend.key = element_rect(fill = "whitesmoke"),
+      legend.title = element_text(colour = "steelblue",size = rel(1.5),family = "Helvetica"),
+      plot.title = element_text(colour = "steelblue4",face = "bold",size = rel(1.7),family = "Helvetica")
+    )
+  }
+
+  xi <- data_cum$bp_add
+  xi <- xi[-1]
+  p <- ggplot(data) + geom_vline(xintercept = xi, color="red", linetype="dotted")
+
+  if (!is.null(col.by)) {
+    p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]]), shape=22, ...)
+    p <- p + scale_fill_manual(values = cols)
+  } else {
+    p <- p + geom_point(aes(x=bp_cum, y=pval), shape=1, ...)
+  }
+  p <- p + scale_x_continuous(label = axis_set$chr, breaks = axis_set$center,
+                              limits = c(min(data$bp_cum), max(data$bp_cum)))
+  p <- p + fbt_theme() + theme(axis.title.y = element_text(size = rel(1.5), angle = 90))
+  p <- p + xlab(xlab) + ylab(ylab)
+  p
 }

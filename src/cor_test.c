@@ -465,6 +465,15 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
         double Ly = Ly1/Ly2;
         double r = ra/(rb1*rb2);
         double e = sqrt(Lx) * (1-r);
+
+#pragma omp critical
+        {
+            REAL(LXval)[idx] = Lx;
+            REAL(LYval)[idx] = Ly;
+            REAL(Rval)[idx]  = r;
+            REAL(Eval)[idx]  = e;
+        }
+
         // mean, var
         double mean = 0,
             var = 0;
@@ -511,10 +520,6 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
         
 #pragma omp critical
         {
-            REAL(LXval)[idx] = Lx;
-            REAL(LYval)[idx] = Ly;
-            REAL(Rval)[idx]  = r;
-            REAL(Eval)[idx]  = e;
             REAL(Tval)[idx]  = t;
         }
     }
