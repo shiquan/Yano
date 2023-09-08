@@ -411,6 +411,11 @@ AddLCModule <- function(object = NULL, lc = NULL, min.features.per.module = 10, 
 #' @export
 LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRUE)
 {
+  assay <- assay %||% DefaultAssay(object)
+  message(paste0("Working on assay ", assay))
+  old.assay <- DefaultAssay(object)
+  DefaultAssay(object) <- assay
+  
   bed <- fread(file)[,c(1:9)]
   colnames(bed) <- c("chr","start","end","name","score","strand","n_gene","gene_name","type")
   if (isTRUE(stranded)) {
@@ -431,8 +436,6 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   message(paste0("Intersect ", length(features), " features."))
   
   bed <- bed[rownames(object),]
-
-  assay <- assay %||% DefaultAssay(object)
   
   object[[assay]]@meta.features[['chr']] <- bed[['chr']]
   object[[assay]]@meta.features[['start']] <- bed[['start']]
@@ -442,7 +445,9 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   object[[assay]]@meta.features[['n_gene']] <- bed[['n_gene']]
   object[[assay]]@meta.features[['gene_name']] <- bed[['gene_name']]
   object[[assay]]@meta.features[['type']] <- bed[['type']]
-  
+
+  DefaultAssay(object) <- old.assay
+
   object
 }
 #' @importFrom data.table fread 
@@ -452,6 +457,9 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
 #' @export
 LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRUE)
 {
+  assay <- assay %||% DefaultAssay(object)
+  message(paste0("Working on assay ", assay))
+
   bed <- fread(file)[,c(1:9)]
   colnames(bed) <- c("chr","start","end","name","score","strand","n_gene","gene_name","type")
   if (isTRUE(stranded)) {
@@ -464,7 +472,6 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   rownames(bed) <- bed$name
 
   old.assay <- DefaultAssay(object)
-  assay <- assay %||% DefaultAssay(object)
   DefaultAssay(object) <- assay
 
   locs <- gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1/\\3",rownames(object))
@@ -487,7 +494,9 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   object[[assay]]@meta.features[['strand']] <- strands
   object[[assay]]@meta.features[['gloc']] <- locs
   object[[assay]]@meta.features[['ept']] <- ept.sel[rownames(object)]
-  
+
+  DefaultAssay(object) <- old.assay
+
   object
 }
 
@@ -853,7 +862,7 @@ aggregateCellByGroup <- function(object = NULL, cell.group = NULL, features = NU
 #'@importFrom dplyr %>%
 #'@import ggplot2
 #'@export
-FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, ylab = "-log10(pval)", xlab = "", ...)
+FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)),...)
 {
   assay <- assay %||% DefaultAssay(object)
   tab0 <- object[[assay]]@meta.features
@@ -887,18 +896,19 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
 
   fbt_theme <- function() {
     theme(
-      legend.text = element_text(face = "italic",colour = "black",family = "Helvetica",size = rel(1)),
-      axis.title = element_text(colour = "black",family = "Helvetica",size = rel(1.5)),
-      axis.text = element_text(family = "Helvetica",colour = "black",size = rel(1.5)),
+      legend.text = element_text(face = "italic",color = "black",family = "Helvetica",size = rel(1.5)),
+      axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
+      axis.title.x = element_text(color = "black", family = "Helvetica",size = rel(1.5)),
+      axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
       axis.line = element_blank(),
-      axis.ticks = element_line(size = rel(1), colour = "black"),
-      panel.border = element_rect(colour = "black", fill = NA, size= rel(2), linetype = "solid"),
-      panel.grid.major = element_blank(),#element_line(colour = "grey", size = rel(0.5)),
+      axis.ticks = element_line(size = rel(1), color = "black"),
+      panel.border = element_rect(color = "black", fill = NA, size= rel(2), linetype = "solid"),
+      panel.grid.major = element_blank(),
       panel.grid.minor = element_blank(),
       panel.background = element_rect(fill = "whitesmoke"),
       legend.key = element_rect(fill = "whitesmoke"),
-      legend.title = element_text(colour = "steelblue",size = rel(1.5),family = "Helvetica"),
-      plot.title = element_text(colour = "steelblue4",face = "bold",size = rel(1.7),family = "Helvetica")
+      legend.title = element_text(size = rel(1.5),family = "Helvetica"),
+      plot.title = element_text(color = "black",face = "bold",size = rel(1.7),family = "Helvetica")
     )
   }
 
@@ -910,7 +920,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
     p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]]), shape=22, ...)
     p <- p + scale_fill_manual(values = cols)
   } else {
-    p <- p + geom_point(aes(x=bp_cum, y=pval), shape=1, ...)
+    p <- p + geom_point(aes(x=bp_cum, y=pval), shape = 19,  ...)    
   }
   p <- p + scale_x_continuous(label = axis_set$chr, breaks = axis_set$center,
                               limits = c(min(data$bp_cum), max(data$bp_cum)))
