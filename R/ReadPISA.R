@@ -182,8 +182,8 @@ ReadPISA <- function(mex_dir=NULL,
   #sce <- SingleCellExperiment(mat)
   #sce
 }
-
-readStereoseq <- function(count = NULL, bin = 50) {
+#' @export
+ReadStereoseq <- function(count = NULL, bin = 50) {
   mtx.file <- paste0(count,"/matrix.mtx.gz")
   feature.file<- paste0(count,"/features.tsv.gz")
   coor.file <- paste0(count,"/barcodes.tsv.gz")
