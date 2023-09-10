@@ -577,8 +577,8 @@ RunBlockCorr <- function(object = NULL,
   }
   
   blocks <- names(which(table(tab[[block.name]]) >= min.features.per.block))
-  
-  tab0 <- tab[features,]
+  idx <- match(features, rownames(tab))
+  tab0 <- tab[idx,]
   blocks <- intersect(unique(tab0[[block.name]]), blocks)
 
   message(paste0("Processing ", length(blocks), " blocks.."))
@@ -628,8 +628,8 @@ RunBlockCorr <- function(object = NULL,
     ## if (keep.matrix) {
     ##   object[[block.assay]] <- CreateAssayObject(counts = y, assay = block.assay)
     ## }
-
-    y <- y[tab[[block.name]],]
+    idx <- match(tab[[block.name]],colnames(tab))
+    y <- y[idx,]
     rownames(y) <- rownames(x)
     
     if (sensitive.mode) {
@@ -655,10 +655,9 @@ RunBlockCorr <- function(object = NULL,
     #x <- GetAssayData(object, assay = assay, slot = "counts")[rownames(tab),cells]
     y <- GetAssayData(object, assay = block.assay, slot = "counts")[blocks,cells]    
     DefaultAssay(object) <- old.assay
-
-    y <- y[tab[[block.name]],]
+    idx <- match(tab[[block.name]],colnames(tab))
+    y <- y[idx,]
     rownames(y) <- rownames(tab)
-
   }
 
   feature.names <- rownames(x)
