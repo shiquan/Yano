@@ -577,16 +577,18 @@ RunBlockCorr <- function(object = NULL,
   }
   
   blocks <- names(which(table(tab[[block.name]]) >= min.features.per.block))
+  features <- intersect(features, rownames(tab))
+    
+  if (length(features) == 0) {
+    stop("No features found.")
+  }
+
   idx <- match(features, rownames(tab))
   tab0 <- tab[idx,]
   blocks <- intersect(unique(tab0[[block.name]]), blocks)
 
   message(paste0("Processing ", length(blocks), " blocks.."))
   tab <- subset(tab, tab[[block.name]] %in% blocks)
-  
-  if (length(features) == 0) {
-    stop("No features found.")
-  }
 
   block.assay <- block.assay %||% "tmp.assay"
   ## blocks <- unique(blocks)
@@ -603,17 +605,7 @@ RunBlockCorr <- function(object = NULL,
   ## all.features <- rownames(tab)
   if (block.assay %ni% names(object) || block.assay.replace) {
     message("Aggregate counts..")
-    #if (slot != "counts") {
-     # warning("Automatic set slot to \"counts\", because new assay requires sum up counts by block.")
-      #slot <- "counts"
-    #}
-  
-    ## if (ncell != ncol(object) && keep.matrix) {
-    ##   warnings("Inconsistance cells, set keep.matrix to FALSE.")
-    ##   keep.matrix <- FALSE
-    ## }
 
-    #x <- GetAssayData(object, assay = assay, slot = "counts")
     x <- x[rownames(tab), cells]
     x <- as(x, "TsparseMatrix")
     
@@ -625,9 +617,6 @@ RunBlockCorr <- function(object = NULL,
     rownames(y) <- blocks
     colnames(y) <- cells
 
-    ## if (keep.matrix) {
-    ##   object[[block.assay]] <- CreateAssayObject(counts = y, assay = block.assay)
-    ## }
     idx <- match(tab[[block.name]],colnames(tab))
     y <- y[idx,]
     rownames(y) <- rownames(x)
@@ -652,7 +641,6 @@ RunBlockCorr <- function(object = NULL,
     tab <- subset(tab, tab[[block.name]] %in% blocks)
 
     x <- x[rownames(tab), cells]
-    #x <- GetAssayData(object, assay = assay, slot = "counts")[rownames(tab),cells]
     y <- GetAssayData(object, assay = block.assay, slot = "counts")[blocks,cells]    
     DefaultAssay(object) <- old.assay
     idx <- match(tab[[block.name]],colnames(tab))
