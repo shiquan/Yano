@@ -346,7 +346,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     return ta;
 }
  
-SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
+SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads, SEXP _bidx)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
@@ -396,7 +396,10 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
     int idx;
 #pragma omp parallel for num_threads(n_thread)
     for (idx = 0; idx < N_feature; ++idx) {
-        if (ap[idx] == ap[idx+1] || bp[idx] == bp[idx+1]) {
+        // todo: bidx
+        int bidx = REAL(_bidx)[idx];
+        
+        if (ap[idx] == ap[idx+1] || bp[bidx] == bp[bidx+1]) {
             REAL(LXval)[idx] = 0;
             REAL(LYval)[idx] = 0;
             REAL(Rval)[idx]  = 0;
@@ -419,7 +422,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
         }
         mna = mna/N_cell;
         
-        for (j = bp[idx]; j < bp[idx+1]; ++j) {
+        for (j = bp[bidx]; j < bp[bidx+1]; ++j) {
             if (ISNAN(bx[j])) continue;
             tmpb[bi[j]] = bx[j];
             mnb += bx[j];
