@@ -617,7 +617,7 @@ RunBlockCorr <- function(object = NULL,
     rownames(y) <- blocks
     colnames(y) <- cells
 
-    idx <- match(tab[[block.name]],colnames(tab))
+    idx <- match(tab[[block.name]],blocks)
     y <- y[idx,]
     rownames(y) <- rownames(x)
     
@@ -643,7 +643,7 @@ RunBlockCorr <- function(object = NULL,
     x <- x[rownames(tab), cells]
     y <- GetAssayData(object, assay = block.assay, slot = "counts")[blocks,cells]    
     DefaultAssay(object) <- old.assay
-    idx <- match(tab[[block.name]],colnames(tab))
+    idx <- match(tab[[block.name]],blocks)
     y <- y[idx,]
     rownames(y) <- rownames(tab)
   }
