@@ -398,7 +398,6 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads, SEXP _bidx)
     for (idx = 0; idx < N_feature; ++idx) {
         // todo: bidx
         int bidx = REAL(_bidx)[idx] -1;
-        Rprintf("%d\n", bidx);
         if (ap[idx] == ap[idx+1] || bp[bidx] == bp[bidx+1]) {
             REAL(LXval)[idx] = 0;
             REAL(LYval)[idx] = 0;
