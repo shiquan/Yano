@@ -649,19 +649,12 @@ RunBlockCorr <- function(object = NULL,
   }
 
   feature.names <- rownames(x)
-  fc <- log1p(rowMeans(x)) - log1p(rowMeans(y))
-  names(fc) <- feature.names
 
   x <- log1p(t(t(x)/cs) * scale.factor)
   y <- log1p(t(t(y)/cs) * scale.factor)
   
-  #if (keep.matrix) {
-  #  SetAssayData(object = object, slot = "data", new.data = y, assay=block.assay)
-  #}
   gc()
   message("Smooth data..")
-  #rownames(y) <- feature.names
-
   ta <- .Call("E_test", x, y, W, perm, threads, idx);
   
   Lx <- ta[[1]]
@@ -683,9 +676,7 @@ RunBlockCorr <- function(object = NULL,
   tab[[paste0(name, ".r")]] <- r[rownames(object)]
   tab[[paste0(name, ".Lx")]] <- Lx[rownames(object)]
   tab[[paste0(name, ".Ly")]] <- Ly[rownames(object)]
-  tab[[paste0(name, ".fc")]] <- fc[rownames(object)]
-  tab[[paste0(name, ".pval")]] <- -1*pval[rownames(object)]
-  
+  tab[[paste0(name, ".pval")]] <- -1*pval[rownames(object)]  
   object[[assay]]@meta.features <- tab
 
   rm(ta)

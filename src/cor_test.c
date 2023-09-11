@@ -360,7 +360,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads, SEXP _bidx)
     
     double one[] = {1, 0};
 
-    if (A->ncol != B->ncol || A->nrow != B->nrow) return mkString("A and B do not match");
+    // if (A->ncol != B->ncol || A->nrow != B->nrow) return mkString("A and B do not match");
     if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
     if (A->ncol < 2) return mkString("Too few cells."); // to do
@@ -398,7 +398,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads, SEXP _bidx)
     for (idx = 0; idx < N_feature; ++idx) {
         // todo: bidx
         int bidx = REAL(_bidx)[idx] -1;
-        
+        Rprintf("%d\n", bidx);
         if (ap[idx] == ap[idx+1] || bp[bidx] == bp[bidx+1]) {
             REAL(LXval)[idx] = 0;
             REAL(LYval)[idx] = 0;
