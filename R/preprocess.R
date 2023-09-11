@@ -601,7 +601,7 @@ RunBlockCorr <- function(object = NULL,
   W <- W[cells, cells]
   cs <- cs[cells]
   ncell <- length(cells)
-
+  
   ## all.features <- rownames(tab)
   if (block.assay %ni% names(object) || block.assay.replace) {
     message("Aggregate counts..")
@@ -644,8 +644,8 @@ RunBlockCorr <- function(object = NULL,
     y <- GetAssayData(object, assay = block.assay, slot = "counts")[blocks,cells]    
     DefaultAssay(object) <- old.assay
     idx <- match(tab[[block.name]],blocks)
-    y <- y[idx,]
-    rownames(y) <- rownames(tab)
+    #y <- y[idx,]
+    #rownames(y) <- rownames(tab)
   }
 
   feature.names <- rownames(x)
@@ -660,9 +660,9 @@ RunBlockCorr <- function(object = NULL,
   #}
   gc()
   message("Smooth data..")
-  rownames(y) <- feature.names
+  #rownames(y) <- feature.names
 
-  ta <- .Call("E_test", x, y, W, perm, threads);
+  ta <- .Call("E_test", x, y, W, perm, threads, idx);
   
   Lx <- ta[[1]]
   Ly <- ta[[2]]
