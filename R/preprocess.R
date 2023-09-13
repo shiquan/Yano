@@ -618,13 +618,13 @@ RunBlockCorr <- function(object = NULL,
     colnames(y) <- cells
 
     idx <- match(tab[[block.name]],blocks)
-    y <- y[idx,]
-    rownames(y) <- rownames(x)
+    #y <- y[idx,]
+    #rownames(y) <- rownames(x)
     
-    if (sensitive.mode) {
+    #if (sensitive.mode) {
       ## expand matrix of block features for calculating with EPT matrix
-      y <- y - x
-    }
+    #  y <- y - x
+    #}
 
   } else {
 
@@ -650,12 +650,13 @@ RunBlockCorr <- function(object = NULL,
 
   feature.names <- rownames(x)
 
-  x <- log1p(t(t(x)/cs) * scale.factor)
-  y <- log1p(t(t(y)/cs) * scale.factor)
-  
+  #x <- log1p(t(t(x)/cs) * scale.factor)
+  #y <- log1p(t(t(y)/cs) * scale.factor)
+  message("Test dissimlarity of two processes ..")
+  x <- as(x, "CsparseMatrix")
+  y <- as(y, "CsparseMatrix")
   gc()
-  message("Smooth data..")
-  ta <- .Call("E_test", x, y, W, perm, threads, idx);
+  ta <- .Call("E_test", x, y, W, perm, threads, idx, cs, scale.factor, sensitive.mode);
   
   Lx <- ta[[1]]
   Ly <- ta[[2]]
