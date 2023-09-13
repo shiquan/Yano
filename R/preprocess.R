@@ -606,7 +606,8 @@ RunBlockCorr <- function(object = NULL,
   if (block.assay %ni% names(object) || block.assay.replace) {
     message("Aggregate counts..")
 
-    x <- x[rownames(tab), cells]
+    #x <- x[rownames(tab), cells]
+    x <- x[, cells]
     x <- as(x, "TsparseMatrix")
     
     # Aggregate features in the same block
@@ -617,6 +618,8 @@ RunBlockCorr <- function(object = NULL,
     rownames(y) <- blocks
     colnames(y) <- cells
 
+    x <- x[features,]
+    tab <- tab[features,]
     idx <- match(tab[[block.name]],blocks)
     #y <- y[idx,]
     #rownames(y) <- rownames(x)
@@ -640,8 +643,12 @@ RunBlockCorr <- function(object = NULL,
     blocks <- intersect(blocks, rownames(object))
     tab <- subset(tab, tab[[block.name]] %in% blocks)
 
-    x <- x[rownames(tab), cells]
-    y <- GetAssayData(object, assay = block.assay, slot = "counts")[blocks,cells]    
+    x <- x[, cells]
+    y <- GetAssayData(object, assay = block.assay, slot = "counts")[blocks,cells]
+
+    x <- x[features,]
+    tab <- tab[features,]
+
     DefaultAssay(object) <- old.assay
     idx <- match(tab[[block.name]],blocks)
     #y <- y[idx,]
