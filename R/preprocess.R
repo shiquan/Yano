@@ -511,7 +511,7 @@ RunBlockCorr <- function(object = NULL,
                          sensitive.mode = FALSE,
                          block.assay = NULL,
                          block.assay.replace = FALSE,
-                         cells = NULL,
+                         ## cells = NULL,
                          feature.types = NULL,
                          #c("exon","exonintron","intron","multiexons","utr3","utr5"),
                          min.features.per.block = 2,
@@ -529,8 +529,8 @@ RunBlockCorr <- function(object = NULL,
                          verbose = TRUE
                          )
 {
-  cells <- cells %||% colnames(object)
-  cells <- intersect(colnames(object), cells)
+  ## cells <- cells %||% colnames(object)
+  ## cells <- intersect(colnames(object), cells)
 
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
@@ -549,7 +549,7 @@ RunBlockCorr <- function(object = NULL,
                     dims=dims,
                     k.nn = k.nn,
                     kernel.method = kernel.method,
-                    cells = cells,
+                    ## cells = cells,
                     self.weight = self.weight,
                     spatial=spatial,
                     scale=TRUE)
@@ -557,13 +557,13 @@ RunBlockCorr <- function(object = NULL,
   } else {
     dims <- dim(weights)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
-    if (dims[1] != length(cells)) {
-      cells <- intersect(colnames(weights),cells)
-      W <- weights[cells, cells]
-      diag(W) <- 0
-      if (!weights.scaled) W <- W/rowSums(W)
-    }
-  }  
+    ## if (dims[1] != length(cells)) {
+    ##   cells <- intersect(colnames(weights),cells)
+    ##   W <- weights[cells, cells]
+    ##   diag(W) <- 0
+    ##   if (!weights.scaled) W <- W/rowSums(W)
+    ## }
+  } 
 
   tab <- object[[assay]]@meta.features
 
@@ -577,6 +577,7 @@ RunBlockCorr <- function(object = NULL,
   }
   
   blocks <- names(which(table(tab[[block.name]]) >= min.features.per.block))
+
   features <- intersect(features, rownames(tab))
     
   if (length(features) == 0) {
@@ -586,10 +587,10 @@ RunBlockCorr <- function(object = NULL,
   idx <- match(features, rownames(tab))
   tab0 <- tab[idx,]
   blocks <- intersect(unique(tab0[[block.name]]), blocks)
-
+  
   message(paste0("Processing ", length(blocks), " blocks.."))
   tab <- subset(tab, tab[[block.name]] %in% blocks)
-
+  
   block.assay <- block.assay %||% "tmp.assay"
   ## blocks <- unique(blocks)
 
@@ -597,30 +598,28 @@ RunBlockCorr <- function(object = NULL,
   
   # cell sizes
   cs <- colSums(x)
-  cells <- intersect(cells,names(which(cs > 0)))
-  W <- W[cells, cells]
-  cs <- cs[cells]
+  ## cells <- intersect(cells,names(which(cs > 0)))
+  ## W <- W[cells, cells]
+  ## cs <- cs[cells]
+  cells <- colnames(object)
   ncell <- length(cells)
   
   ## all.features <- rownames(tab)
   if (block.assay %ni% names(object) || block.assay.replace) {
     message("Aggregate counts..")
-
-    #x <- x[rownames(tab), cells]
-    x <- x[, cells]
-    x <- as(x, "TsparseMatrix")
+    x0 <- x[rownames(tab),]
+    x0 <- as(x0, "TsparseMatrix")
     
     # Aggregate features in the same block
-    y <- sparseMatrix(i = match(tab[[block.name]][x@i+1], blocks),
-                      j = x@j+1,
-                      x = x@x, dims=c(length(blocks), length(cells)))
-    
+    y <- sparseMatrix(i = match(tab[[block.name]][x0@i+1], blocks),
+                      j = x0@j+1,
+                      x = x0@x, dims=c(length(blocks), length(cells)))
+
+    rm(x0)
     rownames(y) <- blocks
     colnames(y) <- cells
 
-    x <- x[features,]
-    tab <- tab[features,]
-    idx <- match(tab[[block.name]],blocks)
+    #x <- x[features,]
     #y <- y[idx,]
     #rownames(y) <- rownames(x)
     
@@ -630,40 +629,26 @@ RunBlockCorr <- function(object = NULL,
     #}
 
   } else {
-
     message(paste0("Trying to retrieve data from assay ", block.assay,".."))
-    
-    if (isTRUE(sensitive.mode)) {
-      # message("Notice: sensitive.mode only can be enabled when aggregate counts.")
-      sensitive.mode <- FALSE
-    }
     
     old.assay <- DefaultAssay(object)
     DefaultAssay(object) <- block.assay
     blocks <- intersect(blocks, rownames(object))
     tab <- subset(tab, tab[[block.name]] %in% blocks)
 
-    x <- x[, cells]
-    y <- GetAssayData(object, assay = block.assay, slot = "counts")[blocks,cells]
-
-    x <- x[features,]
-    tab <- tab[features,]
+    y <- GetAssayData(object, assay = block.assay, slot = "counts")#[blocks,cells]
 
     DefaultAssay(object) <- old.assay
-    idx <- match(tab[[block.name]],blocks)
-    #y <- y[idx,]
-    #rownames(y) <- rownames(tab)
   }
 
-  feature.names <- rownames(x)
+  features <- intersect(features, rownames(tab))
+  tab <- tab[features,]
+  bidx <- match(tab[[block.name]],rownames(y))
+  idx <- match(features, rownames(x))
 
-  #x <- log1p(t(t(x)/cs) * scale.factor)
-  #y <- log1p(t(t(y)/cs) * scale.factor)
   message("Test dissimlarity of two processes ..")
-  x <- as(x, "CsparseMatrix")
-  y <- as(y, "CsparseMatrix")
   gc()
-  ta <- .Call("E_test", x, y, W, perm, threads, idx, cs, scale.factor, sensitive.mode);
+  ta <- .Call("E_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, sensitive.mode);
   
   Lx <- ta[[1]]
   Ly <- ta[[2]]
@@ -671,13 +656,13 @@ RunBlockCorr <- function(object = NULL,
   e <- ta[[4]]
   tval <- ta[[5]]
 
-  names(Lx) <- feature.names
-  names(Ly) <- feature.names
-  names(r) <- feature.names
-  names(e) <- feature.names
+  names(Lx) <- features
+  names(Ly) <- features
+  names(r) <- features
+  names(e) <- features
   
   pval <- pt(tval, df = perm - 1, lower.tail = FALSE, log.p = TRUE)
-  names(pval) <- feature.names
+  names(pval) <- features
   
   tab <- object[[assay]]@meta.features
   tab[[paste0(name, ".e.coef")]] <- e[rownames(object)]

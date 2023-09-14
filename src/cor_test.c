@@ -3,6 +3,7 @@
 #include<Rinternals.h>
 #include "Matrix_stubs.c"
 
+#include <assert.h>
 #include <omp.h>
 
 void progress(int p) {
@@ -346,11 +347,17 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     return ta;
 }
  
-SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads, SEXP _bidx, SEXP cs, SEXP _scale, SEXP _sens)
+SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
+            SEXP _permut,
+            SEXP _threads,
+            SEXP idx, SEXP bidx,
+            SEXP cs, SEXP _scale,
+            SEXP _sens)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
     CHM_SP W = AS_CHM_SP__(_W);
+
     const int perm = asInteger(_permut);
     const int n_thread = asInteger(_threads);
     const int scale_factor = asInteger(_scale);
@@ -374,8 +381,10 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads, SEXP _bidx, 
 
     R_CheckStack();
     const int N_cell = A->nrow;
-    const int N_feature = A->ncol;
+    const int N_feature = length(idx);
 
+    assert (length(bidx) == N_feature);
+    
     SEXP LXval = PROTECT(allocVector(REALSXP, N_feature));
     SEXP LYval = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
@@ -396,17 +405,20 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads, SEXP _bidx, 
         ris[pi] = random_idx(N_cell);
     }
     
-    int idx;
+    int i;
+    
 #pragma omp parallel for num_threads(n_thread)
-    for (idx = 0; idx < N_feature; ++idx) {
+    for (i = 0; i < N_feature; ++i) {
         // todo: bidx
-        int bidx = INTEGER(_bidx)[idx] -1;
-        if (ap[idx] == ap[idx+1] || bp[bidx] == bp[bidx+1]) {
-            REAL(LXval)[idx] = 0;
-            REAL(LYval)[idx] = 0;
-            REAL(Rval)[idx]  = 0;
-            REAL(Eval)[idx]  = 0;
-            REAL(Tval)[idx]  = 0;
+        int ii = INTEGER(idx)[i]  -1;
+        int ij = INTEGER(bidx)[i] -1;
+        //Rprintf("%d\t%d\n", ii, ij);
+        if (ap[ii] == ap[ii+1] || bp[ij] == bp[ij+1]) {
+            REAL(LXval)[i] = 0;
+            REAL(LYval)[i] = 0;
+            REAL(Rval)[i]  = 0;
+            REAL(Eval)[i]  = 0;
+            REAL(Tval)[i]  = 0;
             continue;
         }
         
@@ -417,13 +429,13 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads, SEXP _bidx, 
         double mna = 0,
             mnb = 0;
         int j;
-        for (j = ap[idx]; j < ap[idx+1]; ++j) {
+        for (j = ap[ii]; j < ap[ii+1]; ++j) {
             if (ISNAN(ax[j])) continue;
             int cid = ai[j];
             tmpa[cid] = ax[j];
         }
         
-        for (j = bp[bidx]; j < bp[bidx+1]; ++j) {
+        for (j = bp[ij]; j < bp[ij+1]; ++j) {
             if (ISNAN(bx[j])) continue;
             int cid = bi[j];
             tmpb[cid] = bx[j];
@@ -437,7 +449,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads, SEXP _bidx, 
         }
         mnb = mnb/N_cell;
 
-        for (j = ap[idx]; j < ap[idx+1]; ++j) {
+        for (j = ap[ii]; j < ap[ii+1]; ++j) {
             if (ISNAN(ax[j])) continue;
             int cid = ai[j];
             tmpa[cid] = ax[j];
@@ -488,10 +500,10 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads, SEXP _bidx, 
 
 #pragma omp critical
         {
-            REAL(LXval)[idx] = Lx;
-            REAL(LYval)[idx] = Ly;
-            REAL(Rval)[idx]  = r;
-            REAL(Eval)[idx]  = e;
+            REAL(LXval)[i] = Lx;
+            REAL(LYval)[i] = Ly;
+            REAL(Rval)[i]  = r;
+            REAL(Eval)[i]  = e;
         }
 
         // mean, var
@@ -540,7 +552,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads, SEXP _bidx, 
         
 #pragma omp critical
         {
-            REAL(Tval)[idx]  = t;
+            REAL(Tval)[i]  = t;
         }
     }
     
