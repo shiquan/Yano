@@ -258,11 +258,28 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=-1, end =-1, gene=NULL,
   end <- end + downstream
   
   if (start0 < 0) start0 <- 1
+  cov_theme <- function() {
+    theme(
+      legend.text = element_text(face = "italic",color = "black",family = "Helvetica",size = rel(1.5)),
+      axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
+      axis.title.x = element_text(color = "black", family = "Helvetica",size = rel(1.5)),
+      axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
+      axis.line = element_blank(),
+      axis.ticks = element_line(size = rel(1), color = "black"),
+      panel.border = element_blank(),# element_rect(color = "black", fill = NA, size= rel(2), linetype = "solid"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = "whitesmoke"),
+      legend.key = element_rect(fill = "whitesmoke"),
+      legend.title = element_text(size = rel(1.5),family = "Helvetica"),
+      plot.title = element_text(color = "black",face = "bold",size = rel(1.7),family = "Helvetica")
+    )
+  }
   
   p1 <- plot.cov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
                  bin=bin, cell.tag=cell.tag, umi.tag=umi.tag, cell.group=cell.group,
                  log.scaled=log.scaled, start0 = start0, end0 = end0, max.depth = max.depth)
-  p1 <- p1 + theme_pubr()# + theme(panel.spacing = unit(1, "lines"))
+  p1 <- p1 + cov_theme()
   p1 <- p1 + theme(panel.spacing.y = unit(0, "lines"))
   if (!is.null(peaks)) {
     gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
