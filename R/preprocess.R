@@ -99,7 +99,7 @@ setMethod(f = "QuickRecipe",
 GetWeights <- function(object= NULL,                       
                        reduction = "pca",
                        dims = NULL,
-                       k.nn = 5,
+                       k.nn = 8,
                        spatial = FALSE,
                        kernel.method = "average",
                        self.weight = 0,
@@ -152,7 +152,7 @@ RunAutoCorr <- function(object = NULL,
                         scale.weight = FALSE,
                         reduction = "pca",
                         dims = NULL,
-                        k.nn = 5,
+                        k.nn = 9,
                         kernel.method = "dist",
                         cells = NULL,
                         features = NULL,
@@ -174,6 +174,7 @@ RunAutoCorr <- function(object = NULL,
                     kernel.method=kernel.method,
                     cells=cells,
                     self.weight = 0,
+                    scale=TRUE,
                     spatial=spatial)
   } else {
     dims <- dim(weights)
@@ -284,7 +285,7 @@ LocalCorr <- function(object = NULL,
                       weights.scaled = FALSE,
                       reduction = "pca",
                       dims=NULL,
-                      k.nn = 5,
+                      k.nn = 9,
                       kernel.method = "average",
                       clust.method = "ward.D2",
                       self.weight = 1,
@@ -418,6 +419,9 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   
   bed <- fread(file)[,c(1:9)]
   colnames(bed) <- c("chr","start","end","name","score","strand","n_gene","gene_name","type")
+  
+  bed$chr <- gsub("_","-",bed$chr)
+  
   if (isTRUE(stranded)) {
     bed$name <- paste0(bed$chr,":",bed$start,"-",bed$end,"/",bed$strand)
   } else {
@@ -521,7 +525,7 @@ RunBlockCorr <- function(object = NULL,
                          reduction = "pca",
                          spatial = FALSE,
                          dims = NULL,
-                         k.nn = 8,
+                         k.nn = 9,
                          kernel.method = "average",
                          self.weight = 1,
                          perm=1000,
@@ -661,15 +665,17 @@ RunBlockCorr <- function(object = NULL,
   names(r) <- features
   names(e) <- features
   
-  pval <- pt(tval, df = perm - 1, lower.tail = FALSE, log.p = TRUE)
+  pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
   names(pval) <- features
-  
+  padj <- p.adjust(pval, "BH")
+  names(padj) <- features
   tab <- object[[assay]]@meta.features
   tab[[paste0(name, ".e.coef")]] <- e[rownames(object)]
   tab[[paste0(name, ".r")]] <- r[rownames(object)]
   tab[[paste0(name, ".Lx")]] <- Lx[rownames(object)]
   tab[[paste0(name, ".Ly")]] <- Ly[rownames(object)]
-  tab[[paste0(name, ".pval")]] <- -1*pval[rownames(object)]  
+  tab[[paste0(name, ".pval")]] <- pval[rownames(object)]
+  tab[[paste0(name, ".padj")]] <- padj[rownames(object)]
   object[[assay]]@meta.features <- tab
 
   rm(ta)
@@ -852,7 +858,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
   
   tab <- data.frame(chr = factor(tab0[[chr]], levels = lv),
                     start = as.numeric(tab0[[start]]),
-                    pval = as.numeric(tab0[[val]]))
+                    pval = -log10(as.numeric(tab0[[val]])))
   
   if (!is.null(col.by)) {
     tab[[col.by]] <- tab0[[col.by]]
@@ -888,7 +894,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
   p <- ggplot(data) + geom_vline(xintercept = xi, color="red", linetype="dotted")
 
   if (!is.null(col.by)) {
-    p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]]), shape=22, ...)
+    p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]]), shape=21, ...)
     p <- p + scale_fill_manual(values = cols)
   } else {
     p <- p + geom_point(aes(x=bp_cum, y=pval), shape = 19,  ...)    
