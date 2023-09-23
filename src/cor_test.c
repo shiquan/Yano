@@ -347,10 +347,78 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     return ta;
 }
  
+SEXP smooth_test(SEXP _A, SEXP _W,
+                 SEXP idx,
+                 SEXP cs, SEXP _scale)
+            
+{
+    CHM_SP A = AS_CHM_SP__(_A);
+    CHM_SP W = AS_CHM_SP__(_W);
+
+    const int scale_factor = asInteger(_scale);
+
+    if (A->stype) return mkString("A cannot be symmetric");
+    if (W->stype) return mkString("W cannot be symmetric");
+        
+    double one[] = {1, 0};
+
+    // if (A->ncol != B->ncol || A->nrow != B->nrow) return mkString("A and B do not match");
+    if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
+    if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
+    if (A->ncol < 2) return mkString("Too few cells."); // to do
+
+    A = M_cholmod_transpose(A, (int)A->xtype, &c);
+    W = M_cholmod_transpose(W, (int)W->xtype, &c);
+
+    R_CheckStack();
+    const int N_cell = A->nrow;
+    const int N_feature = length(idx);
+
+    const int * const ap = (int*)A->p;
+    const int * const ai = (int*)A->i;
+    const double * const ax = (double*)A->x;
+
+    SEXP ta = PROTECT(allocVector(VECSXP, N_feature));
+
+    int i;
+    for (i = 0; i < N_feature; ++i) {
+        int ii = INTEGER(idx)[i]  -1;
+        if (ap[ii] == ap[ii+1]) {
+            continue;
+        }
+        
+        double *tmpa = R_Calloc(N_cell, double);
+        memset(tmpa, 0, sizeof(double)*N_cell);
+        int j;
+        for (j = ap[ii]; j < ap[ii+1]; ++j) {
+            if (ISNAN(ax[j])) continue;
+            int cid = ai[j];
+            tmpa[cid] = log(ax[j]/REAL(cs)[cid]*scale_factor + 1);
+        }
+        
+        double *tmpa_s = R_Calloc(N_cell, double);
+        smooth_W(tmpa, tmpa_s, N_cell, W);
+        SEXP val = PROTECT(allocVector(REALSXP, N_cell));
+        for (j = 0; j < N_cell; ++j) {
+            REAL(val)[j] = tmpa_s[j];
+        }
+        SET_VECTOR_ELT(ta, i, val);
+        
+        R_Free(tmpa_s);
+        R_Free(tmpa);
+    }
+
+    M_cholmod_free_sparse(&A, &c);
+    M_cholmod_free_sparse(&W, &c);
+
+    UNPROTECT(N_feature+1);
+    return ta;
+}
 SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
             SEXP _permut,
             SEXP _threads,
             SEXP idx, SEXP bidx,
+            //SEXP cidx,
             SEXP cs, SEXP _scale,
             SEXP _sens)
 {
@@ -381,6 +449,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
 
     R_CheckStack();
     const int N_cell = A->nrow;
+    //const int N_cell = length(cidx);
     const int N_feature = length(idx);
 
     assert (length(bidx) == N_feature);
@@ -390,6 +459,8 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
     SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Eval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Mval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Vval  = PROTECT(allocVector(REALSXP, N_feature));
     
     const int * const ap = (int*)A->p;
     const int * const ai = (int*)A->i;
@@ -452,8 +523,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
         for (j = ap[ii]; j < ap[ii+1]; ++j) {
             if (ISNAN(ax[j])) continue;
             int cid = ai[j];
-            tmpa[cid] = ax[j];
-            tmpa[cid] = log(tmpa[cid]/REAL(cs)[cid]*scale_factor + 1);
+            tmpa[cid] = log(ax[j]/REAL(cs)[cid]*scale_factor + 1);
             mna += tmpa[cid];
         }
         mna = mna/N_cell;
@@ -483,6 +553,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
             Lx2 += pow(tmpa[j]-mna,2);
             Ly1 += pow(tmpb_s[j]-mnb,2);
             Ly2 += pow(tmpb[j]-mnb,2);
+
             tmpa_s[j] = tmpa_s[j] - mna_s;
             tmpb_s[j] = tmpb_s[j] - mnb_s;
             ra  += tmpa_s[j] * tmpb_s[j];
@@ -497,7 +568,6 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
         double Ly = Ly1/Ly2;
         double r = ra/(rb1*rb2);
         double e = sqrt(Lx) * (1-r);
-
 #pragma omp critical
         {
             REAL(LXval)[i] = Lx;
@@ -553,6 +623,8 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
 #pragma omp critical
         {
             REAL(Tval)[i]  = t;
+            REAL(Mval)[i]  = mean;
+            REAL(Vval)[i]  = var;
         }
     }
     
@@ -563,17 +635,18 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
     M_cholmod_free_sparse(&B, &c);
     M_cholmod_free_sparse(&W, &c);
 
-    SEXP ta = PROTECT(allocVector(VECSXP, 5));
+    SEXP ta = PROTECT(allocVector(VECSXP, 7));
     SET_VECTOR_ELT(ta, 0, LXval);
     SET_VECTOR_ELT(ta, 1, LYval);
     SET_VECTOR_ELT(ta, 2, Rval);
     SET_VECTOR_ELT(ta, 3, Eval);
     SET_VECTOR_ELT(ta, 4, Tval);
+    SET_VECTOR_ELT(ta, 5, Mval);
+    SET_VECTOR_ELT(ta, 6, Vval);
 
-    UNPROTECT(6);
+    UNPROTECT(8);
     return ta;
 }
-
 double *sp_colsums(CHM_SP A, Rboolean mn)
 {
     double *cs = R_Calloc(A->ncol, double);
