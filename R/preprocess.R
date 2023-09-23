@@ -99,7 +99,7 @@ setMethod(f = "QuickRecipe",
 GetWeights <- function(object= NULL,                       
                        reduction = "pca",
                        dims = NULL,
-                       k.nn = 8,
+                       k.nn = 9,
                        spatial = FALSE,
                        kernel.method = "average",
                        self.weight = 0,
@@ -838,13 +838,15 @@ aggregateCellByGroup <- function(object = NULL, cell.group = NULL, features = NU
 }
 #'@importFrom dplyr %>%
 #'@import ggplot2
+#'@importFrom scattermore geom_scattermore
+#' 
 #'@export
-FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)),...)
+FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), raster = NULL, types = NULL,...)
 {
   assay <- assay %||% DefaultAssay(object)
   tab0 <- object[[assay]]@meta.features
   cols <- cols %||% c("#131313","blue",RColorBrewer::brewer.pal(12, "Paired"))
-    
+  
   if (is.null(val)) stop("No value name specified.")  
   if (chr %ni% colnames(tab0)) stop("No chr name found.")
   if (start %ni% colnames(tab0)) stop("No start name found.")
@@ -853,7 +855,12 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
   if (!is.null(sel.chrs)) {
     tab0 <- tab0 %>% filter (chr %in% sel.chrs)
   }
-  
+
+  if (!is.null(types)) {
+    if ("type" %ni% colnames(tab0)) stop("No type found.")
+    tab0 <- subset(tab0, type %in% types)
+    if (nrow(tab0) == 0) stop("Empty records.")
+  }
   lv <- gtools::mixedsort(unique(tab0[[chr]]))
   
   tab <- data.frame(chr = factor(tab0[[chr]], levels = lv),
@@ -893,11 +900,24 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
   xi <- xi[-1]
   p <- ggplot(data) + geom_vline(xintercept = xi, color="red", linetype="dotted")
 
+  raster <- raster %||% (nrow(x = data) > 1e5)
+  
   if (!is.null(col.by)) {
-    p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]]), shape=21, ...)
-    p <- p + scale_fill_manual(values = cols)
+    if (raster) {
+      p <- p + geom_scattermore(mapping = aes(x=bp_cum, y = pval, col = .data[[col.by]]),shape=21,...)
+      p <- p + scale_color_manual(values = cols)
+    } else {
+      p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]]), shape=21,...)
+      p <- p + scale_fill_manual(values = cols)
+    }
+
+
   } else {
-    p <- p + geom_point(aes(x=bp_cum, y=pval), shape = 19,  ...)    
+    if (raster) {
+      p <- p + geom_scattermore(aes(x=bp_cum, y=pval),  ...)    
+    } else {
+      p <- p + geom_point(aes(x=bp_cum, y=pval),  ...)    
+    }
   }
   p <- p + scale_x_continuous(label = axis_set$chr, breaks = axis_set$center,
                               limits = c(min(data$bp_cum), max(data$bp_cum)))
