@@ -124,7 +124,7 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE,
   tx = trans0$idx
   names(tx) = trans0$transcript_id
 
-    exons0$idx = tx[exons0$transcript_id]
+  exons0$idx = tx[exons0$transcript_id]
 
   trans0$start0 <- ifelse(trans0$strand == "-", trans0$end, trans0$start)
   trans0$end0 <- ifelse(trans0$strand == "-", trans0$start, trans0$end)
@@ -145,7 +145,7 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE,
       aes(x = end, y = idx, label = gene_name), max.overlaps = max.overlaps,
       nudge_y = -trans0[which(as.character(trans0$strand)=="-"),]$idx-offset-1, size = 5, direction = "x", ...)
   }
-    
+  
   
   if (label & sum(as.character(trans0$strand) == '+') > 0) {
     p = p + ggrepel::geom_text_repel(
