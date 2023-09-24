@@ -18,7 +18,7 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
   }
   
   #bamfile <- normalizePath(bamfile)
-  print(bamfile)
+  message(paste0("Process ", bamfile))
 
   strand.flag <- -1
   if (strand == "forward") strand.flag <- 0
@@ -89,10 +89,25 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
   return(tab)
 }
 
+theme_cov <- function(...) {
+  theme(
+    legend.text = element_blank(),
+    axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
+    axis.title.x = element_blank(),
+    axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
+    axis.line = element_blank(),
+    axis.ticks = element_blank(),
+    panel.background = element_rect(fill = "whitesmoke"),
+    legend.position = "none",
+    plot.title = element_blank(),
+    ...
+  )
+}
+
 #' @import dplyr
+#' @importFrom IRanges subsetByOverlaps
 #' @export
-plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE,
-                       max.overlaps = 5, collapse=TRUE, ...)
+plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
 {
   if (is.null(db)) stop(paste0("No database found, ", genome))
   
@@ -120,50 +135,27 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE,
     p <- p + ylim(0,1) + theme_void()
     return(p)
   }
-  trans0$idx = 1:nrow(trans0)
+
+  trans0$idx <- .Call("trans_sort",trans0$start, trans0$end)
   tx = trans0$idx
   names(tx) = trans0$transcript_id
-
   exons0$idx = tx[exons0$transcript_id]
-
-  trans0$start0 <- ifelse(trans0$strand == "-", trans0$end, trans0$start)
-  trans0$end0 <- ifelse(trans0$strand == "-", trans0$start, trans0$end)
-
-  require(ggarchery)
-  p = ggplot()
-  p = p + geom_arrowsegment(data = trans0,aes(x = start0, xend = end0, y = idx, yend = idx, color=strand),
-                            arrow_positions = c(0.2, 0.4, 0.6, 0.8), 
-                            arrows = arrow(length = unit(0.1, "inches")),
-                            size = 1)
-  p = p + geom_segment(data = exons0, aes(x = start, xend = end, y = idx, yend = idx, color=strand), size = 5)
-
-  offset <- as.integer(max(trans0$idx)/5)
-  offset <- ifelse(offset < 1, 1, offset)
-  if (label & sum(as.character(trans0$strand) == '-') > 0) {
-    p = p + ggrepel::geom_text_repel(
-      data=trans0[which(as.character(trans0$strand)=="-"),], 
-      aes(x = end, y = idx, label = gene_name), max.overlaps = max.overlaps,
-      nudge_y = -trans0[which(as.character(trans0$strand)=="-"),]$idx-offset-1, size = 5, direction = "x", ...)
-  }
-  
-  
-  if (label & sum(as.character(trans0$strand) == '+') > 0) {
-    p = p + ggrepel::geom_text_repel(
-      data=trans0[which(as.character(trans0$strand)=="+"),], 
-      aes(x = start, y = idx, label = gene_name), max.overlaps = max.overlaps,
-      nudge_y = -trans0[which(as.character(trans0$strand)=="+"),]$idx-offset, size = 5, direction = "x", ...)
-  }
-
-  p = p + theme_void()  #+ facet_grid(gene_name~.) 
-  p <- p + theme(panel.spacing= unit(0, "lines"),
-                 axis.title.x=element_blank(), axis.text.y=element_blank(), 
-                 axis.ticks.y=element_blank(), legend.position = "nona") +
+  gname <- trans0 %>% group_by(gene_name) %>% summarise(start = mean(start), end = mean(end), idx = mean(idx))
+  gname <- as.data.frame(gname)
+  gname$med <- (gname$start + gname$end)/2
+  p <- ggplot() + geom_segment(data = trans0,aes(x = start, xend = end, y = idx, yend = idx, color=strand), size=1)
+  p <- p + geom_segment(data = exons0, aes(x = start, xend = end, y = idx, yend = idx),color="black", size = 5)
+  p <- p + geom_text(data=gname,aes(x=med,y=idx,label=gene_name), size=5, check_overlap = TRUE)
+  p <- p + theme_minimal()
+  p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(),
+                 axis.title =element_blank(), 
+                 axis.ticks =element_blank(), legend.position = "nona") +
     ylab("") + xlab("") +scale_x_continuous(limits=c(start(region), end(region)))
 
-  offset <- -offset-2
-  p + ylim(offset,max(trans0$idx+1)) + scale_color_manual(values = c("+" = "red", "-" = "blue"))
+  p + ylim(0,max(trans0$idx+1)) + scale_color_manual(values = c("+" = "red", "-" = "blue"))
+  p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
 }
-
+#'@importFrom IRanges subsetByOverlaps
 plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL)
 {
   r <- subsetByOverlaps(peaks, region, ignore.strand = TRUE)
@@ -179,12 +171,20 @@ plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL)
     p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
     p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
   }
-  p <- p + ylab("") + xlab("") + theme_void() + scale_x_continuous(limits=c(start(region), end(region)))
-  p <- p + ylim(c(0,3))
+  p <- p + ylab("") + scale_x_continuous(limits=c(start(region), end(region)))
+  p <- p + theme_void() +
+    theme(axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1.2)),
+          panel.background = element_rect(fill = "grey"),
+          legend.position = "none",
+          panel.spacing= unit(0, "lines"))
+  
+  p <- p + ylim(-1, 2) + ylab("EPTs")
 
   return(p)
 }
 #' @import patchwork
+#' @import dplyr
+#' @importFrom GenomicRanges seqnames
 #' @export
 plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
                      strand = c("both", "forward", "reverse", "ignore"),
@@ -194,11 +194,36 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
 {
   if (is.null(chr) || start == -1 || end == -1) stop("Require a genomic region.")
 
-  bc <- bamcov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
-               cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+  if (is.list(bamfile)) {
+    nm <- names(bamfile)
+    if (is.list(cell.group)) {
+      dl <- lapply(nm, function(x) {
+        bamcov(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
+               split.bc=split.bc,
+               cell.group=cell.group[[x]], bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+      })
+    } else {
+      dl <- lapply(nm, function(x) {
+        bamcov(bamfile=bamfile[[x]], chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
+                 cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+      })
+    }
+
+    bc <- bind_rows(dl) %>%  group_by(pos, label, strand) %>% summarise(sum(depth, na.rm = TRUE))
+    ss <- table(unlist(bc))
+    colnames(bc) <- c("pos", "label", "strand", "depth")
+  } else {
+    bc <- bamcov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
+                 cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+  }
+
+  if (!is.null(cell.group)) {
+    ss <- table(unlist(cell.group))
+    bc$depth <- bc$depth/ss[bc$label] *1000
+  }
   
   if (isTRUE(log.scaled)) {
-    bc$depth <- log(bc$depth+1)
+    bc$depth <- log1p(bc$depth)
   }
 
   if (max.depth > 0) {
@@ -215,96 +240,82 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   p1 <- p1 + xlab("") + ylab("") + theme_bw() + scale_x_continuous(limits=c(start, end))
   p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue")) 
   
-  if (start0 != -1 & start0 > start & end0 != -1 & end0 < end) {
-    p1 <- p1 + annotate("rect",
-                        xmin = start0,
-                        xmax = end0,
-                        ymin = ymin,
-                        ymax = ymax,
-                        alpha = .1,
-                        fill = "blue")
-  }
+  ## if (start0 != -1 & start0 > start & end0 != -1 & end0 < end) {
+  ##   p1 <- p1 + annotate("rect",
+  ##                       xmin = start0,
+  ##                       xmax = end0,
+  ##                       ymin = ymin,
+  ##                       ymax = ymax,
+  ##                       alpha = .1,
+  ##                       fill = "blue")
+  ## }
   return(p1)
 }
 
 #' @import patchwork
+#' @importFrom GenomicRanges seqnames GRanges
 #' @export
-plotTracks <-  function(bamfile=NULL, chr=NULL, start=-1, end =-1, gene=NULL,
+plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
                         strand = "both",
                         split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
-                        db = NULL, max.overlaps = 5, max.depth = 0,
-                        cell.group=NULL, display.genes = NULL, toUCSC=FALSE, peaks =NULL,
-                        log.scaled = FALSE, upstream = 1000, downstream = 1000, start0 = NULL,
-                        end0 = NULL, anno.col = "blue", collapse = TRUE, type.col = NULL, ...)
+                        db = NULL, max.depth = 0, group.title.size = rel(2),
+                        cell.group=NULL, display.genes = NULL, toUCSC=FALSE, meta.features =NULL,
+                        log.scaled = FALSE, upstream = 1000, downstream = 1000,
+                        anno.col = "blue", type.col = NULL, layout_heights =c(1,10,2),...)
                         
 {
-  start0 <- start0 %||% start
-  end0 <- end0 %||% end
-
   if (!is.null(gene)) {
     if (is.null(db)) stop(paste0("No database found, ", genome))
     genes1 <- db$gene
-    start <- start(genes1[which(genes1$gene_name == gene)][1])
-    end <- end(genes1[which(genes1$gene_name == gene)])
 
-    ## allow some overhang 
-    if (start - start0 < 2000) start <- start0
-    if (end0 - end < 2000) end <- end0
-    
-    if (start0 < start | end0 > end) stop("Conflict target region and gene.")
+    start <- start %||% min(start(genes1[which(genes1$gene_name %in% gene)]))
+    end <- end %||% max(end(genes1[which(genes1$gene_name %in% gene)]))
+    chr <- unique(seqnames(genes1[which(genes1$gene_name %in% gene)]))
+    if (length(chr) != 1) stop(paste("More than 1 chromosome found, ", chr))
   }
-  
+  message(paste0("chr ", chr, ", start ", start, ", end ", end))
+          
+  if (is.null(start) || is.null(end)) stop("No start or/and end position specified.")
   start <- start - upstream
   end <- end + downstream
-  
-  if (start0 < 0) start0 <- 1
-  cov_theme <- function() {
-    theme(
-      legend.text = element_text(face = "italic",color = "black",family = "Helvetica",size = rel(1.5)),
-      axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
-      axis.title.x = element_text(color = "black", family = "Helvetica",size = rel(1.5)),
-      axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
-      axis.line = element_blank(),
-      axis.ticks = element_line(size = rel(1), color = "black"),
-      panel.border = element_blank(),# element_rect(color = "black", fill = NA, size= rel(2), linetype = "solid"),
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      panel.background = element_rect(fill = "whitesmoke"),
-      legend.key = element_rect(fill = "whitesmoke"),
-      legend.title = element_text(size = rel(1.5),family = "Helvetica"),
-      plot.title = element_text(color = "black",face = "bold",size = rel(1.7),family = "Helvetica")
-    )
-  }
-  
+
+  if (is.null(bamfile)) stop("No bam file specified.")
+    
   p1 <- plot.cov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
                  bin=bin, cell.tag=cell.tag, umi.tag=umi.tag, cell.group=cell.group,
-                 log.scaled=log.scaled, start0 = start0, end0 = end0, max.depth = max.depth)
-  p1 <- p1 + cov_theme()
-  p1 <- p1 + theme(panel.spacing.y = unit(0, "lines"))
-  if (!is.null(peaks)) {
-    gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
-    p2 <- plot.bed(region = gr, peaks = peaks, type.col=type.col)
+                 log.scaled=log.scaled, max.depth = max.depth)
+  p1 <- p1 + theme_cov()
+  p1 <- p1 + theme(panel.spacing.y = unit(0.1, "lines"))
+  p1 <- p1 + theme(strip.text = element_text(size = group.title.size))
 
-    if (start0 > start & end0 < end) {
-      p2 <- p2 + annotate("rect", xmin = start0, xmax = end0, ymin = 0, ymax = 1, alpha = .1,fill = anno.col)
-    }
-    
-    if (toUCSC) chr <- paste0("chr",chr)
+  p0 <- NULL
+  if (!is.null(meta.features)) {
+    if (length(intersect(c("chr","start","end","strand","type"), colnames(meta.features))) != 5)
+      stop("No chr/start/end/strand/type column found in meta.features")
+
+    tab <- subset(meta.features, start > 0 & end > 0)
+    peaks <- GRanges(seqnames=tab[['chr']],
+                 ranges = IRanges(start = tab[['start']],
+                                  end = tab[['end']]),
+                 strand = tab[['strand']],
+                 type = tab[['type']])
+
     gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
-    p3 <- plot.genes(gr, db=db, genes=display.genes, max.overlaps = max.overlaps, ...)
-    #p3 <- p3 + theme_pubr()
-    if (start0 > start & end0 < end) {
-      p3 <- p3 + annotate("rect", xmin = start0, xmax = end0, ymin = 0, ymax = 1, alpha = .1,fill = anno.col)
-    }
-    
-    return(p2/p1/p3 + plot_layout(heights = c(1,16,2)))
+    p0 <- plot.bed(region = gr, peaks = peaks, type.col=type.col)
+
+    ## if (start0 > start & end0 < end) {
+    ##   p2 <- p2 + annotate("rect", xmin = start0, xmax = end0, ymin = 0, ymax = 1, alpha = .1,fill = anno.col)
+    ## }    
   } 
 
   if (toUCSC) chr <- paste0("chr",chr)
   gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
   p2 <- plot.genes(gr, db=db, genes=display.genes, collapse=collapse, ...)
-  
-  return(p1 / p2 + plot_layout(heights = c(8, 2)))  
+
+  if (!is.null(p0)) {
+    return(p0/ p1 / p2 + plot_layout(heights=layout_heights))
+  }
+  return(p1 / p2 + plot_layout(heights=layout_heights[c(2,3)]))
 }
 
 #' @import RColorBrewer
