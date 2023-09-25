@@ -920,7 +920,8 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
     }
   }
   p <- p + scale_x_continuous(label = axis_set$chr, breaks = axis_set$center,
-                              limits = c(min(data$bp_cum), max(data$bp_cum)))
+                              limits = c(min(data$bp_cum), max(data$bp_cum)),
+                              expand=c(0,0))
   p <- p + fbt_theme() + theme(axis.title.y = element_text(size = rel(1.5), angle = 90))
   p <- p + xlab(xlab) + ylab(ylab)
   p
