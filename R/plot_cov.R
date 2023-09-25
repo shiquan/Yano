@@ -131,7 +131,8 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
   txcnt <- table(trans0$gene_name)
   if (nrow(trans0) == 0) {
     p <- ggplot()
-    p <- p + ylab("") + xlab("") +scale_x_continuous(limits=c(start(region), end(region)),expand=c(0,0))
+    p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start(region), end(region)), expand=FALSE)
+    #scale_x_continuous(limits=c(start(region), end(region)),expand=c(0,0))
     p <- p + ylim(0,1) + theme_void()
     return(p)
   }
@@ -145,7 +146,7 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
   end0 <- end(region)
   trans0$start[which(trans0$start<start0)] <- start0
   trans0$end[which(trans0$end>end0)] <- end0
-  gname <- trans0 %>% group_by(gene_name) %>% summarise(start = mean(start), end = mean(end), idx = max(idx)+1)
+  gname <- trans0 %>% group_by(gene_name) %>% summarise(start = min(start), end = max(end), idx = max(idx)+1)
   gname <- as.data.frame(gname)
   gname$med <- (gname$start + gname$end)/2
   p <- ggplot() + geom_segment(data = trans0,aes(x = start, xend = end, y = idx, yend = idx, color=strand), size=1)
@@ -159,34 +160,36 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
                  legend.justification="right",
                  legend.box.spacing = unit(-10, "pt"),
                  legend.margin=margin(0,0,0,0))
-  p <- p + ylab("") + xlab("") +scale_x_continuous(limits=c(start(region), end(region)), expand = c(0,0))
+  p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start(region), end(region)), expand=FALSE)
+  # scale_x_continuous(limits=c(start(region), end(region)), expand = c(0,0))
   p <- p + ylim(0,max(trans0$idx)+1)
   p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
   p 
 }
 #'@importFrom IRanges subsetByOverlaps
-plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL)
+plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.size=rel(2))
 {
   r <- subsetByOverlaps(peaks, region, ignore.strand = TRUE)
   tab <- data.frame(r)
   p <- ggplot()
   if ("type" %in% colnames(tab) & !is.null(type.col)) {
-    p <- p + geom_segment(data = subset(tab, strand=="+"),aes(x = start, xend = end, y = 1, yend = 1, color=type), size = 3)
-    p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=type), size = 3)
+    p <- p + geom_segment(data = tab,aes(x = start, xend = end, y = 1, yend = 1, color=type), size = 3)
+    #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=type), size = 3)
     p <- p + scale_color_manual(values = type.col)
   } else {
-    p <- p + geom_segment(data = subset(tab, strand=="+"),aes(x = start, xend = end, y = 1, yend = 1, color=strand), size = 3)
-    p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
+    p <- p + geom_segment(data = tab, aes(x = start, xend = end, y = 1, yend = 1, color=strand), size = 3)
+    #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
     p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
   }
-  p <- p + ylab("") + scale_x_continuous(limits=c(start(region), end(region)), expand = c(0,0))
-  p <- p + theme_void() +
-    theme(axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(0.8)),
-          panel.background = element_rect(fill = "grey"),
-          legend.position = "none",
-          panel.spacing= unit(0, "lines"))
-  
-  p <- p + ylim(-1, 2) + ylab("EPTs")
+  p <- p + facet_wrap(facets = ~strand, strip.position = 'right', ncol = 1)
+  p <- p + xlab("") + coord_cartesian(xlim=c(start(region), end(region)),expand=FALSE)
+  #scale_x_continuous(limits=c(start(region), end(region)), expand = c(0,0))
+  p <- p + ylab("") + scale_y_continuous(expand = c(0,0))
+  p <- p + theme_void() + theme(legend.position = "none",
+                                panel.background = element_rect(fill = "grey"),
+                                panel.spacing= unit(0.1, "lines"),
+                                strip.text = element_text(size = group.title.size))
+  p <- p + ylab("EPTs")
 
   return(p)
 }
@@ -230,7 +233,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   bc$label <- factor(bc$label, levels=gtools::mixedsort(unique(bc$label)))
   if (!is.null(cell.group)) {
     ss <- table(unlist(cell.group))
-    bc$depth <- bc$depth/ss[bc$label] *1000
+    bc$depth <- bc$depth/as.vector(ss[bc$label]) *1000
   }
   
   if (isTRUE(log.scaled)) {
@@ -248,9 +251,9 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   
   p1 <- ggplot(bc, aes(x=pos,y=depth,fill=strand)) + geom_area(stat = "identity")
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
-  p1 <- p1 + xlab("") + ylab("") + theme_bw() + scale_x_continuous(limits=c(start, end),expand=c(0,0))
+  p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), expand=FALSE)
+  # scale_x_continuous(limits=c(start, end),expand=c(0,0))
   p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue"))  
-
   ## if (start0 != -1 & start0 > start & end0 != -1 & end0 < end) {
   ##   p1 <- p1 + annotate("rect",
   ##                       xmin = start0,
@@ -284,12 +287,10 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
     chr <- unique(seqnames(genes1[which(genes1$gene_name %in% gene)]))
     if (length(chr) != 1) stop(paste("More than 1 chromosome found, ", chr))
   }
-  message(paste0("chr ", chr, ", start ", start, ", end ", end))
-          
   if (is.null(start) || is.null(end)) stop("No start or/and end position specified.")
   start <- start - upstream
   end <- end + downstream
-
+  message(paste0("chr ", chr, ", start ", start, ", end ", end))
   if (is.null(bamfile)) stop("No bam file specified.")
     
   p1 <- plot.cov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
@@ -330,7 +331,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
 }
 
 #' @import RColorBrewer
-#' @import pheatmap
+#' @importFrom pheatmap pheatmap
 #' @export
 plotModHeatmap <- function(lc = NULL,
                            cluster_rows = FALSE,
