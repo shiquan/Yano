@@ -131,7 +131,7 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
   txcnt <- table(trans0$gene_name)
   if (nrow(trans0) == 0) {
     p <- ggplot()
-    p <- p + ylab("") + xlab("") +scale_x_continuous(limits=c(start(region), end(region)))
+    p <- p + ylab("") + xlab("") +scale_x_continuous(limits=c(start(region), end(region)),expand=c(0,0))
     p <- p + ylim(0,1) + theme_void()
     return(p)
   }
@@ -140,27 +140,35 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
   tx = trans0$idx
   names(tx) = trans0$transcript_id
   exons0$idx = tx[exons0$transcript_id]
-  gname <- trans0 %>% group_by(gene_name) %>% summarise(start = mean(start), end = mean(end), idx = mean(idx))
+
+  start0 <- start(region)
+  end0 <- end(region)
+  trans0$start[which(trans0$start<start0)] <- start0
+  trans0$end[which(trans0$end>end0)] <- end0
+  gname <- trans0 %>% group_by(gene_name) %>% summarise(start = mean(start), end = mean(end), idx = max(idx)+1)
   gname <- as.data.frame(gname)
   gname$med <- (gname$start + gname$end)/2
   p <- ggplot() + geom_segment(data = trans0,aes(x = start, xend = end, y = idx, yend = idx, color=strand), size=1)
   p <- p + geom_segment(data = exons0, aes(x = start, xend = end, y = idx, yend = idx),color="black", size = 5)
-  p <- p + geom_text(data=gname,aes(x=med,y=idx,label=gene_name), size=5, check_overlap = TRUE)
+  p <- p + geom_text(data=gname,aes(x=med,y=idx,label=gene_name), size=5, check_overlap = TRUE,na.rm=TRUE)
   p <- p + theme_minimal()
   p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(),
                  axis.title =element_blank(), 
-                 axis.ticks =element_blank(), legend.position = "nona") +
-    ylab("") + xlab("") +scale_x_continuous(limits=c(start(region), end(region)))
-
-  p + ylim(0,max(trans0$idx+1)) + scale_color_manual(values = c("+" = "red", "-" = "blue"))
-  p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
+                 axis.ticks =element_blank(),
+                 legend.position="left",
+                 legend.justification="right",
+                 legend.box.spacing = unit(-10, "pt"),
+                 legend.margin=margin(0,0,0,0))
+  p <- p + ylab("") + xlab("") +scale_x_continuous(limits=c(start(region), end(region)), expand = c(0,0))
+  p <- p + ylim(0,max(trans0$idx)+1)
+  p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
+  p 
 }
 #'@importFrom IRanges subsetByOverlaps
 plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL)
 {
   r <- subsetByOverlaps(peaks, region, ignore.strand = TRUE)
   tab <- data.frame(r)
-  
   p <- ggplot()
   if ("type" %in% colnames(tab) & !is.null(type.col)) {
     p <- p + geom_segment(data = subset(tab, strand=="+"),aes(x = start, xend = end, y = 1, yend = 1, color=type), size = 3)
@@ -171,9 +179,9 @@ plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL)
     p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
     p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
   }
-  p <- p + ylab("") + scale_x_continuous(limits=c(start(region), end(region)))
+  p <- p + ylab("") + scale_x_continuous(limits=c(start(region), end(region)), expand = c(0,0))
   p <- p + theme_void() +
-    theme(axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1.2)),
+    theme(axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(0.8)),
           panel.background = element_rect(fill = "grey"),
           legend.position = "none",
           panel.spacing= unit(0, "lines"))
@@ -204,8 +212,9 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
       })
     } else {
       dl <- lapply(nm, function(x) {
-        bamcov(bamfile=bamfile[[x]], chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
-                 cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+        bamcov(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
+               split.bc=split.bc,
+               cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
       })
     }
 
@@ -213,10 +222,12 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     ss <- table(unlist(bc))
     colnames(bc) <- c("pos", "label", "strand", "depth")
   } else {
-    bc <- bamcov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
+    bc <- bamcov(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand, split.bc=split.bc,
                  cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
   }
 
+  bc$label <- as.character(bc$label)
+  bc$label <- factor(bc$label, levels=gtools::mixedsort(unique(bc$label)))
   if (!is.null(cell.group)) {
     ss <- table(unlist(cell.group))
     bc$depth <- bc$depth/ss[bc$label] *1000
@@ -237,9 +248,9 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   
   p1 <- ggplot(bc, aes(x=pos,y=depth,fill=strand)) + geom_area(stat = "identity")
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
-  p1 <- p1 + xlab("") + ylab("") + theme_bw() + scale_x_continuous(limits=c(start, end))
-  p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue")) 
-  
+  p1 <- p1 + xlab("") + ylab("") + theme_bw() + scale_x_continuous(limits=c(start, end),expand=c(0,0))
+  p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue"))  
+
   ## if (start0 != -1 & start0 > start & end0 != -1 & end0 < end) {
   ##   p1 <- p1 + annotate("rect",
   ##                       xmin = start0,
@@ -253,7 +264,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
 }
 
 #' @import patchwork
-#' @importFrom GenomicRanges seqnames GRanges
+#' @importFrom GenomicRanges seqnames GRanges start end
 #' @export
 plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
                         strand = "both",
