@@ -1,30 +1,9 @@
-/*  
-    Copyright (C) 2016,2017,2018,2019  BGI Research
+#ifndef UTILS_HEADER
+#define UTILS_HEADER
 
-    Author: Shi Quan (shiquan@genomics.cn)
-
-    Permission is hereby granted, free of charge, to any person obtaining a copy
-    of this software and associated documentation files (the "Software"), to deal
-    in the Software without restriction, including without limitation the rights
-    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-    copies of the Software, and to permit persons to whom the Software is
-    furnished to do so, subject to the following conditions:
-    
-    The above copyright notice and this permission notice shall be included in
-    all copies or substantial portions of the Software.
-    
-    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-    THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-    FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-    DEALINGS IN THE SOFTWARE. 
-*/
-
-#ifndef SHILIB_UTILS_HEADER
-#define SHILIB_UTILS_HEADER
-
+#include <R.h>
+#include <Rdefines.h>
+#include <Rinternals.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -49,28 +28,20 @@
 #ifndef error
 #define error(line, ...) do						\
     {									\
-	fprintf(stderr, ANSI_COLOR_RED "[error] [func: %s, line: %d] " ANSI_COLOR_RESET ANSI_COLOR_MAGENTA line ANSI_COLOR_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+	Rprintf(ANSI_COLOR_RED "[error] [func: %s, line: %d] " ANSI_COLOR_RESET ANSI_COLOR_MAGENTA line ANSI_COLOR_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__); \
 	errno = 0;							\
 	exit(EXIT_FAILURE);						\
     } while(0)
 
 #endif
 
-#define CHECK_EMPTY(check, line, ...) do {       \
-        if (check == NULL) {\
-            fprintf(stderr, ANSI_COLOR_RED "[error] [func: %s, line: %d] " ANSI_COLOR_RESET ANSI_COLOR_MAGENTA line ANSI_COLOR_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__); \
-            errno = 0;\
-            exit(EXIT_FAILURE);	\
-        }                       \
-    } while(0)
-
 #define warnings(line, ...) do						\
     {									\
-        fprintf(stderr, ANSI_COLOR_YELLOW "[warnings] " line ANSI_COLOR_RESET "\n", ##__VA_ARGS__); \
+        Rprintf(ANSI_COLOR_YELLOW "[warnings] " line ANSI_COLOR_RESET "\n", ##__VA_ARGS__); \
     } while(0)
 
 #define debug_print(line, ...) do {\
-	fprintf(stderr, "[ ** DEBUG ** func: %s, line: %d ] " line "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__); \
+	Rprintf("[ ** DEBUG ** func: %s, line: %d ] " line "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__); \
     } while(0)
 
 #define LOG_print(line, ...) do {               \
@@ -78,7 +49,7 @@
 	time(&second);                                                  \
 	char _time_buff[100];                                           \
 	strftime (_time_buff, 100, "%Y-%m-%d %H:%M:%S", localtime (&second)); \
-	fprintf(stderr, "[%s] " ANSI_COLOR_GREEN line ANSI_COLOR_RESET"\n", _time_buff, ##__VA_ARGS__); \
+	Rprintf("[%s] " ANSI_COLOR_GREEN line ANSI_COLOR_RESET"\n", _time_buff, ##__VA_ARGS__); \
     } while(0)
 
 // timer, copied from bwa/utils.c

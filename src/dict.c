@@ -215,7 +215,7 @@ int dict_read(struct dict *D, const char *fname, int allow_space)
 {
     gzFile fp;
     fp = gzopen(fname, "r");
-    CHECK_EMPTY(fp, "%s : %s.", fname, strerror(errno));
+    if(fp == NULL) error("%s : %s.", fname, strerror(errno));
     kstream_t *ks = ks_init(fp);
     kstring_t str = {0,0,0};
     int ret;

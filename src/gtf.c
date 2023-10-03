@@ -568,7 +568,7 @@ struct gtf_spec *gtf_read(const char *fname, int f)
 
     gzFile fp;
     fp = gzopen(fname, "r");
-    CHECK_EMPTY(fp, "%s : %s.", fname, strerror(errno));
+    if(fp == NULL) error("%s : %s.", fname, strerror(errno));
 
     kstream_t *ks = ks_init(fp);
     kstring_t str = {0,0,0};

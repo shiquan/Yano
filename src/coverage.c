@@ -1,6 +1,10 @@
 #include "utils.h"
 #include "coverage.h"
 #include "bed.h"
+#include "number.h"
+#include "htslib/tbx.h"
+#include "htslib/bgzf.h"
+#include "htslib/kstring.h"
 
 struct depth *depth_init()
 {
@@ -372,3 +376,125 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
     return head;
 }
 
+struct depth *fragment2depth(tbx_t *tbx, const char *seqname, int start, int end, BGZF *fp,
+                             struct dict *bc, const int* alias_idx, int fix_barcodes)
+{
+    int tid = tbx_name2id(tbx, seqname);
+    hts_itr_t *itr = tbx_itr_queryi(tbx, tid, start, end);
+    kstring_t r = {0,0,0};
+
+    struct depth *head = NULL;
+    struct depth *tail = NULL;
+    struct depth *last_start = NULL;
+    for (;;) {
+        int ret = tbx_bgzf_itr_next(fp, tbx, itr, &r);
+        if (ret < 0) break;
+
+        struct depth *cur = NULL;
+        
+        int n;
+        int *s = ksplit(&r, '\t', &n);
+        assert(n >= 4);
+        int st = str2int(r.s + s[1]);
+        int ed = str2int(r.s + s[2]);
+            
+        if (ed <= start) continue;
+        if (st >= end) continue;
+            
+        char *cell = r.s + s[3];
+        int id = -1;
+        if (bc && fix_barcodes) {
+            id = dict_query(bc, cell);
+            if (id == -1) continue;
+            if (alias_idx) id = alias_idx[id];
+        }
+        
+        for (int i = st; i < ed; ++i) {
+            if (i < start) i = start;
+            if (i > end) break;
+
+            if (head == NULL) {
+                head = depth_init();
+                head->pos = i;
+                tail = head;
+            }
+            if (cur && cur->pos == i) last_start = cur;
+            if (cur == NULL) {
+                cur = last_start == NULL ? head : last_start;
+                for (; cur != NULL; cur = cur->next) {
+                    if (cur->pos == i) {
+                        depth_increase(cur, id, NULL, BED_STRAND_UNK);
+                        break;
+                    }
+                    else if (cur->pos > i) { 
+                        struct depth *new = depth_init();
+                        new->pos = i;
+                        new->next = cur;
+                        new->before = cur->before;
+                        if (cur->before) cur->before->next = new;
+                        else {
+                            assert(cur == head);
+                            head->before = new;
+                            head = new;
+                        }
+                        cur->before = new;
+                        cur = new;
+                        depth_increase(cur, id, NULL, BED_STRAND_UNK);
+                        break;
+                    }
+                }
+                
+                if (cur == NULL) { // update tail
+                    struct depth *new = depth_init();
+                    new->pos = i;
+                    new->before = tail;
+                    tail->next = new;
+                    tail = new;
+                    cur = new;
+                    depth_increase(cur, id, NULL, BED_STRAND_UNK);
+                }
+            }
+            else { // not the first one, count start from cur
+                for (;;) {
+                    if (cur == NULL) break;
+                    if (cur->pos == i) {
+                        depth_increase(cur, id, NULL, BED_STRAND_UNK);
+                        break;
+                    }
+                    else if (cur->pos > i) {
+                        struct depth *new = depth_init();
+                        new->pos = i;
+                        new->next = cur;
+                        new->before = cur->before;
+                        if (cur->before) cur->before->next = new;
+                        else {
+                            assert(cur == head);
+                            head->before = new;
+                            head = new;
+                        }
+                        cur->before = new;
+                        cur = new;
+                        depth_increase(cur, id, NULL, BED_STRAND_UNK);
+                        break;
+                    }
+                    cur = cur->next; // next record
+                }
+                if (cur == NULL) {
+                    assert(tail);
+                    struct depth *new = depth_init();
+                    new->pos = i;
+                    new->before = tail;
+                    tail->next = new;
+                    tail = new;
+                    cur = new;
+                    depth_increase(cur, id, NULL,BED_STRAND_UNK);
+                }
+            }
+        }
+        free(s);
+    }
+    if (r.m) free(r.s);
+    hts_itr_destroy(itr);
+    
+    return head;
+}

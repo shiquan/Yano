@@ -5,6 +5,9 @@
 #include "utils.h"
 #include "htslib/sam.h"
 #include "htslib/hts.h"
+#include "htslib/bgzf.h"
+#include "htslib/tbx.h"
+#include "htslib/kstring.h"
 #include "coverage.h"
 #include "dict.h"
 
@@ -165,14 +168,124 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
     SET_VECTOR_ELT(df, 2, depth);
     SET_VECTOR_ELT(df, 3, label);
 
-    //SEXP cls;
-    //PROTECT(cls = allocVector(STRSXP, 1)); // class attribute
-    // SET_STRING_ELT(cls, 0, mkChar("data.frame"));
-    // classgets(df, cls);
-    
-    //SET_CLASS(df, mkString("data.frame"));
-    // setAttrib(df, R_RowNamesSymbol, NULL);
-    // UNPROTECT(6);
     UNPROTECT(5);
     return df;
 }
+
+SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
+                     SEXP _split, SEXP _cells, SEXP _n_cell, SEXP _group, SEXP _group_names)
+{
+    if (!Rf_isString(_fname)) {
+        Rprintf("Input is not String");
+        return R_NilValue;
+    }
+    
+    const char *fname = translateChar(STRING_ELT(_fname, 0));
+    const char *seqname = translateChar(STRING_ELT(_name,0)); // chromosome
+    int start = asInteger(_start);
+    int end = asInteger(_end);
+    
+    Rboolean split_by_bc = Rf_asLogical(_split);
+
+    int n_cell = asInteger(_n_cell);
+
+    BGZF *fp = bgzf_open(fname, "r");
+    if (fp == NULL) {
+        Rprintf("%s : %s.", fname, strerror(errno));
+        return R_NilValue;
+    }
+            
+    tbx_t *tbx = tbx_index_load(fname);
+    if (tbx == NULL) {
+        Rprintf("Failed to load index file.");
+        return R_NilValue;
+    }
+    
+    struct dict *bc = dict_init();
+    int fix_barcodes = 0;
+    int *alias = NULL;
+    int alias_tag = 0;
+    if (n_cell > 0) {
+        int n1 = Rf_length(_cells);
+        int n2 = Rf_length(_group);
+        if (n1 != n2 || n1 != n_cell) {
+            Rprintf("Inconsistance length of cell vector.");
+            return R_NilValue;
+        }
+
+        for (int i = 0; i < n_cell; i++) {
+            const char *name = translateChar(STRING_ELT(_cells,i));
+            int ret = dict_query(bc, name);
+            if (ret != -1) {
+                Rprintf("Duplicate cell name records? %s", name);
+                return R_NilValue;
+            }
+            dict_push(bc, name);
+        }
+        alias_tag = 1;
+        split_by_bc = TRUE;
+        alias = INTEGER(_group);
+        
+        int n3 = Rf_length(_group_names);
+        for (int i = 0; i < n_cell; ++i) {
+            alias[i] = alias[i]-1; // convert 1-based to 0-based
+            if (alias[i] > n3) {
+                Rprintf("Inconsistance alias names.");
+                return R_NilValue;
+            }
+        }
+    }
+
+    struct depth *d = fragment2depth(tbx, seqname, start, end, fp, bc, alias, fix_barcodes);
+
+    bgzf_close(fp);
+    tbx_destroy(tbx); // ??
+
+    int n = 0;
+    struct depth *r = d;
+    
+    for (; r; ) {
+        r = r->next;
+        n++;
+    }
+
+    
+    SEXP pos = PROTECT(allocVector(INTSXP, n));
+    SEXP stra = PROTECT(allocVector(INTSXP, n));
+    SEXP depth = PROTECT(allocVector(INTSXP, n));
+    SEXP label = PROTECT(allocVector(STRSXP, n));
+
+    int i = 0;
+    r = d;
+    for (; r; ) {
+        INTEGER(pos)[i] = r->pos;
+        INTEGER(stra)[i] = 0;
+        INTEGER(depth)[i] = r->dep1;
+        if (r->id == -1) {
+            SET_STRING_ELT(label, i, mkChar("."));
+        } else {
+            if (alias_tag)
+                SET_STRING_ELT(label, i, mkChar(translateChar(STRING_ELT(_group_names,r->id))));
+            else
+                SET_STRING_ELT(label, i, mkChar((const char*)dict_name(bc, r->id)));
+        }
+
+        i++;
+        struct depth *t = r;
+        r = r->next;
+        free(t);
+    }
+    assert(i == n);
+
+    dict_destroy(bc);
+    
+    SEXP df = PROTECT(Rf_allocVector(VECSXP,4));
+    SET_VECTOR_ELT(df, 0, pos);
+    SET_VECTOR_ELT(df, 1, stra);
+    SET_VECTOR_ELT(df, 2, depth);
+    SET_VECTOR_ELT(df, 3, label);
+
+    UNPROTECT(5);
+    return df;
+}
+
