@@ -173,6 +173,7 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
 }
 
 SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
+                     // SEXP _split,
                      SEXP _cells, SEXP _n_cell, SEXP _group, SEXP _group_names)
 {
     if (!Rf_isString(_fname)) {
@@ -202,9 +203,9 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
     }
     
     struct dict *bc = dict_init();
-    int fix_barcodes = 0;
+    // int fix_barcodes = 0;
     int *alias = NULL;
-    int alias_tag = 0;
+    // int alias_tag = 0;
     if (n_cell > 0) {
         int n1 = Rf_length(_cells);
         int n2 = Rf_length(_group);
@@ -222,7 +223,8 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
             }
             dict_push(bc, name);
         }
-        alias_tag = 1;
+        // alias_tag = 1;
+        //fix_barcodes = 1;
         //split_by_bc = TRUE;
         alias = INTEGER(_group);
         
@@ -236,7 +238,7 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
         }
     }
 
-    struct depth *d = fragment2depth(tbx, seqname, start, end, fp, bc, alias, fix_barcodes);
+    struct depth *d = fragment2depth(tbx, seqname, start, end, fp, bc, alias);
 
     bgzf_close(fp);
     tbx_destroy(tbx); // ??
@@ -264,7 +266,7 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
         if (r->id == -1) {
             SET_STRING_ELT(label, i, mkChar("."));
         } else {
-            if (alias_tag)
+            if (alias)
                 SET_STRING_ELT(label, i, mkChar(translateChar(STRING_ELT(_group_names,r->id))));
             else
                 SET_STRING_ELT(label, i, mkChar((const char*)dict_name(bc, r->id)));

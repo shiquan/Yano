@@ -46,6 +46,6 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
     );
 
 struct depth *fragment2depth(tbx_t *tbx, const char *seqname, int start, int end, BGZF *fp,
-                             struct dict *bc, const int* alias_idx, int fix_barcodes);
+                             struct dict *bc, const int* alias_idx); //, int fix_barcodes);
 
 #endif
