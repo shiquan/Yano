@@ -173,7 +173,7 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
 }
 
 SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
-                     SEXP _split, SEXP _cells, SEXP _n_cell, SEXP _group, SEXP _group_names)
+                     SEXP _cells, SEXP _n_cell, SEXP _group, SEXP _group_names)
 {
     if (!Rf_isString(_fname)) {
         Rprintf("Input is not String");
@@ -185,7 +185,7 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
     int start = asInteger(_start);
     int end = asInteger(_end);
     
-    Rboolean split_by_bc = Rf_asLogical(_split);
+    //Rboolean split_by_bc = Rf_asLogical(_split);
 
     int n_cell = asInteger(_n_cell);
 
@@ -223,7 +223,7 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
             dict_push(bc, name);
         }
         alias_tag = 1;
-        split_by_bc = TRUE;
+        //split_by_bc = TRUE;
         alias = INTEGER(_group);
         
         int n3 = Rf_length(_group_names);
