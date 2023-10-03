@@ -88,6 +88,66 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
 
   return(tab)
 }
+#'@useDynLib Yano depth2matrix
+#'@export
+fragcov <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc = FALSE, cell.group = NULL, bin=1000)
+{
+  if (is.null(fragfile)) stop("No fragment file.")
+  if (is.null(chr)) stop("No chromosome name")
+  if (start == -1) stop("No start position.")
+  if (end == -1) stop("No end position")
+
+  len <- end - start
+  if (len > 10000000) { ## 10M
+    stop("Too large region, try to shrink it before querying.")
+  }
+
+  win <- 1
+  if (len > bin*2) {
+    win <- as.integer(len/bin)
+  }
+  message(paste0("Process ", fragfile))
+
+  if (!is.null(cell.group)) {
+    #if (length(cell.group)) stop("cell.group should be a vector of cell groups with cell names.")    
+    cell.names <- names(cell.group)
+    if (is.null(cell.names)) stop("Names of cell.group should not be empty.")
+    cell.group <- as.character(cell.group)
+    
+    groups <- levels(cell.group) %||% unique(cell.group)
+    group.ids <- match(cell.group, groups)
+    n <- length(cell.group)
+    split.bc <- TRUE    
+    dlst <- .Call("fragment2matrix", fragfile, chr, start, end, cell.names, n, group.ids, groups)
+  } else {
+    dlst <- .Call("fragment2matrix", fragfile, chr, start, end,  NULL, 0, NULL, NULL)
+  }
+  
+  dlst[[1]] <- as.integer(dlst[[1]]/win)*win
+
+  x <- seq(as.integer(start/win)*win, as.integer(end/win)*win, win)
+  y <- unique(dlst[[4]])
+
+  nr <- length(x)
+  nc <- length(y)
+  
+  m0 <- Matrix::sparseMatrix(
+    i = match(dlst[[1]], x),
+    j = match(dlst[[4]], y),
+    x = dlst[[3]],
+    dims=c(nr,nc))
+
+  rownames(m0) <- x
+  colnames(m0) <- y
+  m0 <- as.matrix(m0)
+  tab <- reshape2::melt(m0)
+  tab$strand <- '.'
+
+  colnames(tab) <- c("pos","label","depth","strand")
+  tab$depth <- as.integer(tab$depth/win)
+
+  return(tab)
+}
 
 theme_cov <- function(...) {
   theme(
@@ -263,6 +323,64 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   ##                       alpha = .1,
   ##                       fill = "blue")
   ## }
+  return(p1)
+}
+
+#' @import patchwork
+#' @import dplyr
+#' @importFrom GenomicRanges seqnames
+#' @export
+plot.cov2 <- function(fragment.file=NULL, chr=NULL, start=-1, end =-1,
+                      max.depth = 0,
+                      split.bc = FALSE, bin = 1000,
+                      cell.group=NULL, log.scaled = log.scaled, start0 = -1, end0 = -1)
+{
+  if (is.null(chr) || start == -1 || end == -1) stop("Require a genomic region.")
+
+  if (is.list(fragment.file)) {
+    nm <- names(fragment.file)
+    if (is.list(cell.group)) {
+      dl <- lapply(nm, function(x) {
+        fragcov(fragfile=fragment.file[[x]], chr=as.character(chr), start=start, end=end,
+                split.bc=split.bc,cell.group=cell.group[[x]], bin=bin)
+      })
+    } else {
+      dl <- lapply(nm, function(x) {
+        fragcov(fragfile=fragment.file[[x]], chr=as.character(chr), start=start, end=end,
+                split.bc=split.bc, cell.group=cell.group, bin=bin)
+      })
+    }
+
+    bc <- bind_rows(dl) %>%  group_by(pos, label, strand) %>% summarise(sum(depth, na.rm = TRUE))
+    ss <- table(unlist(bc))
+    colnames(bc) <- c("pos", "label", "strand", "depth")
+  } else {
+    bc <- fragcov(fragfile=fragment.file, chr=as.character(chr), start=start, end=end,
+                  split.bc=split.bc, cell.group=cell.group, bin=bin)
+  }
+
+  bc$label <- as.character(bc$label)
+  bc$label <- factor(bc$label, levels=gtools::mixedsort(unique(bc$label)))
+  if (!is.null(cell.group)) {
+    ss <- table(unlist(cell.group))
+    bc$depth <- bc$depth/as.vector(ss[bc$label]) *1000
+  }
+  
+  if (isTRUE(log.scaled)) {
+    bc$depth <- log1p(bc$depth)
+  }
+
+  if (max.depth > 0) {
+    bc$depth[bc$depth > max.depth] <- max.depth
+  }
+  
+  ymax <- max(bc$depth)
+  ymin <- min(bc$depth)
+  
+  p1 <- ggplot(bc, aes(x=pos,y=depth), fill="black") + geom_area(stat = "identity")
+  p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
+  p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), expand=FALSE)
+
   return(p1)
 }
 
