@@ -377,7 +377,7 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
 }
 
 struct depth *fragment2depth(tbx_t *tbx, const char *seqname, int start, int end, BGZF *fp,
-                             struct dict *bc, const int* alias_idx, int fix_barcodes)
+                             struct dict *bc, const int* alias_idx)//, int fix_barcodes)
 {
     int tid = tbx_name2id(tbx, seqname);
     hts_itr_t *itr = tbx_itr_queryi(tbx, tid, start, end);
@@ -403,7 +403,7 @@ struct depth *fragment2depth(tbx_t *tbx, const char *seqname, int start, int end
             
         char *cell = r.s + s[3];
         int id = -1;
-        if (bc && fix_barcodes) {
+        if (bc) {
             id = dict_query(bc, cell);
             if (id == -1) continue;
             if (alias_idx) id = alias_idx[id];
