@@ -233,11 +233,11 @@ plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.s
   tab <- data.frame(r)
   p <- ggplot()
   if ("type" %in% colnames(tab) & !is.null(type.col)) {
-    p <- p + geom_segment(data = tab,aes(x = start, xend = end, y = 1, yend = 1, color=type), size = 3)
+    p <- p + geom_segment(data = tab,aes(x = start, xend = end, y = 0, yend = 1, color=type), size = 1)
     #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=type), size = 3)
     p <- p + scale_color_manual(values = type.col)
   } else {
-    p <- p + geom_segment(data = tab, aes(x = start, xend = end, y = 1, yend = 1, color=strand), size = 3)
+    p <- p + geom_segment(data = tab, aes(x = start, xend = end, y = 0, yend = 1, color=strand), size = 1)
     #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
     p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
   }
@@ -330,23 +330,23 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
 #' @import dplyr
 #' @importFrom GenomicRanges seqnames
 #' @export
-plot.cov2 <- function(fragment.file=NULL, chr=NULL, start=-1, end =-1,
+plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
                       max.depth = 0,
                       split.bc = FALSE, bin = 1000,
-                      cell.group=NULL, log.scaled = log.scaled, start0 = -1, end0 = -1)
+                      cell.group=NULL, log.scaled = FALSE, start0 = -1, end0 = -1)
 {
   if (is.null(chr) || start == -1 || end == -1) stop("Require a genomic region.")
 
-  if (is.list(fragment.file)) {
-    nm <- names(fragment.file)
+  if (is.list(fragfile)) {
+    nm <- names(fragfile)
     if (is.list(cell.group)) {
       dl <- lapply(nm, function(x) {
-        fragcov(fragfile=fragment.file[[x]], chr=as.character(chr), start=start, end=end,
+        fragcov(fragfile=fragfile[[x]], chr=as.character(chr), start=start, end=end,
                 split.bc=split.bc,cell.group=cell.group[[x]], bin=bin)
       })
     } else {
       dl <- lapply(nm, function(x) {
-        fragcov(fragfile=fragment.file[[x]], chr=as.character(chr), start=start, end=end,
+        fragcov(fragfile=fragfile[[x]], chr=as.character(chr), start=start, end=end,
                 split.bc=split.bc, cell.group=cell.group, bin=bin)
       })
     }
@@ -355,10 +355,10 @@ plot.cov2 <- function(fragment.file=NULL, chr=NULL, start=-1, end =-1,
     ss <- table(unlist(bc))
     colnames(bc) <- c("pos", "label", "strand", "depth")
   } else {
-    bc <- fragcov(fragfile=fragment.file, chr=as.character(chr), start=start, end=end,
+    bc <- fragcov(fragfile=fragfile, chr=as.character(chr), start=start, end=end,
                   split.bc=split.bc, cell.group=cell.group, bin=bin)
   }
-
+  
   bc$label <- as.character(bc$label)
   bc$label <- factor(bc$label, levels=gtools::mixedsort(unique(bc$label)))
   if (!is.null(cell.group)) {
@@ -393,7 +393,10 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
                         db = NULL, max.depth = 0, group.title.size = rel(2),
                         cell.group=NULL, display.genes = NULL, toUCSC=FALSE, meta.features =NULL,
                         log.scaled = FALSE, upstream = 1000, downstream = 1000,
-                        anno.col = "blue", type.col = NULL, layout_heights =c(1,10,2),...)
+                        fragfile = NULL,
+                        atac.log.scaled = FALSE,
+                        atac.max.depth = 0,
+                        anno.col = "blue", type.col = NULL, layout_heights =c(1,10,10,2),...)
                         
 {
   if (!is.null(gene)) {
@@ -438,14 +441,30 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
     ## }    
   } 
 
+  p3 <- NULL
+
+  if (!is.null(fragfile)) {
+    p3 <- plot.cov2(fragfile = fragfile, chr=chr, start=start, end=end, bin=bin, cell.group=cell.group, log.scaled = atac.log.scaled, max.depth=atac.max.depth)
+    p3 <- p3 + theme_cov()
+    p3 <- p3 + theme(panel.spacing.y = unit(0.1, "lines"))
+    p3 <- p3 + theme(strip.text = element_text(size = group.title.size))
+  }
+  
   if (toUCSC) chr <- paste0("chr",chr)
   gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
   p2 <- plot.genes(gr, db=db, genes=display.genes, collapse=collapse, ...)
-
+  
   if (!is.null(p0)) {
-    return(p0/ p1 / p2 + plot_layout(heights=layout_heights))
+    if (!is.null(p3)) {
+      return(p0/ p1 / p3/ p2 + plot_layout(heights=layout_heights))
+    } else {
+      return(p0/ p1 / p2 + plot_layout(heights=layout_heights[c(1,2,4)]))
+    }
   }
-  return(p1 / p2 + plot_layout(heights=layout_heights[c(2,3)]))
+  if (!is.null(p3)) {
+    return(p1 / p3/ p2 + plot_layout(heights=layout_heights[c(2,3,4)]))
+  }
+  return(p1 / p2 + plot_layout(heights=layout_heights[c(2,4)]))
 }
 
 #' @import RColorBrewer
