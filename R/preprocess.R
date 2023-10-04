@@ -838,14 +838,15 @@ aggregateCellByGroup <- function(object = NULL, cell.group = NULL, features = NU
 }
 #'@importFrom dplyr %>%
 #'@import ggplot2
+#'@import ggrepel
 #'@importFrom scattermore geom_scattermore
 #' 
 #'@export
-FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), raster = NULL, types = NULL,...)
+FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), raster = NULL, types = NULL, point.label = NULL, arrange.type = FALSE, ...)
 {
   assay <- assay %||% DefaultAssay(object)
   tab0 <- object[[assay]]@meta.features
-  cols <- cols %||% c("#131313","blue",RColorBrewer::brewer.pal(12, "Paired"))
+  cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
   
   if (is.null(val)) stop("No value name specified.")  
   if (chr %ni% colnames(tab0)) stop("No chr name found.")
@@ -865,7 +866,8 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
   
   tab <- data.frame(chr = factor(tab0[[chr]], levels = lv),
                     start = as.numeric(tab0[[start]]),
-                    pval = -log10(as.numeric(tab0[[val]])))
+                    pval = -log10(as.numeric(tab0[[val]])),
+                    row.names = rownames(tab0))
   
   if (!is.null(col.by)) {
     tab[[col.by]] <- tab0[[col.by]]
@@ -876,7 +878,12 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
     mutate(bp_add = lag(cumsum(max_bp), default = 0)) %>% select(chr, bp_add)
   
   data <- tab %>% inner_join(data_cum, by = "chr") %>% mutate(bp_cum = start + bp_add)
-  axis_set <- data %>%   group_by(chr) %>%  summarize(center = mean(bp_cum))
+  axis_set <- data %>% group_by(chr) %>% summarize(center = mean(bp_cum))
+
+  data$name <- rownames(tab)
+  rownames(data) <- rownames(tab)
+  
+  if (isTRUE(arrange.type)) data <- data %>% arrange(type)
 
   fbt_theme <- function() {
     theme(
@@ -924,5 +931,12 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
                               expand=c(0,0))
   p <- p + fbt_theme() + theme(axis.title.y = element_text(size = rel(1.5), angle = 90))
   p <- p + xlab(xlab) + ylab(ylab)
+
+  if (!is.null(point.label)) {
+    sel <- intersect(point.label, rownames(data))
+    if (length(sel) > 0) {
+      p <- p + geom_label_repel(data=data[sel,],aes(x=bp_cum, y=pval,label=name),box.padding = 0.5, max.overlaps = Inf)
+    }
+  }
   p
 }
