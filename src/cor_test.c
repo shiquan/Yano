@@ -418,7 +418,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
             SEXP _permut,
             SEXP _threads,
             SEXP idx, SEXP bidx,
-            //SEXP cidx,
+            SEXP cidx,
             SEXP cs, SEXP _scale,
             SEXP _sens)
 {
@@ -448,8 +448,8 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
     W = M_cholmod_transpose(W, (int)W->xtype, &c);
 
     R_CheckStack();
-    const int N_cell = A->nrow;
-    //const int N_cell = length(cidx);
+    // const int N_cell = A->nrow;
+    const int N_cell = length(cidx);
     const int N_feature = length(idx);
 
     assert (length(bidx) == N_feature);
@@ -503,12 +503,14 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
         for (j = ap[ii]; j < ap[ii+1]; ++j) {
             if (ISNAN(ax[j])) continue;
             int cid = ai[j];
+            cid = INTEGER(cidx)[cid]-1;
             tmpa[cid] = ax[j];
         }
         
         for (j = bp[ij]; j < bp[ij+1]; ++j) {
             if (ISNAN(bx[j])) continue;
             int cid = bi[j];
+            cid = INTEGER(cidx)[cid]-1;
             tmpb[cid] = bx[j];
             if (sens) {
                 tmpb[cid] = tmpb[cid] - tmpa[cid];
@@ -521,8 +523,9 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
         mnb = mnb/N_cell;
 
         for (j = ap[ii]; j < ap[ii+1]; ++j) {
-            if (ISNAN(ax[j])) continue;
+            if (ISNAN(ax[j])) continue;            
             int cid = ai[j];
+            cid = INTEGER(cidx)[cid]-1;
             tmpa[cid] = log(ax[j]/REAL(cs)[cid]*scale_factor + 1);
             mna += tmpa[cid];
         }

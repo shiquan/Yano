@@ -93,7 +93,25 @@ setMethod(f = "QuickRecipe",
 
             ProcessDimReduc(object, ndim=ndim, resolution=resolution, nvar=nvar)
           })
+#' @importFrom Matrix sparseMatrix
+#' @export
+WeightLinear <- function(order.cells = NULL, k.nn = 9, self.weight = 0, scale = FALSE) {
+  if (is.null(order.cells)) stop("No order.cells specified.")
+  
+  n <- length(order.cells)
+  i <- .Call("build_weight_i", n, k.nn)
 
+  W <- sparseMatrix(i = i + 1, j = rep(1:n, each =k.nn), x=1, dims =c(n,n))
+
+  W@x[W@x > 1] <- 1
+  diag(W) <- self.weight
+
+  if (scale) W <- W/rowSums(W)
+
+  colnames(W) <- order.cells
+  rownames(W) <- order.cells
+  W
+}
 #'
 #' @export
 GetWeights <- function(object= NULL,                       
@@ -101,17 +119,20 @@ GetWeights <- function(object= NULL,
                        dims = NULL,
                        k.nn = 9,
                        spatial = FALSE,
-                       kernel.method = "average",
                        self.weight = 0,
                        scale = FALSE,
+                       order.cells = NULL,
                        cells = NULL)
 {
+  if (!is.null(order.cells)) {
+    return(WeightLinear(order.cells = order.cells, k.nn = k.nn, self.weight=self.weight, scale=scale))
+  }
+  
   cells <- cells %||% colnames(object)
   
   if (isTRUE(spatial)) {
     message("Build weights on tissue coordiantes")
     emb <- GetTissueCoordinates(object)
-    kernel.method <- "average"
   } else {
     message(paste0("Build weights on ", reduction))
     emb <- Embeddings(object,reduction = reduction)
@@ -121,9 +142,6 @@ GetWeights <- function(object= NULL,
   emb <- emb[cells,]
   
   knn.rlt <- nabor::knn(data=emb, query = emb, k=k.nn)
-  if (kernel.method == "average") x = 1
-  else x = 1/c(knn.rlt$nn.dists)
-
   ncell <- length(cells)
   W <- sparseMatrix(i = rep(c(1:ncell), k.nn), 
                     j = c(knn.rlt$nn.idx),
@@ -144,7 +162,7 @@ GetWeights <- function(object= NULL,
 #' @import Matrix
 #' @export
 RunAutoCorr <- function(object = NULL, 
-                        assay = NULL,
+                        assay = NULL,                        
                         slot = "data",
                         spatial = FALSE,
                         scaled = FALSE,
@@ -153,7 +171,7 @@ RunAutoCorr <- function(object = NULL,
                         reduction = "pca",
                         dims = NULL,
                         k.nn = 9,
-                        kernel.method = "dist",
+                        order.cells = NULL,
                         cells = NULL,
                         features = NULL,
                         perm = 10000,threads=4,
@@ -171,8 +189,8 @@ RunAutoCorr <- function(object = NULL,
     W <- GetWeights(object=object, reduction=reduction,
                     dims=dims,
                     k.nn=k.nn,
-                    kernel.method=kernel.method,
                     cells=cells,
+                    order.cells=order.cells,
                     self.weight = 0,
                     scale=TRUE,
                     spatial=spatial)
@@ -186,7 +204,11 @@ RunAutoCorr <- function(object = NULL,
       if (scale.weight) W <- W/rowSums(W)
     }
   }
-  
+
+  if (!is.null(order.cells)) {
+    message("Working on linear trajectory mode ..")
+    cells <- order.cells    
+  }
   x0 <- GetAssayData(object, assay = assay, slot = slot)[,cells]
   features <- intersect(rownames(x0), features)
   x0 <- x0[features,]
@@ -282,11 +304,10 @@ LocalCorr <- function(object = NULL,
                       slot = "data",
                       scaled = FALSE,
                       weights = NULL,
-                      weights.scaled = FALSE,
+                      weight.scale = TRUE,
                       reduction = "pca",
                       dims=NULL,
                       k.nn = 9,
-                      kernel.method = "average",
                       clust.method = "ward.D2",
                       self.weight = 1,
                       verbose = TRUE
@@ -316,8 +337,8 @@ LocalCorr <- function(object = NULL,
     W <- GetWeights(object = object, reduction = reduction,
                     dims = dims,
                     k.nn = k.nn,
-                    kernel.method = kernel.method,
                     self.weight = self.weight,
+                    scale = weight.scale,
                     cells = cells)
   } else {
     dims <- dim(weights)
@@ -326,7 +347,7 @@ LocalCorr <- function(object = NULL,
       cells <- intersect(colnames(weights),cells)
       W <- weights[cells, cells]
       diag(W) <- 0
-      if (!weights.scaled) W <- W/rowSums(W)
+      if (weight.scale) W <- W/rowSums(W)
     }
   }
 
@@ -510,13 +531,14 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
 RunBlockCorr <- function(object = NULL,
                          block.name = "gene_name",
                          assay = NULL,
-                         name = NULL,
                          features = NULL,
                          sensitive.mode = FALSE,
                          block.assay = NULL,
                          block.assay.replace = FALSE,
-                         ## cells = NULL,
+                         cells = NULL,
+                         order.cells = NULL,
                          feature.types = NULL,
+                         prefix = NULL,
                          #c("exon","exonintron","intron","multiexons","utr3","utr5"),
                          min.features.per.block = 2,
                          scale.factor = 1e4,
@@ -526,21 +548,21 @@ RunBlockCorr <- function(object = NULL,
                          spatial = FALSE,
                          dims = NULL,
                          k.nn = 9,
-                         kernel.method = "average",
                          self.weight = 1,
                          perm=1000,
                          threads = 1,
                          verbose = TRUE
                          )
 {
-  ## cells <- cells %||% colnames(object)
-  ## cells <- intersect(colnames(object), cells)
+  cells <- cells %||% order.cells
+  cells <- cells %||% colnames(object)
+  cells <- intersect(colnames(object), cells)
 
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
-  
-  name <- name %||% block.name
 
+  prefix <- prefix %||% block.name
+  
   features <- features %||% AutoCorrFeatures(object)
   features <- intersect(rownames(object),features)
 
@@ -552,7 +574,7 @@ RunBlockCorr <- function(object = NULL,
                     reduction = reduction,
                     dims=dims,
                     k.nn = k.nn,
-                    kernel.method = kernel.method,
+                    order.cells = order.cells,
                     ## cells = cells,
                     self.weight = self.weight,
                     spatial=spatial,
@@ -602,16 +624,16 @@ RunBlockCorr <- function(object = NULL,
   
   # cell sizes
   cs <- colSums(x)
-  ## cells <- intersect(cells,names(which(cs > 0)))
-  ## W <- W[cells, cells]
-  ## cs <- cs[cells]
-  cells <- colnames(object)
+  cells <- intersect(cells,names(which(cs > 0)))
+  W <- W[cells, cells]
+  cs <- cs[cells]
+  #cells <- colnames(object)
   ncell <- length(cells)
   
   ## all.features <- rownames(tab)
   if (block.assay %ni% names(object) || block.assay.replace) {
     message("Aggregate counts..")
-    x0 <- x[rownames(tab),]
+    x0 <- x[rownames(tab),cells]
     x0 <- as(x0, "TsparseMatrix")
     
     # Aggregate features in the same block
@@ -634,7 +656,6 @@ RunBlockCorr <- function(object = NULL,
 
   } else {
     message(paste0("Trying to retrieve data from assay ", block.assay,".."))
-    
     old.assay <- DefaultAssay(object)
     DefaultAssay(object) <- block.assay
     blocks <- intersect(blocks, rownames(object))
@@ -649,10 +670,11 @@ RunBlockCorr <- function(object = NULL,
   tab <- tab[features,]
   bidx <- match(tab[[block.name]],rownames(y))
   idx <- match(features, rownames(x))
-
+  cidx <- match(cells, colnames(x))
+  
   message("Test dissimlarity of two processes ..")
   gc()
-  ta <- .Call("E_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, sensitive.mode);
+  ta <- .Call("E_test", x, y, W, perm, threads, idx, bidx, cidx, cs, scale.factor, sensitive.mode);
   
   Lx <- ta[[1]]
   Ly <- ta[[2]]
@@ -670,12 +692,12 @@ RunBlockCorr <- function(object = NULL,
   padj <- p.adjust(pval, "BH")
   names(padj) <- features
   tab <- object[[assay]]@meta.features
-  tab[[paste0(name, ".e.coef")]] <- e[rownames(object)]
-  tab[[paste0(name, ".r")]] <- r[rownames(object)]
-  tab[[paste0(name, ".Lx")]] <- Lx[rownames(object)]
-  tab[[paste0(name, ".Ly")]] <- Ly[rownames(object)]
-  tab[[paste0(name, ".pval")]] <- pval[rownames(object)]
-  tab[[paste0(name, ".padj")]] <- padj[rownames(object)]
+  tab[[paste0(prefix, ".e.coef")]] <- e[rownames(object)]
+  tab[[paste0(prefix, ".r")]] <- r[rownames(object)]
+  tab[[paste0(prefix, ".Lx")]] <- Lx[rownames(object)]
+  tab[[paste0(prefix, ".Ly")]] <- Ly[rownames(object)]
+  tab[[paste0(prefix, ".pval")]] <- pval[rownames(object)]
+  tab[[paste0(prefix, ".padj")]] <- padj[rownames(object)]
   object[[assay]]@meta.features <- tab
 
   rm(ta)
@@ -698,7 +720,6 @@ RunTwoAssayCorr <- function(object = NULL,
                             reduction = "pca",
                             dims=NULL,
                             k.nn = 5,
-                            kernel.method = "average",
                             self.weight = 1,
                             verbose = TRUE
                             )
@@ -717,7 +738,7 @@ RunTwoAssayCorr <- function(object = NULL,
   # Make weights
   if (is.null(weights)) {
     W <- GetWeights(object = object, reduction = reduction, dims=dims, k.nn = k.nn,
-                    kernel.method = kernel.method, self.weight = self.weight,
+                    self.weight = self.weight,
                     cells = cells)
   } else {
     dims <- dim(weights)
