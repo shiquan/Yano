@@ -35,10 +35,12 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
     group.ids <- match(cell.group, groups)
     n <- length(cell.group)
     split.bc <- TRUE    
-    dlst<- .Call("depth2matrix", bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, cell.names, n, group.ids, groups)
+    dlst <- .Call("depth2matrix", bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, cell.names, n, group.ids, groups)
   } else {
     dlst <- .Call("depth2matrix", bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, NULL, 0, NULL, NULL)
   }
+
+  if (is.null(dlst)) stop("No cell found in the bam. Check cell names.")
   
   idx.0 <- which(dlst[[2]] == 0)
   idx.1 <- which(dlst[[2]] == 1)
@@ -221,7 +223,6 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
                  legend.box.spacing = unit(-10, "pt"),
                  legend.margin=margin(0,0,0,0))
   p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start(region), end(region)), expand=FALSE)
-  # scale_x_continuous(limits=c(start(region), end(region)), expand = c(0,0))
   p <- p + ylim(0,max(trans0$idx)+1)
   p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
   p 
@@ -233,11 +234,11 @@ plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.s
   tab <- data.frame(r)
   p <- ggplot()
   if ("type" %in% colnames(tab) & !is.null(type.col)) {
-    p <- p + geom_segment(data = tab,aes(x = start, xend = end, y = 0, yend = 1, color=type), size = 1)
+    p <- p + geom_rect(data = tab,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, color=type), size = 1)
     #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=type), size = 3)
     p <- p + scale_color_manual(values = type.col)
   } else {
-    p <- p + geom_segment(data = tab, aes(x = start, xend = end, y = 0, yend = 1, color=strand), size = 1)
+    p <- p + geom_rect(data = tab, aes(xmin = start, xmax = end, ymin = 0, ymax = 1, color=strand), size = 1)
     #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
     p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
   }
@@ -396,15 +397,15 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
                         fragfile = NULL,
                         atac.log.scaled = FALSE,
                         atac.max.depth = 0,
-                        anno.col = "blue", type.col = NULL, layout_heights =c(1,10,10,2),...)
+                        anno.col = "blue", type.col = NULL, layout_heights =c(1,10,2),...)
                         
 {
   if (!is.null(gene)) {
     if (is.null(db)) stop(paste0("No database found, ", genome))
     genes1 <- db$gene
 
-    start <- start %||% min(start(genes1[which(genes1$gene_name %in% gene)]))
-    end <- end %||% max(end(genes1[which(genes1$gene_name %in% gene)]))
+    start <- start %||% min(GenomicRanges::start(genes1[which(genes1$gene_name %in% gene)]))
+    end <- end %||% max(GenomicRanges::end(genes1[which(genes1$gene_name %in% gene)]))
     chr <- unique(seqnames(genes1[which(genes1$gene_name %in% gene)]))
     if (length(chr) != 1) stop(paste("More than 1 chromosome found, ", chr))
   }
@@ -456,15 +457,15 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
   
   if (!is.null(p0)) {
     if (!is.null(p3)) {
-      return(p0/ p1 / p3/ p2 + plot_layout(heights=layout_heights))
+      return(p0/ p1 / p3/ p2 + plot_layout(heights=layout_heights[c(1,2,2,3)]))
     } else {
-      return(p0/ p1 / p2 + plot_layout(heights=layout_heights[c(1,2,4)]))
+      return(p0/ p1 / p2 + plot_layout(heights=layout_heights))
     }
   }
   if (!is.null(p3)) {
-    return(p1 / p3/ p2 + plot_layout(heights=layout_heights[c(2,3,4)]))
+    return(p1 / p3/ p2 + plot_layout(heights=layout_heights[c(2,2,3)]))
   }
-  return(p1 / p2 + plot_layout(heights=layout_heights[c(2,4)]))
+  return(p1 / p2 + plot_layout(heights=layout_heights[c(2,3)]))
 }
 
 #' @import RColorBrewer
