@@ -149,7 +149,7 @@ RunAutoCorr <- function(object = NULL,
                         assay = NULL,                        
                         slot = "data",
                         spatial = FALSE,
-                        weights = NULL,                              
+                        W = NULL,                              
                         scale.weight = FALSE,
                         reduction = "pca",
                         dims = NULL,
@@ -168,21 +168,21 @@ RunAutoCorr <- function(object = NULL,
   features <- features %||% rownames(object)
   features <- intersect(rownames(object),features)
   
-  if (is.null(weights)) {
+  if (is.null(W)) {
     W <- GetWeights(object=object, reduction=reduction,
                     dims=dims,
                     k.nn=k.nn,
                     cells=cells,
                     order.cells=order.cells,
                     self.weight = 0,
-                    scale=FALSE,
+                    scale=TRUE,
                     spatial=spatial)
   } else {
-    dims <- dim(weights)
+    dims <- dim(W)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
     if (dims[1] != length(cells)) {
-      cells <- intersect(colnames(weights),cells)
-      W <- weights[cells, cells]
+      cells <- intersect(colnames(W),cells)
+      W <- W[cells, cells]
       diag(W) <- 0
       if (scale.weight) W <- W/rowSums(W)
     }
@@ -195,12 +195,14 @@ RunAutoCorr <- function(object = NULL,
   x0 <- GetAssayData(object, assay = assay, slot = slot)[,cells]
   features <- intersect(rownames(x0), features)
   x0 <- x0[features,]
-  x0 <- as(x0, "CsparseMatrix")
-  W <- as(W, "CsparseMatrix")
+  x0 <- as(x0, "dgCMatrix")
+  W <- as(W, "dgCMatrix")
   
   message(paste0("Run autocorrelation test for ", length(features), " features."))
   moransi.vals <- .Call("autocorrelation_test", x0, W, TRUE, threads);
 
+  if (length(moransi.vals) == 1) stop(moransi.vals[[1]])
+  
   #message("Run permutation test.")
   #moransi.vals2 <-  .Call("moransi_mc_test", x0, W, TRUE, perm, threads);
 
@@ -268,8 +270,8 @@ LocalCorr <- function(object = NULL,
                       cells = NULL,
                       assay = DefaultAssay(object),             
                       slot = "data",
-                      scaled = FALSE,
-                      weights = NULL,
+                      scale = FALSE,
+                      W = NULL,
                       reduction = "pca",
                       dims=NULL,
                       k.nn = 9,
@@ -298,7 +300,7 @@ LocalCorr <- function(object = NULL,
   features <- intersect(rownames(mtx), features)
   mtx <- mtx[features,]
 
-  if (is.null(weights)) {
+  if (is.null(W)) {
     W <- GetWeights(object = object, reduction = reduction,
                     dims = dims,
                     k.nn = k.nn,
@@ -306,24 +308,18 @@ LocalCorr <- function(object = NULL,
                     scale = TRUE,
                     cells = cells)
   } else {
-    dims <- dim(weights)
+    dims <- dim(W)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
     if (dims[1] != length(cells)) {
-      cells <- intersect(colnames(weights),cells)
-      W <- weights[cells, cells]
+      cells <- intersect(colnames(W),cells)
+      W <- W[cells, cells]
       diag(W) <- 0
-      if (weight.scale) W <- W/rowSums(W)
+      if (scale) W <- W/rowSums(W)
     }
   }
 
   # mtx <- mtx %*% W
   mtx <- Matrix::tcrossprod(mtx,W)
-
-  # smoothed by weights for logcounts, then scaled 
-  if (!scaled) {
-    ## todo, performance improvement
-    mtx <- t(scale(t(mtx)))
-  }
 
   hm <- Matrix::tcrossprod(mtx)
   H <- hm/(length(cells)-1)
@@ -495,7 +491,7 @@ RunBlockCorr <- function(object = NULL,
                          reduction = "pca",
                          sensitive.mode = FALSE,
                          spatial = FALSE,
-                         weights = NULL,
+                         W = NULL,
                          dims = NULL,
                          k.nn = 9,
                          perm=1000,
@@ -517,7 +513,7 @@ RunBlockCorr <- function(object = NULL,
   message(paste0("Working on ", length(features), " features."))
   
   # Make weights
-  if (is.null(weights)) {
+  if (is.null(W)) {
     W <- GetWeights(object = object,
                     reduction = reduction,
                     dims=dims,
@@ -527,7 +523,7 @@ RunBlockCorr <- function(object = NULL,
                     spatial=spatial,
                     scale=TRUE)
   } else {
-    dims <- dim(weights)
+    dims <- dim(W)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
   } 
 
@@ -648,8 +644,8 @@ RunTwoAssayCorr <- function(object = NULL,
                             features2 = AutoCorrFeatures(object, assay = assay2),
                             cells = NULL,
                             slot = "data",
-                            weights = NULL,
-                            weights.scaled = FALSE,
+                            W = NULL,
+                            scale = FALSE,
                             reduction = "pca",
                             dims=NULL,
                             k.nn = 5,
@@ -669,18 +665,18 @@ RunTwoAssayCorr <- function(object = NULL,
   }
 
   # Make weights
-  if (is.null(weights)) {
+  if (is.null(W)) {
     W <- GetWeights(object = object, reduction = reduction, dims=dims, k.nn = k.nn,
                     self.weight = self.weight,
                     cells = cells)
   } else {
-    dims <- dim(weights)
+    dims <- dim(W)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
     if (dims[1] != length(cells)) {
-      cells <- intersect(colnames(weights),cells)
-      W <- weights[cells, cells]
+      cells <- intersect(colnames(W),cells)
+      W <- W[cells, cells]
       diag(W) <- 0
-      if (!weights.scaled) W <- W/rowSums(W)
+      if (scale) W <- W/rowSums(W)
     }
   }  
   
