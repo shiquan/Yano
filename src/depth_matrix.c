@@ -115,6 +115,7 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
         n++;
     }
 
+    if (n == 0) return R_NilValue;
     if (strand == -1) n = n*2;
     
     SEXP pos = PROTECT(allocVector(INTSXP, n));
