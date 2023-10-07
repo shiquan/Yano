@@ -145,7 +145,7 @@ GetWeights <- function(object= NULL,
   ncell <- length(cells)
   W <- sparseMatrix(i = rep(c(1:ncell), k.nn), 
                     j = c(knn.rlt$nn.idx),
-                    x = x,
+                    x = 1,
                     dims = c(ncell, ncell))
 
   diag(W) <- self.weight
@@ -165,7 +165,6 @@ RunAutoCorr <- function(object = NULL,
                         assay = NULL,                        
                         slot = "data",
                         spatial = FALSE,
-                        scaled = FALSE,
                         weights = NULL,                              
                         scale.weight = FALSE,
                         reduction = "pca",
@@ -174,8 +173,8 @@ RunAutoCorr <- function(object = NULL,
                         order.cells = NULL,
                         cells = NULL,
                         features = NULL,
-                        perm = 10000,threads=4,
-                        verbose = TRUE)
+                        #perm = 10000,
+                        threads=4)
 {
   assay <- assay %||% DefaultAssay(object = object)
   message(paste0("Working on assay : ", assay))
@@ -192,7 +191,7 @@ RunAutoCorr <- function(object = NULL,
                     cells=cells,
                     order.cells=order.cells,
                     self.weight = 0,
-                    scale=TRUE,
+                    scale=FALSE,
                     spatial=spatial)
   } else {
     dims <- dim(weights)
@@ -224,32 +223,14 @@ RunAutoCorr <- function(object = NULL,
   ## message(paste0("Run Geary's C for ", length(features), " features."))
   ## gearysc.vals <- .Call("GearysC_test", x0, W);
   Ivals <- moransi.vals[[1]]
-  #Cvals <- moransi.vals[[2]]
   IZvals <- moransi.vals[[3]]  
-  #CZvals <- moransi.vals[[4]]
-  #Ivals2 <- moransi.vals2[[1]]
-  #Pvals <- moransi.vals2[[2]]
   names(Ivals) <- features
   pvals <- pnorm(IZvals, lower.tail = FALSE)
   names(pvals) <- features
-  #names(Cvals) <- features
-  #names(IZvals) <- features
-  #names(CZvals) <- features
-  #names(Ivals2) <- features
-  #names(Pvals) <- features
-  ## names(gearysc.vals) <- features
-
   object[[assay]]@meta.features[['MoransI']] <- Ivals[rownames(object)]
   object[[assay]]@meta.features[['MoransI.pval']] <- pvals[rownames(object)]
-  #object[[assay]]@meta.features[['MoransI.Z']] <- IZvals[rownames(object)]
-  #object[[assay]]@meta.features[['GearyC']] <- Cvals[rownames(object)]
-  #object[[assay]]@meta.features[['GearyC.Z']] <- CZvals[rownames(object)]
-  #object[[assay]]@meta.features[['MoransI.2']] <- Ivals2[rownames(object)]
-  #object[[assay]]@meta.features[['MoransI.pval']] <- Pvals[rownames(object)]
   rm(W)
   rm(moransi.vals)
-  #rm(moransi.vals2)
-  ## rm(gearysc.vals)
   gc()
   
   object
@@ -274,6 +255,7 @@ SetAutoCorrFeatures <- function(object = NULL,
 
   idx <- which(tab[["MoransI"]] > moransi.min & tab[["MoransI.pval"]] <= p.cutoff)
 
+  message(paste0(length(idx), " autocorrelated features."))
   tab[["AutoCorrFeature"]] <- FALSE
   tab[idx,][["AutoCorrFeature"]] <- TRUE
   object[[assay]]@meta.features <- tab
@@ -304,7 +286,6 @@ LocalCorr <- function(object = NULL,
                       slot = "data",
                       scaled = FALSE,
                       weights = NULL,
-                      weight.scale = TRUE,
                       reduction = "pca",
                       dims=NULL,
                       k.nn = 9,
@@ -338,7 +319,7 @@ LocalCorr <- function(object = NULL,
                     dims = dims,
                     k.nn = k.nn,
                     self.weight = self.weight,
-                    scale = weight.scale,
+                    scale = TRUE,
                     cells = cells)
   } else {
     dims <- dim(weights)
@@ -360,10 +341,7 @@ LocalCorr <- function(object = NULL,
     mtx <- t(scale(t(mtx)))
   }
 
-  # H(x) = sum(X,Y)/sqrt(sum(X^2)*sum(Y^2))  
-  hm <- Matrix::tcrossprod(mtx) #mtx.2 %*% t(mtx.2)
-  #rs <- rowSums(mtx * mtx)
-  #rs2 <- sqrt(as.matrix(rs) %*% rs)  
+  hm <- Matrix::tcrossprod(mtx)
   H <- hm/(length(cells)-1)
   H <- as.matrix(H)
   rm(mtx)
@@ -391,27 +369,17 @@ GroupLocalCorr <- function(lc = NULL, k = 10, plot = TRUE, name = "module")
   
   lc$module <- ann
   if (plot) {
-    # require(RColorBrewer)
-    # require(pheatmap)
-    ## if (is.null(annotation_colors)) {
-    ##   annotation_colors <- brewer.pal(12, "Paired")
-    ## }
-    ## if (k > length(annotation_colors)) {
-    ##   pals <- colorRampPalette(annotation_colors)
-    ##   annotation_colors <- pals(k)
-    ## }
-
     fig <- pheatmap(lc$LC,
                     cluster_rows = FALSE,
                     cluster_cols =FALSE,
                     show_rownames = FALSE,
                     show_colnames = FALSE,
                     annotation_row = ann)
-                    #annotation_colors = list(module=annotation_colors))
     fig
   }
   lc
 }
+#'@importFrom Seurat AddModuleScore
 #'@export
 AddLCModule <- function(object = NULL, lc = NULL, min.features.per.module = 10, module.prefix.name = "module")
 {
@@ -526,45 +494,42 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
 }
 
 
-#'
+#' @importFrom Matrix sparseMatrix
 #' @export
 RunBlockCorr <- function(object = NULL,
                          block.name = "gene_name",
-                         assay = NULL,
                          features = NULL,
-                         sensitive.mode = FALSE,
+                         assay = NULL,
                          block.assay = NULL,
-                         block.assay.replace = FALSE,
+                         block.features = NULL,
+                         prefix = NULL,
                          cells = NULL,
                          order.cells = NULL,
-                         feature.types = NULL,
-                         prefix = NULL,
-                         #c("exon","exonintron","intron","multiexons","utr3","utr5"),
+                         feature.types = NULL,                         
                          min.features.per.block = 2,
                          scale.factor = 1e4,
-                         weights = NULL,
-                         weights.scaled = FALSE,
                          reduction = "pca",
+                         sensitive.mode = FALSE,
                          spatial = FALSE,
                          dims = NULL,
                          k.nn = 9,
-                         self.weight = 1,
                          perm=1000,
-                         threads = 1,
-                         verbose = TRUE
+                         threads = 1
                          )
 {
   cells <- cells %||% order.cells
   cells <- cells %||% colnames(object)
-  cells <- intersect(colnames(object), cells)
+  cells <- intersect(cells, colnames(object))
 
+  order.cells <- intersect(order.cells, cells)
+  
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
 
   prefix <- prefix %||% block.name
   
   features <- features %||% AutoCorrFeatures(object)
-  features <- intersect(rownames(object),features)
+  features <- intersect(features, rownames(object))
 
   message(paste0("Working on ", length(features), " features."))
   
@@ -575,20 +540,13 @@ RunBlockCorr <- function(object = NULL,
                     dims=dims,
                     k.nn = k.nn,
                     order.cells = order.cells,
-                    ## cells = cells,
-                    self.weight = self.weight,
+                    self.weight = 1,
                     spatial=spatial,
                     scale=TRUE)
                    
   } else {
     dims <- dim(weights)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
-    ## if (dims[1] != length(cells)) {
-    ##   cells <- intersect(colnames(weights),cells)
-    ##   W <- weights[cells, cells]
-    ##   diag(W) <- 0
-    ##   if (!weights.scaled) W <- W/rowSums(W)
-    ## }
   } 
 
   tab <- object[[assay]]@meta.features
@@ -604,6 +562,9 @@ RunBlockCorr <- function(object = NULL,
   
   blocks <- names(which(table(tab[[block.name]]) >= min.features.per.block))
 
+  block.features <- block.features %||% blocks
+  blocks <- intersect(block.features, blocks)
+  
   features <- intersect(features, rownames(tab))
     
   if (length(features) == 0) {
@@ -627,7 +588,7 @@ RunBlockCorr <- function(object = NULL,
   cells <- intersect(cells,names(which(cs > 0)))
   W <- W[cells, cells]
   cs <- cs[cells]
-  #cells <- colnames(object)
+
   ncell <- length(cells)
   
   ## all.features <- rownames(tab)
@@ -644,16 +605,6 @@ RunBlockCorr <- function(object = NULL,
     rm(x0)
     rownames(y) <- blocks
     colnames(y) <- cells
-
-    #x <- x[features,]
-    #y <- y[idx,]
-    #rownames(y) <- rownames(x)
-    
-    #if (sensitive.mode) {
-      ## expand matrix of block features for calculating with EPT matrix
-    #  y <- y - x
-    #}
-
   } else {
     message(paste0("Trying to retrieve data from assay ", block.assay,".."))
     old.assay <- DefaultAssay(object)
@@ -689,15 +640,15 @@ RunBlockCorr <- function(object = NULL,
   
   pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
   names(pval) <- features
-  padj <- p.adjust(pval, "BH")
+  #padj <- p.adjust(pval, "BH")
   names(padj) <- features
   tab <- object[[assay]]@meta.features
-  tab[[paste0(prefix, ".e.coef")]] <- e[rownames(object)]
+  tab[[paste0(prefix, ".E")]] <- e[rownames(object)]
   tab[[paste0(prefix, ".r")]] <- r[rownames(object)]
-  tab[[paste0(prefix, ".Lx")]] <- Lx[rownames(object)]
-  tab[[paste0(prefix, ".Ly")]] <- Ly[rownames(object)]
+  #tab[[paste0(prefix, ".Lx")]] <- Lx[rownames(object)]
+  #tab[[paste0(prefix, ".Ly")]] <- Ly[rownames(object)]
   tab[[paste0(prefix, ".pval")]] <- pval[rownames(object)]
-  tab[[paste0(prefix, ".padj")]] <- padj[rownames(object)]
+  #tab[[paste0(prefix, ".padj")]] <- padj[rownames(object)]
   object[[assay]]@meta.features <- tab
 
   rm(ta)
@@ -858,6 +809,7 @@ aggregateCellByGroup <- function(object = NULL, cell.group = NULL, features = NU
   m
 }
 #'@importFrom dplyr %>%
+#' @importFrom gtools mixedsort
 #'@import ggplot2
 #'@import ggrepel
 #'@importFrom scattermore geom_scattermore
@@ -883,7 +835,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
     tab0 <- subset(tab0, type %in% types)
     if (nrow(tab0) == 0) stop("Empty records.")
   }
-  lv <- gtools::mixedsort(unique(tab0[[chr]]))
+  lv <- mixedsort(unique(tab0[[chr]]))
   
   tab <- data.frame(chr = factor(tab0[[chr]], levels = lv),
                     start = as.numeric(tab0[[start]]),
