@@ -25,22 +25,6 @@ setMethod(f = "QuickRecipe0",
 
             counts <- NormalizeData(counts, normalization.method = "LogNormalize",
                                     scale.factor = scale.factor)
-
-            #RNA.assay <- intersect("RNA", names(counts))
-            #RNA.assay <- RNA.assay %||% assay
-            #message(paste0("Use assay ", RNA.assay, " to evaluate cell size.." ))
-            #x <- GetAssayData(counts, assay = RNA.assay, slot = "counts")
-            #cs <- colSums(x)
-            #cells <- intersect(colnames(counts),names(which(cs > 0)))
-            #cs <- cs[cells]
-            #counts <- counts[,cells]
-            #x <- GetAssayData(counts, assay=assay, slot = "counts")
-            #x <- log1p(t(t(x)/cs) * scale.factor)
-            #rownames(x) <- rownames(counts)
-            #colnames(x) <- cells
-            #SetAssayData(object = counts, slot = "data", new.data = x, assay= assay)
-            #rm(x)
-            #gc()
             counts
           })
 
@@ -639,7 +623,7 @@ RunBlockCorr <- function(object = NULL,
   pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
   names(pval) <- features
   #padj <- p.adjust(pval, "BH")
-  names(padj) <- features
+  #names(padj) <- features
   tab <- object[[assay]]@meta.features
   tab[[paste0(prefix, ".E")]] <- e[rownames(object)]
   tab[[paste0(prefix, ".r")]] <- r[rownames(object)]
@@ -715,9 +699,6 @@ RunTwoAssayCorr <- function(object = NULL,
     stop("No valid features2 found, check the assay2 name.")
   }
   y <- FetchData(obj, vars = features2, cells = cells, slot = slot)
-  
-  #x <- x %*% W
-  #y <- y %*% W
 
   x <- tcrossprod(x, W)
   y <- tcrossprod(y, W)
