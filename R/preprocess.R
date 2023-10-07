@@ -590,7 +590,7 @@ RunBlockCorr <- function(object = NULL,
   ncell <- length(cells)
   
   ## all.features <- rownames(tab)
-  if (block.assay %ni% names(object) || block.assay.replace) {
+  if (block.assay %ni% names(object)) {
     message("Aggregate counts..")
     x0 <- x[rownames(tab),cells]
     x0 <- as(x0, "TsparseMatrix")
