@@ -511,7 +511,7 @@ RunBlockCorr <- function(object = NULL,
                          reduction = "pca",
                          sensitive.mode = FALSE,
                          spatial = FALSE,
-                         weight = NULL,
+                         weights = NULL,
                          dims = NULL,
                          k.nn = 9,
                          perm=1000,
@@ -544,7 +544,6 @@ RunBlockCorr <- function(object = NULL,
                     self.weight = 1,
                     spatial=spatial,
                     scale=TRUE)
-                   
   } else {
     dims <- dim(weights)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
