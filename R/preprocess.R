@@ -521,8 +521,6 @@ RunBlockCorr <- function(object = NULL,
   cells <- cells %||% order.cells
   cells <- cells %||% colnames(object)
   cells <- intersect(cells, colnames(object))
-
-  order.cells <- intersect(order.cells, cells)
   
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
