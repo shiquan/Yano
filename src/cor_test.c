@@ -439,7 +439,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
     double one[] = {1, 0};
 
     // if (A->ncol != B->ncol || A->nrow != B->nrow) return mkString("A and B do not match");
-    if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
+    // if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
     if (A->ncol < 2) return mkString("Too few cells."); // to do
 
