@@ -566,7 +566,7 @@ RunBlockCorr <- function(object = NULL,
   cells <- intersect(cells,names(which(cs > 0)))
   W <- W[cells, cells]
   cs <- cs[cells]
-
+  x <- x[,cells]
   ncell <- length(cells)
   
   ## all.features <- rownames(tab)
