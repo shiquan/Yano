@@ -604,7 +604,8 @@ RunBlockCorr <- function(object = NULL,
   message("Test dissimlarity of two processes ..")
   gc()
   ta <- .Call("E_test", x, y, W, perm, threads, idx, bidx, cidx, cs, scale.factor, sensitive.mode);
-  
+  if (length(ta) == 1) stop(ta[[1]])
+
   Lx <- ta[[1]]
   Ly <- ta[[2]]
   r <- ta[[3]]
