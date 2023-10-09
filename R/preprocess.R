@@ -593,17 +593,18 @@ RunBlockCorr <- function(object = NULL,
     y <- GetAssayData(object, assay = block.assay, slot = "counts")#[blocks,cells]
 
     DefaultAssay(object) <- old.assay
+    y <- y[,cells]
   }
 
   features <- intersect(features, rownames(tab))
   tab <- tab[features,]
   bidx <- match(tab[[block.name]],rownames(y))
   idx <- match(features, rownames(x))
-  cidx <- match(cells, colnames(x))
+  #cidx <- match(cells, colnames(x))
   
   message("Test dissimlarity of two processes ..")
   gc()
-  ta <- .Call("E_test", x, y, W, perm, threads, idx, bidx, cidx, cs, scale.factor, sensitive.mode);
+  ta <- .Call("E_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, sensitive.mode);
   if (length(ta) == 1) stop(ta[[1]])
 
   Lx <- ta[[1]]
