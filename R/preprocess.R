@@ -784,7 +784,8 @@ aggregateCellByGroup <- function(object = NULL, cell.group = NULL, features = NU
   m
 }
 #'@importFrom dplyr %>%
-#' @importFrom gtools mixedsort
+#'@importFrom gtools mixedsort
+#'@importFrom ggrepel geom_label_repel
 #'@import ggplot2
 #'@import ggrepel
 #'@importFrom scattermore geom_scattermore
