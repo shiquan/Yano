@@ -168,6 +168,7 @@ theme_cov <- function(...) {
 
 #' @import dplyr
 #' @importFrom IRanges subsetByOverlaps
+#' @importFrom GenomeInfoDb sortSeqlevels
 #' @export
 plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
 {
