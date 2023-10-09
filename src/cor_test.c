@@ -448,8 +448,8 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
     W = M_cholmod_transpose(W, (int)W->xtype, &c);
 
     R_CheckStack();
-    // const int N_cell = A->nrow;
-    const int N_cell = length(cidx);
+    const int N_cell = A->nrow;
+    //const int N_cell = length(cidx);
     const int N_feature = length(idx);
 
     assert (length(bidx) == N_feature);
