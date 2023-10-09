@@ -234,13 +234,13 @@ plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.s
   tab <- data.frame(r)
   p <- ggplot()
   if ("type" %in% colnames(tab) & !is.null(type.col)) {
-    p <- p + geom_rect(data = tab,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, color=type), size = 1)
+    p <- p + geom_rect(data = tab,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=type), size = 1)
     #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=type), size = 3)
-    p <- p + scale_color_manual(values = type.col)
+    p <- p + scale_fill_manual(values = type.col)
   } else {
-    p <- p + geom_rect(data = tab, aes(xmin = start, xmax = end, ymin = 0, ymax = 1, color=strand), size = 1)
+    p <- p + geom_rect(data = tab, aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=strand), size = 1)
     #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
-    p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
+    p <- p + scale_fill_manual(values = c("+" = "red", "-" = "blue"))
   }
   p <- p + facet_wrap(facets = ~strand, strip.position = 'right', ncol = 1)
   p <- p + xlab("") + coord_cartesian(xlim=c(start(region), end(region)),expand=FALSE)
