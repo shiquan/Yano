@@ -650,6 +650,228 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
     UNPROTECT(8);
     return ta;
 }
+SEXP E_test_cell(SEXP _A, SEXP _B, SEXP _W,
+                 SEXP _permut,
+                 SEXP _threads,
+                 SEXP idx, 
+                 SEXP cs, SEXP _scale,
+                 SEXP _sens)
+{
+    CHM_SP A = AS_CHM_SP__(_A);
+    CHM_SP W = AS_CHM_SP__(_W);
+
+    const int perm = asInteger(_permut);
+    const int n_thread = asInteger(_threads);
+    const int scale_factor = asInteger(_scale);
+
+    Rboolean sens = asLogical(_sens);
+    
+    if (A->stype) return mkString("A cannot be symmetric");
+    if (W->stype) return mkString("W cannot be symmetric");
+    
+    double one[] = {1, 0};
+
+    if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
+    if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
+    if (A->ncol < 2) return mkString("Too few cells."); // to do
+
+    A = M_cholmod_transpose(A, (int)A->xtype, &c);
+    W = M_cholmod_transpose(W, (int)W->xtype, &c);
+
+    R_CheckStack();
+    const int N_cell = A->nrow;
+    const int N_feature = length(idx);
+
+    
+    SEXP LXval = PROTECT(allocVector(REALSXP, N_feature));
+    // SEXP LYval = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Eval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Mval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Vval  = PROTECT(allocVector(REALSXP, N_feature));
+    
+    const int * const ap = (int*)A->p;
+    const int * const ai = (int*)A->i;
+    const double * const ax = (double*)A->x;
+    
+    int **ris = NULL;
+    ris = R_Calloc(perm,int*);
+    for (int pi = 0; pi < perm; ++pi) {
+        ris[pi] = random_idx(N_cell);
+    }
+    
+    double *bx = malloc(N_cell*sizeof(double));
+    for (int ii = 0; ii < N_cell; ++ii) {
+        bx[ii] = REAL(_B)[ii];
+    }
+    
+    int i;
+    
+#pragma omp parallel for num_threads(n_thread)
+    for (i = 0; i < N_feature; ++i) {
+        int ii = INTEGER(idx)[i]  -1;
+        if (ap[ii] == ap[ii+1]) {
+            REAL(LXval)[i] = 0;
+            // REAL(LYval)[i] = 0;
+            REAL(Rval)[i]  = 0;
+            REAL(Eval)[i]  = 0;
+            REAL(Tval)[i]  = 0;
+            continue;
+        }
+        
+        double *tmpa = R_Calloc(N_cell, double);
+        double *tmpb = R_Calloc(N_cell, double);
+        memset(tmpa, 0, sizeof(double)*N_cell);
+        memset(tmpb, 0, sizeof(double)*N_cell);
+        double mna = 0,
+            mnb = 0;
+        int j;
+        for (j = ap[ii]; j < ap[ii+1]; ++j) {
+            if (ISNAN(ax[j])) continue;
+            int cid = ai[j];
+            tmpa[cid] = ax[j];
+        }
+        
+        for (j = 0; j < N_cell; ++j) tmpb[j] = bx[j];
+
+        for (j = 0; j < N_cell; ++j) {
+            if (sens) {
+                tmpb[j] = tmpb[j] - tmpa[j];
+                if (tmpb[j] < 0) tmpb[j] = 0;
+            }
+            tmpb[j] = tmpb[j]/REAL(cs)[j];
+            mnb += tmpb[j];
+        }
+        mnb = mnb/N_cell;
+
+        for (j = ap[ii]; j < ap[ii+1]; ++j) {
+            if (ISNAN(ax[j])) continue;            
+            int cid = ai[j];
+            tmpa[cid] = ax[j]/REAL(cs)[cid]*scale_factor;
+            mna += tmpa[cid];
+        }
+        mna = mna/N_cell;
+        
+        double *tmpa_s = R_Calloc(N_cell, double);
+        double *tmpb_s = R_Calloc(N_cell, double);
+        smooth_W(tmpa, tmpa_s, N_cell, W);
+        smooth_W(tmpb, tmpb_s, N_cell, W);
+        double mna_s = 0,
+            mnb_s = 0;
+        for (j = 0; j < N_cell; ++j) {
+            mna_s += tmpa_s[j];
+            mnb_s += tmpb_s[j];
+        }
+        mna_s = mna_s/(double)N_cell;
+        mnb_s = mnb_s/(double)N_cell;
+        
+        double Lx1 = 0,
+            Lx2 = 0,
+            //Ly1 = 0,
+            //Ly2 = 0,
+            ra  = 0,
+            rb1 = 0,
+            rb2 = 0;
+        for (j = 0; j < N_cell; ++j) {
+            Lx1 += pow(tmpa_s[j]-mna,2);
+            Lx2 += pow(tmpa[j]-mna,2);
+            //Ly1 += pow(tmpb_s[j]-mnb,2);
+            //Ly2 += pow(tmpb[j]-mnb,2);
+
+            tmpa_s[j] = tmpa_s[j] - mna_s;
+            tmpb_s[j] = tmpb_s[j] - mnb_s;
+            ra  += tmpa_s[j] * tmpb_s[j];
+            rb1 += pow(tmpa_s[j],2);
+            rb2 += pow(tmpb_s[j],2);
+        }
+        
+        rb1 = sqrt(rb1);
+        rb2 = sqrt(rb2);
+        
+        double Lx = Lx1/Lx2;
+        // double Ly = Ly1/Ly2;
+        double r = ra/(rb1*rb2);
+        double e = sqrt(Lx) * (1-r);
+#pragma omp critical
+        {
+            REAL(LXval)[i] = Lx;
+            //REAL(LYval)[i] = Ly;
+            REAL(Rval)[i]  = r;
+            REAL(Eval)[i]  = e;
+        }
+
+        // mean, var
+        double mean = 0,
+            var = 0;
+        
+        double *es = R_Calloc(perm, double);
+        int k;
+        for (k = 0; k < perm; ++k) {
+            shuffle(tmpa, ris[k], N_cell);
+            smooth_W(tmpa, tmpa_s, N_cell, W);
+            mna_s = 0;
+            for (j = 0; j < N_cell; ++j) {
+                mna_s += tmpa_s[j];
+            }
+            mna_s = mna_s/(double)N_cell;
+            Lx1 = 0;
+            ra = 0;
+            rb1 = 0;
+            for (j = 0; j < N_cell; ++j) {
+                Lx1 += pow(tmpa_s[j]-mna,2);
+                tmpa_s[j] = tmpa_s[j] - mna_s;
+                ra += tmpa_s[j] * tmpb_s[j];
+                rb1 += pow(tmpa_s[j],2);
+            }
+            rb1 = sqrt(rb1);
+            Lx = Lx1/Lx2;
+            r = ra/(rb1*rb2);
+            es[k] = sqrt(Lx) *(1-r);
+            mean += es[k];
+        }
+        mean = mean/perm;
+
+        for (k = 0; k < perm; ++k) {
+            var += pow((es[k] -mean),2);
+        }
+        var = sqrt(var/perm);
+
+        double t = (e - mean)/var;
+        
+        R_Free(es);
+        R_Free(tmpa_s);
+        R_Free(tmpb_s);
+        R_Free(tmpa);
+        R_Free(tmpb);
+        
+#pragma omp critical
+        {
+            REAL(Tval)[i]  = t;
+            REAL(Mval)[i]  = mean;
+            REAL(Vval)[i]  = var;
+        }
+}
+
+    for (int pi = 0; pi < perm; ++pi) R_Free(ris[pi]);
+    R_Free(ris);
+    R_Free(bx);
+    
+    M_cholmod_free_sparse(&A, &c);
+    M_cholmod_free_sparse(&W, &c);
+
+    SEXP ta = PROTECT(allocVector(VECSXP, 6));
+    SET_VECTOR_ELT(ta, 0, LXval);
+    //SET_VECTOR_ELT(ta, 1, LYval);
+    SET_VECTOR_ELT(ta, 1, Rval);
+    SET_VECTOR_ELT(ta, 2, Eval);
+    SET_VECTOR_ELT(ta, 3, Tval);
+    SET_VECTOR_ELT(ta, 4, Mval);
+    SET_VECTOR_ELT(ta, 5, Vval);
+
+    UNPROTECT(7);
+    return ta;
+}
 double *sp_colsums(CHM_SP A, Rboolean mn)
 {
     double *cs = R_Calloc(A->ncol, double);

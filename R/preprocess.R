@@ -492,6 +492,7 @@ RunBlockCorr <- function(object = NULL,
                          sensitive.mode = FALSE,
                          spatial = FALSE,
                          W = NULL,
+                         cell.size = NULL,
                          dims = NULL,
                          k.nn = 9,
                          perm=1000,
@@ -562,7 +563,7 @@ RunBlockCorr <- function(object = NULL,
   x <- GetAssayData(object, assay = assay, slot = "counts")
   
   # cell sizes
-  cs <- colSums(x)
+  cs <- cell.size %||% colSums(x)  
   cells <- intersect(cells,names(which(cs > 0)))
   W <- W[cells, cells]
   cs <- cs[cells]
@@ -634,6 +635,119 @@ RunBlockCorr <- function(object = NULL,
   rm(ta)
   gc()
   
+  object
+}
+
+#' @importFrom Matrix sparseMatrix
+#' @export
+RunCellCorr <- function(object = NULL,
+                        meta.name = "UB",
+                        features = NULL,
+                        assay = NULL,
+                        prefix = NULL,
+                        cells = NULL,
+                        order.cells = NULL,
+                        scale.factor = 1e4,
+                        reduction = "pca",
+                        sensitive.mode = FALSE,
+                        spatial = FALSE,
+                        W = NULL,
+                        cell.size = NULL,
+                        dims = NULL,
+                        k.nn = 9,
+                        perm=1000,
+                        threads = 1
+                        )
+{
+  cells <- cells %||% order.cells
+  cells <- cells %||% colnames(object)
+  cells <- intersect(cells, colnames(object))
+  
+  assay <- assay %||% DefaultAssay(object)
+  message(paste0("Working on assay ", assay))
+  old.assay <- DefaultAssay(object)
+  DefaultAssay(object) <- assay
+  
+  prefix <- prefix %||% meta.name
+  
+  features <- features %||% AutoCorrFeatures(object)
+  features <- intersect(features, rownames(object))
+
+  message(paste0("Working on ", length(features), " features."))
+  
+  # Make weights
+  if (is.null(W)) {
+    W <- GetWeights(object = object,
+                    reduction = reduction,
+                    dims=dims,
+                    k.nn = k.nn,
+                    order.cells = order.cells,
+                    self.weight = 1,
+                    spatial=spatial,
+                    scale=TRUE)
+  } else {
+    dims <- dim(W)
+    if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
+  } 
+
+  tab <- object@meta.data
+
+  if (meta.name %ni% colnames(tab)) {
+    stop(paste0("No meta.name found in the meta.data."))
+  }
+  
+  tab <- tab[tab[[meta.name]] != ".",] # skip empty
+  y <- tab[[meta.data]]
+  if (!is.numeric(y)) stop("meta.name contain non-numeric value.")
+  
+  features <- intersect(features, rownames(object))
+    
+  if (length(features) == 0) {
+    stop("No features found.")
+  }
+
+  message(paste0("Processing ", length(cells), " cells.."))
+  tab <- tab[cells,]
+  
+  x <- GetAssayData(object, assay = assay, slot = "counts")
+  
+  cs <- cell.size %||% y
+  
+  cells <- intersect(cells,names(which(cs > 0)))
+  W <- W[cells, cells]
+  cs <- cs[cells]
+  x <- x[,cells]
+  y <- y[cells]
+  ncell <- length(cells)
+  
+  idx <- match(features, rownames(x))
+  
+  
+  message("Test dissimlarity of two processes ..")
+  gc()
+  ta <- .Call("E_test_cell", x, y, W, perm, threads, idx, cs, scale.factor, sensitive.mode);
+  if (length(ta) == 1) stop(ta[[1]])
+
+  Lx <- ta[[1]]
+  r <- ta[[2]]
+  e <- ta[[3]]
+  tval <- ta[[4]]
+
+  names(Lx) <- features
+  names(r) <- features
+  names(e) <- features
+  
+  tab <- object[[assay]]@meta.features
+  tab[[paste0(prefix, ".E")]] <- e[rownames(object)]
+  tab[[paste0(prefix, ".r")]] <- r[rownames(object)]
+  #tab[[paste0(prefix, ".Lx")]] <- Lx[rownames(object)]
+  tab[[paste0(prefix, ".pval")]] <- pval[rownames(object)]
+  object[[assay]]@meta.features <- tab
+
+  rm(ta)
+  gc()
+
+  DefaultAssay(object) <- old.assay
   object
 }
 
