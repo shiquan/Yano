@@ -79,7 +79,7 @@ setMethod(f = "QuickRecipe",
           })
 #' @importFrom Matrix sparseMatrix
 #' @export
-WeightLinear <- function(order.cells = NULL, k.nn = 9, self.weight = 0, scale = FALSE) {
+WeightLineage <- function(order.cells = NULL, k.nn = 9, self.weight = 0, scale = FALSE) {
   if (is.null(order.cells)) stop("No order.cells specified.")
   
   n <- length(order.cells)
@@ -109,7 +109,7 @@ GetWeights <- function(object= NULL,
                        cells = NULL)
 {
   if (!is.null(order.cells)) {
-    return(WeightLinear(order.cells = order.cells, k.nn = k.nn, self.weight=self.weight, scale=scale))
+    return(WeightLineage(order.cells = order.cells, k.nn = k.nn, self.weight=self.weight, scale=scale))
   }
   
   cells <- cells %||% colnames(object)
@@ -189,7 +189,7 @@ RunAutoCorr <- function(object = NULL,
   }
 
   if (!is.null(order.cells)) {
-    message("Working on linear trajectory mode ..")
+    message("Working on lineage trajectory mode ..")
     cells <- order.cells    
   }
   x0 <- GetAssayData(object, assay = assay, slot = slot)[,cells]
@@ -465,8 +465,11 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   object[[assay]]@meta.features[['chr']] <- chrs
   object[[assay]]@meta.features[['start']] <- starts
   object[[assay]]@meta.features[['strand']] <- strands
-  object[[assay]]@meta.features[['gloc']] <- locs
-  object[[assay]]@meta.features[['ept']] <- ept.sel[rownames(object)]
+  object[[assay]]@meta.features[['locus']] <- locs
+  epts <- ept.sel[rownames(object)]
+  object[[assay]]@meta.features[['ept']] <- epts
+  object[[assay]]@meta.features[['gene_name']] <- bed[epts,]$gene_name
+  object[[assay]]@meta.features[['type']] <- bed[epts,]$type
 
   DefaultAssay(object) <- old.assay
 
@@ -531,7 +534,7 @@ RunBlockCorr <- function(object = NULL,
   tab <- object[[assay]]@meta.features
 
   if (block.name %ni% colnames(tab)) {
-    stop(paste0("No block.name found in the feature table of assay ", assay, ". Run LoadEPTanno first."))
+    stop(paste0("No block.name found in the feature table of assay ", assay, ". Run LoadEPTanno or LoadVARanno first."))
   }
   
   tab <- tab[tab[[block.name]] != ".",] # skip unannotated records

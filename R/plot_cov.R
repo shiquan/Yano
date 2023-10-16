@@ -170,7 +170,7 @@ theme_cov <- function(...) {
 #' @importFrom IRanges subsetByOverlaps
 #' @importFrom GenomeInfoDb sortSeqlevels
 #' @export
-plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
+plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, highlights=NULL, ...)
 {
   if (is.null(db)) stop(paste0("No database found, ", genome))
   
@@ -195,8 +195,14 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
   if (nrow(trans0) == 0) {
     p <- ggplot()
     p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start(region), end(region)), expand=FALSE)
-    #scale_x_continuous(limits=c(start(region), end(region)),expand=c(0,0))
     p <- p + ylim(0,1) + theme_void()
+    
+    if (!is.null(highlights)) {
+      df <- as.data.frame(highlights)
+      df$ymin <- 0
+      df$ymax <- 1
+      p <- p + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.5)
+    }
     return(p)
   }
 
@@ -214,6 +220,14 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
   gname$med <- (gname$start + gname$end)/2
   p <- ggplot() + geom_segment(data = trans0,aes(x = start, xend = end, y = idx, yend = idx, color=strand), size=1)
   p <- p + geom_segment(data = exons0, aes(x = start, xend = end, y = idx, yend = idx),color="black", size = 5)
+
+  if (!is.null(highlights)) {
+    df <- as.data.frame(highlights)
+    df$ymin <- 0
+    df$ymax <- max(gname$idx)
+    p <- p + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.5)
+  }
+
   p <- p + geom_text(data=gname,aes(x=med,y=idx,label=gene_name), size=5, check_overlap = TRUE,na.rm=TRUE)
   p <- p + theme_minimal()
   p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(),
@@ -229,20 +243,27 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, ...)
   p 
 }
 #'@importFrom IRanges subsetByOverlaps
-plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.size=rel(2))
+plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.size=rel(2), highlights=NULL)
 {
   r <- subsetByOverlaps(peaks, region, ignore.strand = TRUE)
   tab <- data.frame(r)
   p <- ggplot()
   if ("type" %in% colnames(tab) & !is.null(type.col)) {
-    p <- p + geom_rect(data = tab,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=type), size = 1)
+    p <- p + geom_rect(data = tab,inherit.aes = F,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=type), size = 1)
     #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=type), size = 3)
     p <- p + scale_fill_manual(values = type.col)
   } else {
-    p <- p + geom_rect(data = tab, aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=strand), size = 1)
+    p <- p + geom_rect(data = tab, inherit.aes = F,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=strand), size = 1)
     #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
     p <- p + scale_fill_manual(values = c("+" = "red", "-" = "blue"))
   }
+  if (!is.null(highlights)) {
+    df <- as.data.frame(highlights)
+    df$ymin <- 0
+    df$ymax <- 1
+    p <- p + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.5)
+  }
+
   p <- p + facet_wrap(facets = ~strand, strip.position = 'right', ncol = 1)
   p <- p + xlab("") + coord_cartesian(xlim=c(start(region), end(region)),expand=FALSE)
   #scale_x_continuous(limits=c(start(region), end(region)), expand = c(0,0))
@@ -263,7 +284,8 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
                      strand = c("both", "forward", "reverse", "ignore"),
                      max.depth = 0,
                      split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
-                     cell.group=NULL, log.scaled = log.scaled, start0 = -1, end0 = -1)
+                     cell.group=NULL, log.scaled = log.scaled, start0 = -1, end0 = -1,
+                     highlights=NULL)
 {
   if (is.null(chr) || start == -1 || end == -1) stop("Require a genomic region.")
 
@@ -312,6 +334,13 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   ymin <- min(bc$depth)
   
   p1 <- ggplot(bc, aes(x=pos,y=depth,fill=strand)) + geom_area(stat = "identity")
+  if (!is.null(highlights)) {
+    df <- as.data.frame(highlights)
+    df$ymin <- ymin
+    df$ymax <- ymax
+    p1 <- p1 + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.5)
+  }
+
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
   p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), expand=FALSE)
   # scale_x_continuous(limits=c(start, end),expand=c(0,0))
@@ -398,7 +427,9 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
                         fragfile = NULL,
                         atac.log.scaled = FALSE,
                         atac.max.depth = 0,
-                        anno.col = "blue", type.col = NULL, layout_heights =c(1,10,2),...)
+                        anno.col = "blue", type.col = NULL, layout_heights =c(1,10,2),
+                        highlights = NULL,
+                        ...)
                         
 {
   if (!is.null(gene)) {
@@ -410,19 +441,33 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
     chr <- unique(seqnames(genes1[which(genes1$gene_name %in% gene)]))
     if (length(chr) != 1) stop(paste("More than 1 chromosome found, ", chr))
   }
+
   if (is.null(start) || is.null(end)) stop("No start or/and end position specified.")
   start <- start - upstream
   end <- end + downstream
   message(paste0("chr ", chr, ", start ", start, ", end ", end))
   if (is.null(bamfile)) stop("No bam file specified.")
-    
+
+  df <- NULL
+  if (!is.null(highlights)) {
+    if (is.list(highlights)) {
+      highlights <- lapply(highlights, function(x) x[c(1,2)])
+    }
+
+    df <- matrix(unlist(highlights),nrow=2)
+    df <- as.data.frame(t(df))
+    colnames(df) <- c("xmin","xmax")
+
+    df <- subset(df, xmin > start & xmax < end)
+  }
+  
   p1 <- plot.cov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
                  bin=bin, cell.tag=cell.tag, umi.tag=umi.tag, cell.group=cell.group,
-                 log.scaled=log.scaled, max.depth = max.depth)
+                 log.scaled=log.scaled, max.depth = max.depth, highlights=df)
   p1 <- p1 + theme_cov()
   p1 <- p1 + theme(panel.spacing.y = unit(0.1, "lines"))
   p1 <- p1 + theme(strip.text = element_text(size = group.title.size))
-
+  
   p0 <- NULL
   if (!is.null(meta.features)) {
     if (length(intersect(c("chr","start","end","strand","type"), colnames(meta.features))) != 5)
@@ -436,7 +481,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
                  type = tab[['type']])
 
     gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
-    p0 <- plot.bed(region = gr, peaks = peaks, type.col=type.col)
+    p0 <- plot.bed(region = gr, peaks = peaks, type.col=type.col, highlights = df)
 
     ## if (start0 > start & end0 < end) {
     ##   p2 <- p2 + annotate("rect", xmin = start0, xmax = end0, ymin = 0, ymax = 1, alpha = .1,fill = anno.col)
@@ -454,7 +499,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
   
   if (toUCSC) chr <- paste0("chr",chr)
   gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
-  p2 <- plot.genes(gr, db=db, genes=display.genes, collapse=collapse, ...)
+  p2 <- plot.genes(gr, db=db, genes=display.genes, collapse=collapse, highlights=df, ...)
   
   if (!is.null(p0)) {
     if (!is.null(p3)) {
