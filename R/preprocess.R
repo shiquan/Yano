@@ -461,15 +461,18 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   var.sel <- gv[queryHits(ov)]$name
   ept.sel <- gr[subjectHits(ov)]$name
   names(ept.sel) <- var.sel
- 
+  gnames <- bed[ept.sel,]$gene_name
+  types <- bed[ept.sel,]$type
+  names(gnames) <- var.sel
+  names(types) <- var.sel
+  
   object[[assay]]@meta.features[['chr']] <- chrs
   object[[assay]]@meta.features[['start']] <- starts
   object[[assay]]@meta.features[['strand']] <- strands
   object[[assay]]@meta.features[['locus']] <- locs
-  epts <- ept.sel[rownames(object)]
-  object[[assay]]@meta.features[['ept']] <- epts
-  object[[assay]]@meta.features[['gene_name']] <- bed[epts,]$gene_name
-  object[[assay]]@meta.features[['type']] <- bed[epts,]$type
+  object[[assay]]@meta.features[['ept']] <- ept.sel[rownames(object)]
+  object[[assay]]@meta.features[['gene_name']] <- gnames[rownames(object)]
+  object[[assay]]@meta.features[['type']] <- types[rownames(object)]
 
   DefaultAssay(object) <- old.assay
 
