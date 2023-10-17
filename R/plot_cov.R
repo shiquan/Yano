@@ -201,7 +201,7 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, highl
       df <- as.data.frame(highlights)
       df$ymin <- 0
       df$ymax <- 1
-      p <- p + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.5)
+      p <- p + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
     }
     return(p)
   }
@@ -225,7 +225,7 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, highl
     df <- as.data.frame(highlights)
     df$ymin <- 0
     df$ymax <- max(gname$idx)
-    p <- p + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.5)
+    p <- p + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
   }
 
   p <- p + geom_text(data=gname,aes(x=med,y=idx,label=gene_name), size=5, check_overlap = TRUE,na.rm=TRUE)
@@ -261,7 +261,7 @@ plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.s
     df <- as.data.frame(highlights)
     df$ymin <- 0
     df$ymax <- 1
-    p <- p + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.5)
+    p <- p + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
   }
 
   p <- p + facet_wrap(facets = ~strand, strip.position = 'right', ncol = 1)
@@ -339,7 +339,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     df <- as.data.frame(highlights)
     df$ymin <- ymin
     df$ymax <- ymax
-    p1 <- p1 + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.5)
+    p1 <- p1 + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
   }
 
   p1 <- p1 + scale_y_continuous(breaks=pretty_breaks(),guide=guide_axis(check.overlap = T))
