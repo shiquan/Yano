@@ -141,8 +141,6 @@ GetWeights <- function(object= NULL,
   W
 }
 
-#'
-#' @import sparseMatrixStats
 #' @import Matrix
 #' @export
 RunAutoCorr <- function(object = NULL, 
@@ -913,7 +911,7 @@ aggregateCellByGroup <- function(object = NULL, cell.group = NULL, features = NU
 #'@importFrom scattermore geom_scattermore
 #' 
 #'@export
-FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), raster = NULL, types = NULL, point.label = NULL, arrange.type = FALSE, ...)
+FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), raster = NULL, types = NULL, point.label = NULL, arrange.type = FALSE, label.size=1,...)
 {
   assay <- assay %||% DefaultAssay(object)
   tab0 <- object[[assay]]@meta.features
@@ -1006,7 +1004,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
   if (!is.null(point.label)) {
     sel <- intersect(point.label, rownames(data))
     if (length(sel) > 0) {
-      p <- p + geom_label_repel(data=data[sel,],aes(x=bp_cum, y=pval,label=name),box.padding = 0.5, max.overlaps = Inf)
+      p <- p + geom_label_repel(data=data[sel,],aes(x=bp_cum, y=pval,label=name),box.padding = 0.5, max.overlaps = Inf, size=label.size)
     }
   }
   p
