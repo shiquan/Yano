@@ -911,7 +911,7 @@ aggregateCellByGroup <- function(object = NULL, cell.group = NULL, features = NU
 #'@importFrom scattermore geom_scattermore
 #' 
 #'@export
-FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), raster = NULL, types = NULL, point.label = NULL, arrange.type = FALSE, label.size=1,...)
+FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), raster = NULL, types = NULL, point.label = NULL, arrange.type = FALSE, label.size=3,...)
 {
   assay <- assay %||% DefaultAssay(object)
   tab0 <- object[[assay]]@meta.features
