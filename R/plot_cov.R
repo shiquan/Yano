@@ -154,7 +154,7 @@ fragcov <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc 
 theme_cov <- function(...) {
   theme(
     legend.text = element_blank(),
-    axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
+    axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(0.5)),
     axis.title.x = element_blank(),
     axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
     axis.line = element_blank(),
@@ -341,17 +341,8 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     df$ymax <- ymax
     p1 <- p1 + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
   }
-
+  
   p1 <- p1 + scale_y_continuous(breaks=pretty_breaks(),guide=guide_axis(check.overlap = T))
-  
-  ## if (ymin == 0) {
-  ##   p1 <- p1 + scale_y_continuous(breaks=c(0, as.integer(ymax)),guide_axis(check.overlap = T))
-  ## } else if (ymax == 0) {
-  ##   p1 <- p1 + scale_y_continuous(breaks=c(as.integer(ymin),0),guide_axis(check.overlap = T))
-  ## } else {
-  ##   p1 <- p1 + scale_y_continuous(breaks=c(as.integer(ymin),0,ymax),guide_axis(check.overlap = T))
-  ## }
-  
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
   p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), expand=FALSE)
   # scale_x_continuous(limits=c(start, end),expand=c(0,0))
