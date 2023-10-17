@@ -156,7 +156,7 @@ theme_cov <- function(...) {
     legend.text = element_blank(),
     axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
     axis.title.x = element_blank(),
-    axis.text.y = element_text(family = "Helvetica",color = "black",size = rel(0.5)),
+    axis.text.y = element_text(family = "Helvetica",color = "black",size = rel(1)),
     axis.text.x = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
     axis.line = element_blank(),
     axis.ticks = element_blank(),
