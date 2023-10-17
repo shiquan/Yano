@@ -154,9 +154,10 @@ fragcov <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc 
 theme_cov <- function(...) {
   theme(
     legend.text = element_blank(),
-    axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(0.5)),
+    axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
     axis.title.x = element_blank(),
-    axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
+    axis.text.y = element_text(family = "Helvetica",color = "black",size = rel(0.5)),
+    axis.text.x = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
     axis.line = element_blank(),
     axis.ticks = element_blank(),
     panel.background = element_rect(fill = "whitesmoke"),
