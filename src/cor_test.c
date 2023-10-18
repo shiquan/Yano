@@ -1,7 +1,11 @@
 #include<R.h>
 #include<Rdefines.h>
 #include<Rinternals.h>
+
+#ifndef Matrix_stubs
+#define Matrix_stubs 1
 #include "Matrix_stubs.c"
+#endif
 
 #include <assert.h>
 #include <omp.h>
@@ -34,7 +38,7 @@ void progress(int p) {
     R_FlushConsole();
 }
 // # nocov end
-cholmod_common c;
+static cholmod_common c;
 
 #define CACHE_PER_BATCH 10000
 #define MIN_HIT 1
@@ -118,7 +122,7 @@ SEXP cor_test(SEXP _A, SEXP _B, SEXP _trans)
         // scale
         int j;
         double mn = 0.0;
-        double sd = 0.0;
+        //double sd = 0.0;
 
         for (j = ap[ci]; j < ap[ci+1]; ++j) {
             if (ISNAN(ax[j])) continue;
@@ -130,7 +134,7 @@ SEXP cor_test(SEXP _A, SEXP _B, SEXP _trans)
         for (j = 0; j < N; ++j) tmpa[j] = tmpa[j] - mn;
         
         mn = 0;
-        sd = 0;        
+        //sd = 0;        
         for (j = bp[ci]; j < bp[ci+1]; ++j) {
             if (ISNAN(bx[j])) continue;
             mn += bx[j];
@@ -196,7 +200,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     if (A->stype) return mkString("A cannot be symmetric");
     if (W->stype) return mkString("W cannot be symmetric");
     
-    double one[] = {1, 0};
+    //double one[] = {1, 0};
 
     if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
@@ -214,13 +218,13 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     SEXP Ival = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Pval = PROTECT(allocVector(REALSXP, N_feature));    
 
-    const int const *ap = (int*)A->p;
-    const int const *ai = (int*)A->i;
-    const double const *ax = (double*)A->x;
+    const int *ap = (int*)A->p;
+    const int *ai = (int*)A->i;
+    const double *ax = (double*)A->x;
 
-    const int const *wp = (int*)W->p;
-    const int const *wi = (int*)W->i;
-    const double const *wx = (double*)W->x;
+    const int *wp = (int*)W->p;
+    const int *wi = (int*)W->i;
+    const double *wx = (double*)W->x;
 
     int *hits = R_Calloc(N_feature, int);    
     int *steps = R_Calloc(N_feature, int);
@@ -251,7 +255,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
             double *tmp = R_Calloc(N_cell, double);
             int j;
             double mn = 0,
-                sd = 0,
+                //sd = 0,
                 xix = 0,
                 xij = 0;
             
@@ -319,7 +323,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
         for (i = 0; i < N_feature; ++i) {
             if (hits[i] == -1) continue;
             if (hits[i] > MIN_HIT) {
-                REAL(Pval)[i] == (double)hits[i]/((step+1)*CACHE_PER_BATCH);
+                REAL(Pval)[i] = (double)hits[i]/((step+1)*CACHE_PER_BATCH);
             } else {
                 steps[j++] = i;
             }
@@ -329,7 +333,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
 
     for (int i = 0; i < N; ++i) {
         int idx = steps[i];
-        REAL(Pval)[idx] == (double)hits[idx]/(n_step*CACHE_PER_BATCH);
+        REAL(Pval)[idx] = (double)hits[idx]/(n_step*CACHE_PER_BATCH);
     }
     
     R_Free(hits);
@@ -360,7 +364,7 @@ SEXP smooth_test(SEXP _A, SEXP _W,
     if (A->stype) return mkString("A cannot be symmetric");
     if (W->stype) return mkString("W cannot be symmetric");
         
-    double one[] = {1, 0};
+    //double one[] = {1, 0};
 
     // if (A->ncol != B->ncol || A->nrow != B->nrow) return mkString("A and B do not match");
     if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
@@ -374,9 +378,9 @@ SEXP smooth_test(SEXP _A, SEXP _W,
     const int N_cell = A->nrow;
     const int N_feature = length(idx);
 
-    const int * const ap = (int*)A->p;
-    const int * const ai = (int*)A->i;
-    const double * const ax = (double*)A->x;
+    const int * ap = (int*)A->p;
+    const int * ai = (int*)A->i;
+    const double * ax = (double*)A->x;
 
     SEXP ta = PROTECT(allocVector(VECSXP, N_feature));
 
@@ -436,7 +440,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
     if (B->stype) return mkString("B cannot be symmetric");
     if (W->stype) return mkString("W cannot be symmetric");
     
-    double one[] = {1, 0};
+    // double one[] = {1, 0};
 
     // if (A->ncol != B->ncol || A->nrow != B->nrow) return mkString("A and B do not match");
     if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
@@ -669,7 +673,7 @@ SEXP E_test_cell(SEXP _A, SEXP _B, SEXP _W,
     if (A->stype) return mkString("A cannot be symmetric");
     if (W->stype) return mkString("W cannot be symmetric");
     
-    double one[] = {1, 0};
+    //double one[] = {1, 0};
 
     if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
@@ -875,9 +879,9 @@ SEXP E_test_cell(SEXP _A, SEXP _B, SEXP _W,
 double *sp_colsums(CHM_SP A, Rboolean mn)
 {
     double *cs = R_Calloc(A->ncol, double);
-    const int *const ap = (int*)A->p;
-    const int *const ai = (int*)A->i;
-    const double *const ax = (double*)A->x;
+    const int * ap = (int*)A->p;
+    //const int * ai = (int*)A->i;
+    const double * ax = (double*)A->x;
 
     for (int i = 0; i < A->ncol; ++i) {
         if (ap[i] == ap[i+1]) {
@@ -889,7 +893,7 @@ double *sp_colsums(CHM_SP A, Rboolean mn)
             cs[i] += ax[j];
         }
 
-        if (mn) cs[i]/A->ncol;
+        if (mn) cs[i] = cs[i]/A->ncol;
     }
     return cs;
 }
@@ -926,7 +930,7 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     double N1 = N -1;
     double N2 = N -2;
     double N3 = N -3;
-    double N4 = N -4;
+    //double N4 = N -4;
     double NN = pow(N, 2);
     double tmp1 = NN - 3 *N + 3;
     double tmp2 = N1 *N2 * N3;

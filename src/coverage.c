@@ -45,7 +45,7 @@ void depth_summary(struct depth *d) {
         tmp = tmp->next;
         i++;
     }
-    debug_print("summary : %d", i);
+    Rprintf("summary : %d", i);
 }
 struct depth *depth_cut_branch(struct depth *head)
 {

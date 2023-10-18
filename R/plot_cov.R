@@ -448,7 +448,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
   if (is.null(start) || is.null(end)) stop("No start or/and end position specified.")
   start <- start - upstream
   end <- end + downstream
-  message(paste0("chr ", chr, ", start ", start, ", end ", end))
+  message(paste0("Chromosome ", chr, ", start ", start, ", end ", end))
   if (is.null(bamfile)) stop("No bam file specified.")
 
   df <- NULL

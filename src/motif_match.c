@@ -85,7 +85,7 @@ static int _match_PWM(const double *pwm, int pwm_ncol, const Chars_holder *S, do
 SEXP match_PWM_fast(SEXP pwm, SEXP subject, SEXP min_score, SEXP count_only, SEXP base_codes)
 {
     Chars_holder S;
-    int pwm_ncol, is_count_only;
+    int pwm_ncol;//, is_count_only;
     double minscore;
     
     if (INTEGER(GET_DIM(pwm))[0] != 4)
