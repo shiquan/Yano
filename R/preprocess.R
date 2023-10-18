@@ -503,6 +503,7 @@ RunBlockCorr <- function(object = NULL,
                          threads = 1
                          )
 {
+  tt <- Sys.time()
   cells <- cells %||% order.cells
   cells <- cells %||% colnames(object)
   cells <- intersect(cells, colnames(object))
@@ -638,7 +639,14 @@ RunBlockCorr <- function(object = NULL,
 
   rm(ta)
   gc()
+
+  tt <- Sys.time()-tt
   
+  if (tt > 60) {
+    message(paste0("Runtime : ", as.integer(tt/60), " mins."));
+  } else {
+    message(paste0("Runtime : ", as.integer(tt), " secs."));
+  }
   object
 }
 

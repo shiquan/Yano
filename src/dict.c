@@ -11,8 +11,7 @@ typedef struct dict_val {
 
 KHASH_MAP_INIT_STR(name, dict_val_t)
     
-KSTREAM_INIT(gzFile, gzread, 8193);
-
+KSTREAM_INIT(gzFile, gzread, 8193)
 
 struct dict {
     int n, m;
@@ -249,10 +248,9 @@ char **dict_names(struct dict *D)
 // hamming distance
 static int check_similar(char *a, char *b, int mis)
 {
-    int l0, l1;
-    l0 = strlen(a);
-    l1 = strlen(b);
-    assert(l0 == l1);
+    int l0 = strlen(a);
+    int l1 = strlen(b);
+    if (l0 != l1) error("Unequal length.");
     int i;
     int m = 0;
     for (i = 0; i < l0; ++i) {
