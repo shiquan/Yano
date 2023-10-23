@@ -17,12 +17,25 @@ setMethod(f = "QuickRecipe0",
           signature = signature(counts = "Seurat"),
           definition = function(counts = NULL, scale.factor = 1e4,
                                 assay = NULL,
+                                min.cells = 0,
+                                min.features = 0,
                                 ...
                                 ) {
             assay <- assay %||% DefaultAssay(counts)
             message(paste0("Set default assay to ", assay))
             DefaultAssay(counts) <- assay
-
+            if (min.cells > 0) {
+              X <- GetAssayData(counts, "counts")
+              rs <- rowSums(X>0)
+              idx <- which(rs >= min.cells)
+              counts <- counts[,idx]
+            }
+            if (min.features > 0) {
+              X <- GetAssayData(counts, "counts")
+              rs <- colSums(X>0)
+              idx <- which(rs >= min.features)
+              counts <- counts[idx,]
+            }
             counts <- NormalizeData(counts, normalization.method = "LogNormalize",
                                     scale.factor = scale.factor)
             counts
@@ -610,7 +623,7 @@ RunBlockCorr <- function(object = NULL,
   
   message("Test dissimlarity of two processes ..")
   gc()
-  ta <- .Call("E_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, sensitive.mode);
+  ta <- .Call("D_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, sensitive.mode);
   if (length(ta) == 1) stop(ta[[1]])
 
   Lx <- ta[[1]]
@@ -629,7 +642,7 @@ RunBlockCorr <- function(object = NULL,
   #padj <- p.adjust(pval, "BH")
   #names(padj) <- features
   tab <- object[[assay]]@meta.features
-  tab[[paste0(prefix, ".E")]] <- e[rownames(object)]
+  tab[[paste0(prefix, ".D")]] <- e[rownames(object)]
   tab[[paste0(prefix, ".r")]] <- r[rownames(object)]
   #tab[[paste0(prefix, ".Lx")]] <- Lx[rownames(object)]
   #tab[[paste0(prefix, ".Ly")]] <- Ly[rownames(object)]
@@ -642,18 +655,14 @@ RunBlockCorr <- function(object = NULL,
 
   tt <- Sys.time()-tt
   
-  if (tt > 60) {
-    message(paste0("Runtime : ", as.integer(tt/60), " mins."));
-  } else {
-    message(paste0("Runtime : ", as.integer(tt), " secs."));
-  }
+  message(paste0("Runtime : ",tt));  
   object
 }
 
 #' @importFrom Matrix sparseMatrix
 #' @export
 RunCellCorr <- function(object = NULL,
-                        meta.name = "UB",
+                        meta.name = "nCount_RNA",
                         features = NULL,
                         assay = NULL,
                         prefix = NULL,
@@ -708,8 +717,10 @@ RunCellCorr <- function(object = NULL,
     stop(paste0("No meta.name found in the meta.data."))
   }
   
-  tab <- tab[tab[[meta.name]] != ".",] # skip empty
-  y <- tab[[meta.data]]
+  tab <- tab[which(tab[[meta.name]] != "."),] # skip empty
+  y <- tab[[meta.name]]
+  names(y) <- rownames(tab)
+  
   if (!is.numeric(y)) stop("meta.name contain non-numeric value.")
   
   features <- intersect(features, rownames(object))
@@ -723,9 +734,7 @@ RunCellCorr <- function(object = NULL,
   
   x <- GetAssayData(object, assay = assay, slot = "counts")
   
-  cs <- cell.size %||% y
-  
-  cells <- intersect(cells,names(which(cs > 0)))
+  #cells <- intersect(cells,names(which(cs > 0)))
   W <- W[cells, cells]
   cs <- cs[cells]
   x <- x[,cells]
@@ -733,11 +742,11 @@ RunCellCorr <- function(object = NULL,
   ncell <- length(cells)
   
   idx <- match(features, rownames(x))
-  
-  
+
+  cs <- cell.size %||% colSums(x)
   message("Test dissimlarity of two processes ..")
   gc()
-  ta <- .Call("E_test_cell", x, y, W, perm, threads, idx, cs, scale.factor, sensitive.mode);
+  ta <- .Call("D_test_cell", x, y, W, perm, threads, idx, cs, scale.factor, sensitive.mode);
   if (length(ta) == 1) stop(ta[[1]])
 
   Lx <- ta[[1]]
@@ -745,6 +754,9 @@ RunCellCorr <- function(object = NULL,
   e <- ta[[3]]
   tval <- ta[[4]]
 
+  pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
+  
+  names(pval) <- features  
   names(Lx) <- features
   names(r) <- features
   names(e) <- features
@@ -951,6 +963,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
   }
 
   tab <- subset(tab, !is.na(pval))
+  
   data_cum <- tab %>% group_by(chr) %>% summarise(max_bp = max(start)) %>%
     mutate(bp_add = lag(cumsum(max_bp), default = 0)) %>% select(chr, bp_add)
   
