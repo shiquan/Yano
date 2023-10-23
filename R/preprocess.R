@@ -641,7 +641,7 @@ RunBlockCorr <- function(object = NULL,
 
   tt <- Sys.time()-tt
   
-  message(paste0("Runtime : ",tt));  
+  message(paste0("Runtime : ",format(tt)));
   object
 }
 
