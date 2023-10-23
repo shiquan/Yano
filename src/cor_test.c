@@ -418,7 +418,7 @@ SEXP smooth_test(SEXP _A, SEXP _W,
     UNPROTECT(N_feature+1);
     return ta;
 }
-SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
+SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             SEXP _permut,
             SEXP _threads,
             SEXP idx, SEXP bidx,
@@ -461,7 +461,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
     SEXP LXval = PROTECT(allocVector(REALSXP, N_feature));
     SEXP LYval = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
-    SEXP Eval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Dval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Mval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Vval  = PROTECT(allocVector(REALSXP, N_feature));
@@ -492,7 +492,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
             REAL(LXval)[i] = 0;
             REAL(LYval)[i] = 0;
             REAL(Rval)[i]  = 0;
-            REAL(Eval)[i]  = 0;
+            REAL(Dval)[i]  = 0;
             REAL(Tval)[i]  = 0;
             continue;
         }
@@ -580,7 +580,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
             REAL(LXval)[i] = Lx;
             REAL(LYval)[i] = Ly;
             REAL(Rval)[i]  = r;
-            REAL(Eval)[i]  = e;
+            REAL(Dval)[i]  = e;
         }
 
         // mean, var
@@ -646,7 +646,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
     SET_VECTOR_ELT(ta, 0, LXval);
     SET_VECTOR_ELT(ta, 1, LYval);
     SET_VECTOR_ELT(ta, 2, Rval);
-    SET_VECTOR_ELT(ta, 3, Eval);
+    SET_VECTOR_ELT(ta, 3, Dval);
     SET_VECTOR_ELT(ta, 4, Tval);
     SET_VECTOR_ELT(ta, 5, Mval);
     SET_VECTOR_ELT(ta, 6, Vval);
@@ -654,7 +654,7 @@ SEXP E_test(SEXP _A, SEXP _B, SEXP _W,
     UNPROTECT(8);
     return ta;
 }
-SEXP E_test_cell(SEXP _A, SEXP _B, SEXP _W,
+SEXP D_test_cell(SEXP _A, SEXP _B, SEXP _W,
                  SEXP _permut,
                  SEXP _threads,
                  SEXP idx, 
@@ -674,7 +674,6 @@ SEXP E_test_cell(SEXP _A, SEXP _B, SEXP _W,
     if (W->stype) return mkString("W cannot be symmetric");
     
     //double one[] = {1, 0};
-
     if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
     if (A->ncol < 2) return mkString("Too few cells."); // to do
@@ -685,19 +684,18 @@ SEXP E_test_cell(SEXP _A, SEXP _B, SEXP _W,
     R_CheckStack();
     const int N_cell = A->nrow;
     const int N_feature = length(idx);
-
     
     SEXP LXval = PROTECT(allocVector(REALSXP, N_feature));
     // SEXP LYval = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
-    SEXP Eval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Dval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Mval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Vval  = PROTECT(allocVector(REALSXP, N_feature));
     
-    const int * const ap = (int*)A->p;
-    const int * const ai = (int*)A->i;
-    const double * const ax = (double*)A->x;
+    const int * ap = (int*)A->p;
+    const int * ai = (int*)A->i;
+    const double * ax = (double*)A->x;
     
     int **ris = NULL;
     ris = R_Calloc(perm,int*);
@@ -719,7 +717,7 @@ SEXP E_test_cell(SEXP _A, SEXP _B, SEXP _W,
             REAL(LXval)[i] = 0;
             // REAL(LYval)[i] = 0;
             REAL(Rval)[i]  = 0;
-            REAL(Eval)[i]  = 0;
+            REAL(Dval)[i]  = 0;
             REAL(Tval)[i]  = 0;
             continue;
         }
@@ -802,7 +800,7 @@ SEXP E_test_cell(SEXP _A, SEXP _B, SEXP _W,
             REAL(LXval)[i] = Lx;
             //REAL(LYval)[i] = Ly;
             REAL(Rval)[i]  = r;
-            REAL(Eval)[i]  = e;
+            REAL(Dval)[i]  = e;
         }
 
         // mean, var
@@ -868,7 +866,7 @@ SEXP E_test_cell(SEXP _A, SEXP _B, SEXP _W,
     SET_VECTOR_ELT(ta, 0, LXval);
     //SET_VECTOR_ELT(ta, 1, LYval);
     SET_VECTOR_ELT(ta, 1, Rval);
-    SET_VECTOR_ELT(ta, 2, Eval);
+    SET_VECTOR_ELT(ta, 2, Dval);
     SET_VECTOR_ELT(ta, 3, Tval);
     SET_VECTOR_ELT(ta, 4, Mval);
     SET_VECTOR_ELT(ta, 5, Vval);
