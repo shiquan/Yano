@@ -17,25 +17,11 @@ setMethod(f = "QuickRecipe0",
           signature = signature(counts = "Seurat"),
           definition = function(counts = NULL, scale.factor = 1e4,
                                 assay = NULL,
-                                min.cells = 0,
-                                min.features = 0,
                                 ...
                                 ) {
             assay <- assay %||% DefaultAssay(counts)
             message(paste0("Set default assay to ", assay))
             DefaultAssay(counts) <- assay
-            if (min.cells > 0) {
-              X <- GetAssayData(counts, "counts")
-              rs <- rowSums(X>0)
-              idx <- which(rs >= min.cells)
-              counts <- counts[,idx]
-            }
-            if (min.features > 0) {
-              X <- GetAssayData(counts, "counts")
-              rs <- colSums(X>0)
-              idx <- which(rs >= min.features)
-              counts <- counts[idx,]
-            }
             counts <- NormalizeData(counts, normalization.method = "LogNormalize",
                                     scale.factor = scale.factor)
             counts
