@@ -14,8 +14,8 @@ static double Jaccard(double *a, double *b, int n)
         if (a[i] != 0 && b[i] != 0) x++;
         y++;        
     }
-    if (y == 0) return 0;
-    return (double)x/y;
+    if (y == 0) return 1;
+    return 1- (double)x/y;
 }
 
 typedef double (*method_func)(double *, double *, int);
