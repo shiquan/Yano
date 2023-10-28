@@ -27,7 +27,6 @@ setMethod(f = "QuickRecipe0",
             counts
           })
 
-#' @export
 ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, nvar= 3000, features = NULL)
 {
   object <- FindVariableFeatures(object, selection.method = "vst", nfeatures = nvar)
@@ -76,6 +75,12 @@ setMethod(f = "QuickRecipe",
 
             ProcessDimReduc(object, ndim=ndim, resolution=resolution, nvar=nvar)
           })
+#' Build cell-cell weight matrix on cell lineage.
+#' @param order.cells Predefined cell ranks, used for cell lineage analysis.
+#' @param k.nn k-nearest neighbors.
+#' @param self.weight Diagnoal value in the weight matrix.
+#' @param scale Scale the weight values by row.
+#' @returns A sprase weight matrix.
 #' @importFrom Matrix sparseMatrix
 #' @export
 WeightLineage <- function(order.cells = NULL, k.nn = 9, self.weight = 0, scale = FALSE) {
@@ -95,7 +100,17 @@ WeightLineage <- function(order.cells = NULL, k.nn = 9, self.weight = 0, scale =
   rownames(W) <- order.cells
   W
 }
-#'
+#' Calcualte cell-cell weight matrix by feature space (usually PCA) or spatial locations.
+#' @param object Seurat object.
+#' @param reduction Which dimesional reduction (PCA/ICA/harmony/spatial) to use for the weight matrix. Default is "pca".
+#' @param dims Which dimensions to use as input features.
+#' @param k.nn k-nearest neighbors.
+#' @param spatial Use tissue coordinates instead of pca. Require input object is spatially resolved data.
+#' @param self.weight Diagnoal value in the weight matrix.
+#' @param scale Scale the weight values by row.
+#' @param order.cells Predefined cell ranks, used for cell lineage analysis.
+#' @param cells If set, run weight matrix on these cells only.
+#' @returns A sparse weight matrix.
 #' @export
 GetWeights <- function(object= NULL,                       
                        reduction = "pca",
@@ -139,7 +154,20 @@ GetWeights <- function(object= NULL,
   rownames(W) <- cells
   W
 }
-
+#' Calculate Moran's index for features in parallel.
+#' @param object
+#' @param assay
+#' @param slot
+#' @param spatial
+#' @param W
+#' @param scale.weight
+#' @param reduction
+#' @param dims
+#' @param k.nn
+#' @param order.cells
+#' @param cells
+#' @param features
+#' @param threads
 #' @import Matrix
 #' @export
 RunAutoCorr <- function(object = NULL, 
@@ -224,10 +252,7 @@ RunAutoCorr <- function(object = NULL,
 SetAutoCorrFeatures <- function(object = NULL,
                                 moransi.min = 0,
                                 assay = DefaultAssay(object),
-                                degree=1,
-                                p.cutoff = 0.05,
-                                top.n = 5000
-                                )
+                                p.cutoff = 0.05)
 {
   tab <- object[[assay]]@meta.features
 
@@ -246,8 +271,9 @@ SetAutoCorrFeatures <- function(object = NULL,
   object
 }
 #' @export
-AutoCorrFeatures <- function(object = NULL, assay = DefaultAssay(object))
+AutoCorrFeatures <- function(object = NULL, assay = NULL)
 {
+  assay <- assay %||% DefaultAssay(object)
   tab <- object[[assay]]@meta.features
 
   if ('AutoCorrFeature' %ni% colnames(tab)) {
@@ -373,6 +399,25 @@ AddLCModule <- function(object = NULL, lc = NULL, min.features.per.module = 10, 
   object <- AddModuleScore(object, features=ml, name=module.prefix.name)
   object
 }
+#' @export
+ParseExonName <- function(object = NULL, assay = NULL, stranded = TRUE)
+{
+  assay <- assay %||% DefaultAssay(object)
+  message(paste0("Working on assay ", assay))
+  old.assay <- DefaultAssay(object)
+  DefaultAssay(object) <- assay
+
+  nm <- rownames(object)
+
+  object[[assay]]@meta.features[['chr']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\1",nm)
+  object[[assay]]@meta.features[['start']] <- as.integer(gsub("(.*):(.*)-(.*)/(.)/(.*)","\\2",nm))
+  object[[assay]]@meta.features[['end']] <- as.integer(gsub("(.*):(.*)-(.*)/(.)/(.*)","\\3",nm))
+  object[[assay]]@meta.features[['strand']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\4",nm)
+  object[[assay]]@meta.features[['gene_name']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\5",nm)
+
+  DefaultAssay(object) <- old.assay
+  return(object)
+}
 #'
 #' @importFrom data.table fread
 #' @export
@@ -420,10 +465,12 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
 
   object
 }
+
 #' @importFrom data.table fread 
 #' @importFrom GenomicRanges GRanges findOverlaps
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors queryHits subjectHits
+#' @importFrom stringr str_detect
 #' @export
 LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRUE)
 {
@@ -444,10 +491,14 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   old.assay <- DefaultAssay(object)
   DefaultAssay(object) <- assay
 
+
+
   locs <- gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1/\\3",rownames(object))
   chrs <- gsub("(.*):.*","\\1",rownames(object))
   starts <- as.numeric(gsub("(.*):([0-9]+).*","\\2",rownames(object)))
   strands <- gsub(".*/([-+])","\\1",rownames(object))
+
+  
   gv <- GRanges(chrs,IRanges(start=starts,width=1),strand=strands)
   gv$name <- rownames(object)
 
@@ -462,6 +513,8 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   types <- bed[ept.sel,]$type
   names(gnames) <- var.sel
   names(types) <- var.sel
+
+  idx <- which(str_detect(rownames(object),"="))
   
   object[[assay]]@meta.features[['chr']] <- chrs
   object[[assay]]@meta.features[['start']] <- starts
@@ -469,8 +522,11 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   object[[assay]]@meta.features[['locus']] <- locs
   object[[assay]]@meta.features[['ept']] <- ept.sel[rownames(object)]
   object[[assay]]@meta.features[['gene_name']] <- gnames[rownames(object)]
-  object[[assay]]@meta.features[['type']] <- types[rownames(object)]
+  object[[assay]]@meta.features[['ept_type']] <- types[rownames(object)]
+  object[[assay]]@meta.features[['type']] <- "alt"
 
+  object[[assay]]@meta.features[['type']][idx] <- "ref"
+  
   DefaultAssay(object) <- old.assay
 
   object
