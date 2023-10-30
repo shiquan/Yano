@@ -1,0 +1,2 @@
+# Yano
+Yano is an R/C package to perform spatial dissimilarity analysis for single cell RNA sequencing data. The key idea of this method is to test the different expression pattern of a feature (such as an exon) with its binding feature (the gene) in cell lineage (1D), spatial location (2D), or PCA space (high D). The different expressed pattern of a feature and its binding feature may indicate various biological phenomona, such as alternative splcing. 
