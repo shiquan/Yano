@@ -1,3 +1,5 @@
+#include <omp.h>
+
 #include<R.h>
 #include<Rdefines.h>
 //#include<Rinternals.h>
@@ -8,7 +10,7 @@
 #endif
 
 #include <assert.h>
-#include <omp.h>
+
 
 void progress(int p) {
     static int displayed = -1;
