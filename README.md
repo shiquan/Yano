@@ -10,7 +10,13 @@ Yano is seamlessly integrated with Seurat, building upon the Seurat object's fra
 # INSTALL
 
 ```
-devtools::install_package("shiquan/Yano")
+# install all dependency in R, skip these steps if you have already install them
+install.packages(c("BiocManager", "Seurat", "devtools"), repos = "https://cloud.r-project.org")
+
+BiocManager::install(c("SingleCellExperiment","Rhtslib", "Biostrings"))
+
+# install Yano 
+devtools::install_github("shiquan/Yano")
 ```
 
 # Quick start
