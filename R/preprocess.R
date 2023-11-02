@@ -492,13 +492,16 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   DefaultAssay(object) <- assay
 
 
-
-  locs <- gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1/\\3",rownames(object))
+  if (isTRUE(stranded)) {
+    locs <- gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1/\\3",rownames(object))
+    strands <- gsub(".*/([-+])","\\1",rownames(object))
+  } else {
+    locs <- gsub("(.*:[0-9]+)([ACGT=>]*).*", "\\1",rownames(object))
+    strands <- "."
+  }
   chrs <- gsub("(.*):.*","\\1",rownames(object))
   starts <- as.numeric(gsub("(.*):([0-9]+).*","\\2",rownames(object)))
-  strands <- gsub(".*/([-+])","\\1",rownames(object))
-
-  
+    
   gv <- GRanges(chrs,IRanges(start=starts,width=1),strand=strands)
   gv$name <- rownames(object)
 
