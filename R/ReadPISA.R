@@ -21,6 +21,8 @@ ReadMM <- function(file = NULL)
 #' @return Returns a sparse matrix of feature counts or a list of spliced, unspliced, and
 #'         spanning reads sparse matrix.
 #' @importFrom S4Vectors SimpleList
+#' @importFrom data.table fread
+#' @import R.utils
 #' @export
 ReadPISA <- function(mex_dir=NULL,
                      barcode.path = NULL,
