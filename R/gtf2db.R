@@ -25,6 +25,8 @@ gtf2db <- function(filename = NULL) {
                        ranges = IRanges(start = exon$start, end=exon$end),
                        gene_name = exon$genename, gene_id = exon$geneid,
                        transcript_id = exon$txid)
-  
+
+  rm(tab)
+
   return(anno)
 }

@@ -32,11 +32,21 @@ SEXP gtf_genes(struct gtf_spec *G)
             INTEGER(end_)[idx] = gtf->end;
             int q = -1;
             if (gtf->attr != NULL) {
-                q = dict_query(gtf->attr, "gene_type");
-                if (q == -1) q = dict_query(gtf->attr, "gene_biotype");
-                if (q == -1) q = dict_query(gtf->attr, "biotype");
+                q = dict_query(G->attrs, "gene_type");
+                if (q == -1) q = dict_query(G->attrs, "gene_biotype");
+                if (q == -1) q = dict_query(G->attrs, "biotype");
             }
-            char *biotype = q == -1 ? "Unknown" : dict_query_value(gtf->attr, q);
+            char *biotype = "Unknown";
+            if (q != -1) {
+                struct attr *a = gtf->attr;
+                for (; a != NULL; a = a->next) {
+                    if (a->id == q) {
+                        biotype = a->val;
+                        break;
+                    }
+                }
+                
+            }
             SET_STRING_ELT(biotype_,  idx, mkChar((const char*)biotype));
             SET_STRING_ELT(strand_,   idx, mkChar(gtf->strand == 0 ? "+" : "-"));
             SET_STRING_ELT(geneid_,   idx, mkChar((const char*)dict_name(G->gene_id, gtf->gene_id)));
@@ -108,13 +118,23 @@ SEXP gtf_transcript(struct gtf_spec *G)
                 INTEGER(start_)[idx]      = gtf->start;
                 INTEGER(end_)[idx]        = gtf->end;
                 int q = -1;
-                if (gtf->attr != NULL) {
-                    q = dict_query(gtf->attr, "transcript_type");
-                    if (q == -1) q = dict_query(gtf->attr, "transcript_biotype");
-                    if (q == -1) q = dict_query(gtf->attr, "biotype");
-                }
 
-                char *biotype = q == -1 ? "Unknown" : dict_query_value(gtf->attr, q);
+                if (gtf->attr != NULL) {
+                    q = dict_query(G->attrs, "gene_type");
+                    if (q == -1) q = dict_query(G->attrs, "gene_biotype");
+                    if (q == -1) q = dict_query(G->attrs, "biotype");
+                }
+                char *biotype = "Unknown";
+                if (q != -1) {
+                    struct attr *a = gtf->attr;
+                    for (; a != NULL; a = a->next) {
+                        if (a->id == q) {
+                            biotype = a->val;
+                            break;
+                        }
+                    }
+                    
+                }
 
                 SET_STRING_ELT(biotype_,  idx, mkChar((const char*)biotype));
                 SET_STRING_ELT(strand_,   idx, mkChar(gtf->strand == 0 ? "+" : "-"));
