@@ -111,6 +111,7 @@ WeightLineage <- function(order.cells = NULL, k.nn = 9, self.weight = 0, scale =
 #' @param order.cells Predefined cell ranks, used for cell lineage analysis.
 #' @param cells If set, run weight matrix on these cells only.
 #' @returns A sparse weight matrix.
+#' @importFrom nabor knn
 #' @export
 GetWeights <- function(object= NULL,
                        weight.matrix = "RNA_nn",
