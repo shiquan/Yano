@@ -183,7 +183,7 @@ RunAutoCorr <- function(object = NULL,
                         cells = NULL,
                         features = NULL,
                         #perm = 10000,
-                        threads=4)
+                        threads=0)
 {
   assay <- assay %||% DefaultAssay(object = object)
   message(paste0("Working on assay : ", assay))
@@ -192,6 +192,8 @@ RunAutoCorr <- function(object = NULL,
 
   features <- features %||% rownames(object)
   features <- intersect(rownames(object),features)
+
+  threads <- getCores(threads)
   
   if (is.null(W)) {
     W <- GetWeights(object=object, reduction=reduction,
@@ -399,6 +401,14 @@ AddLCModule <- function(object = NULL, lc = NULL, min.features.per.module = 10, 
   object <- AddModuleScore(object, features=ml, name=module.prefix.name)
   object
 }
+
+#'@importFrom parallel detectCores
+getCores <- function(threads = 0)
+{
+  if (threads > 0) return(threads)
+  return(detectCores())
+}
+
 #' @export
 ParseExonName <- function(object = NULL, assay = NULL, stranded = TRUE)
 {
@@ -539,11 +549,11 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
 #' @importFrom Matrix sparseMatrix
 #' @export
 RunBlockCorr <- function(object = NULL,
-                         block.name = "gene_name",
+                         bind.name = "gene_name",
                          features = NULL,
                          assay = NULL,
-                         block.assay = NULL,
-                         block.features = NULL,
+                         bind.assay = NULL,
+                         bind.features = NULL,
                          prefix = NULL,
                          cells = NULL,
                          order.cells = NULL,
@@ -558,9 +568,27 @@ RunBlockCorr <- function(object = NULL,
                          dims = NULL,
                          k.nn = 9,
                          perm=1000,
-                         threads = 1
+                         threads = 0,
+                         block.name = NULL,
+                         block.assay = NULL,
+                         block.features = NULL
                          )
 {
+  if (!is.null(block.name)) {
+    warning(paste0("'block.name' is deprecated. Set bind.name = '", block.name, "'"))
+    bind.name <- block.name
+  }
+
+  if (!is.null(block.assay)) {
+    warning(paste0("'block.assay' is deprecated. Set bind.assay = '", block.assay, "'"))
+    bind.assay <- block.assay
+  }
+
+  if (!is.null(block.features)) {
+    warning(paste0("'block.features' is deprecated. Set bind.features = '", block.features, "'"))
+    bind.features <- block.features
+  }
+  
   tt <- Sys.time()
   cells <- cells %||% order.cells
   cells <- cells %||% colnames(object)
@@ -569,12 +597,14 @@ RunBlockCorr <- function(object = NULL,
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
 
-  prefix <- prefix %||% block.name
+  prefix <- prefix %||% bind.name
   
   features <- features %||% AutoCorrFeatures(object)
   features <- intersect(features, rownames(object))
 
   message(paste0("Working on ", length(features), " features."))
+
+  threads <- getCores(threads)
   
   # Make weights
   if (is.null(W)) {
@@ -593,19 +623,19 @@ RunBlockCorr <- function(object = NULL,
 
   tab <- object[[assay]]@meta.features
 
-  if (block.name %ni% colnames(tab)) {
-    stop(paste0("No block.name found in the feature table of assay ", assay, ". Run LoadEPTanno or LoadVARanno first."))
+  if (bind.name %ni% colnames(tab)) {
+    stop(paste0("No bind.name found in the feature table of assay ", assay, ". Run LoadEPTanno or LoadVARanno first."))
   }
   
-  tab <- tab[tab[[block.name]] != ".",] # skip unannotated records
+  tab <- tab[tab[[bind.name]] != ".",] # skip unannotated records
   if (!is.null(feature.types) & "type" %in% colnames(tab)) {
     tab <- subset(tab, type %in% feature.types)
   }
   
-  blocks <- names(which(table(tab[[block.name]]) >= min.features.per.block))
+  blocks <- names(which(table(tab[[bind.name]]) >= min.features.per.block))
 
-  block.features <- block.features %||% blocks
-  blocks <- intersect(block.features, blocks)
+  bind.features <- bind.features %||% blocks
+  blocks <- intersect(bind.features, blocks)
   
   features <- intersect(features, rownames(tab))
     
@@ -615,12 +645,12 @@ RunBlockCorr <- function(object = NULL,
 
   idx <- match(features, rownames(tab))
   tab0 <- tab[idx,]
-  blocks <- intersect(unique(tab0[[block.name]]), blocks)
+  blocks <- intersect(unique(tab0[[bind.name]]), blocks)
   
   message(paste0("Processing ", length(blocks), " blocks.."))
-  tab <- subset(tab, tab[[block.name]] %in% blocks)
+  tab <- subset(tab, tab[[bind.name]] %in% blocks)
   
-  block.assay <- block.assay %||% "tmp.assay"
+  bind.assay <- bind.assay %||% "tmp.assay"
   ## blocks <- unique(blocks)
 
   x <- GetAssayData(object, assay = assay, slot = "counts")
@@ -634,13 +664,13 @@ RunBlockCorr <- function(object = NULL,
   ncell <- length(cells)
   
   ## all.features <- rownames(tab)
-  if (block.assay %ni% names(object)) {
+  if (bind.assay %ni% names(object)) {
     message("Aggregate counts..")
     x0 <- x[rownames(tab),cells]
     x0 <- as(x0, "TsparseMatrix")
     
     # Aggregate features in the same block
-    y <- sparseMatrix(i = match(tab[[block.name]][x0@i+1], blocks),
+    y <- sparseMatrix(i = match(tab[[bind.name]][x0@i+1], blocks),
                       j = x0@j+1,
                       x = x0@x, dims=c(length(blocks), length(cells)))
 
@@ -648,13 +678,13 @@ RunBlockCorr <- function(object = NULL,
     rownames(y) <- blocks
     colnames(y) <- cells
   } else {
-    message(paste0("Trying to retrieve data from assay ", block.assay,".."))
+    message(paste0("Trying to retrieve data from assay ", bind.assay,".."))
     old.assay <- DefaultAssay(object)
-    DefaultAssay(object) <- block.assay
+    DefaultAssay(object) <- bind.assay
     blocks <- intersect(blocks, rownames(object))
-    tab <- subset(tab, tab[[block.name]] %in% blocks)
+    tab <- subset(tab, tab[[bind.name]] %in% blocks)
 
-    y <- GetAssayData(object, assay = block.assay, slot = "counts")#[blocks,cells]
+    y <- GetAssayData(object, assay = bind.assay, slot = "counts")#[blocks,cells]
 
     DefaultAssay(object) <- old.assay
     y <- y[,cells]
@@ -662,7 +692,7 @@ RunBlockCorr <- function(object = NULL,
 
   features <- intersect(features, rownames(tab))
   tab <- tab[features,]
-  bidx <- match(tab[[block.name]],rownames(y))
+  bidx <- match(tab[[bind.name]],rownames(y))
   idx <- match(features, rownames(x))
   #cidx <- match(cells, colnames(x))
   
@@ -722,13 +752,13 @@ RunCellCorr <- function(object = NULL,
                         dims = NULL,
                         k.nn = 9,
                         perm=1000,
-                        threads = 1
+                        threads = 0
                         )
 {
   cells <- cells %||% order.cells
   cells <- cells %||% colnames(object)
   cells <- intersect(cells, colnames(object))
-  
+
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
   old.assay <- DefaultAssay(object)
@@ -739,6 +769,8 @@ RunCellCorr <- function(object = NULL,
   features <- features %||% AutoCorrFeatures(object)
   features <- intersect(features, rownames(object))
 
+  threads <- getCores(threads)
+  
   message(paste0("Working on ", length(features), " features."))
   
   # Make weights

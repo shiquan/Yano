@@ -17,7 +17,7 @@ RunAutoCorr(
   order.cells = NULL,
   cells = NULL,
   features = NULL,
-  threads = 4
+  threads = 0
 )
 }
 \description{
