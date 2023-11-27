@@ -696,7 +696,7 @@ RunBlockCorr <- function(object = NULL,
   idx <- match(features, rownames(x))
   #cidx <- match(cells, colnames(x))
   
-  message("Test dissimlarity of two processes ..")
+  message(paste0("Test dissimlarity of binding features with ", threads, " threads."))
   gc()
   ta <- .Call("D_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, sensitive.mode);
   if (length(ta) == 1) stop(ta[[1]])
