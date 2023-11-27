@@ -171,7 +171,7 @@ SEXP cor_test(SEXP _A, SEXP _B, SEXP _trans)
     return rval;
 }
 
-void smooth_W(double * const a, double *s, const int N, const_CHM_SP W)
+void smooth_W(double * const a, double *s, const int N, CHM_SP W)
 {
     int *wp = (int*)W->p;
     int *wi = (int*)W->i;
