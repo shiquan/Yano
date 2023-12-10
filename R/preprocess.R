@@ -127,8 +127,10 @@ GetWeights <- function(object= NULL,
     return(WeightLineage(order.cells = order.cells, k.nn = k.nn, self.weight=self.weight, scale=scale))
   }
 
+  cells <- colnames(object)
+  
   if (weight.matrix %in% names(object)) {
-    W <- object[[weight.matrix]]
+  
   } else {
   
   #cells <- cells %||% colnames(object)
@@ -143,7 +145,6 @@ GetWeights <- function(object= NULL,
     }
     
     #emb <- emb[cells,]
-    cells <- colnames(object)
     
     knn.rlt <- nabor::knn(data=emb, query = emb, k=k.nn)
     ncell <- length(cells)
@@ -151,13 +152,13 @@ GetWeights <- function(object= NULL,
                       j = c(knn.rlt$nn.idx),
                       x = 1,
                       dims = c(ncell, ncell))
+    W <- object[[weight.matrix]]
   }
   diag(W) <- self.weight
   
   if (scale) W <- W/rowSums(W)
   W[is.na(W)] <- 0
-  colnames(W) <- cells
-  rownames(W) <- cells
+  
   W
 }
 #' Calculate Moran's index for features in parallel.
