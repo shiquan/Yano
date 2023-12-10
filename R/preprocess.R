@@ -127,14 +127,13 @@ GetWeights <- function(object= NULL,
     return(WeightLineage(order.cells = order.cells, k.nn = k.nn, self.weight=self.weight, scale=scale))
   }
 
-  cells <- colnames(object)
+
   
   if (weight.matrix %in% names(object)) {
-  
+    W <- object[[weight.matrix]]
   } else {
-  
-  #cells <- cells %||% colnames(object)
-  
+    #cells <- cells %||% colnames(object)
+    cells <- colnames(object)
     if (isTRUE(spatial)) {
       message("Build weights on tissue coordiantes")
       emb <- GetTissueCoordinates(object)
@@ -152,13 +151,13 @@ GetWeights <- function(object= NULL,
                       j = c(knn.rlt$nn.idx),
                       x = 1,
                       dims = c(ncell, ncell))
-    W <- object[[weight.matrix]]
+    colnames(W) <- cells
+    rownames(W) <- cells
   }
   diag(W) <- self.weight
   
   if (scale) W <- W/rowSums(W)
   W[is.na(W)] <- 0
-  
   W
 }
 #' Calculate Moran's index for features in parallel.
