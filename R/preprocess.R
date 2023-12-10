@@ -112,40 +112,46 @@ WeightLineage <- function(order.cells = NULL, k.nn = 9, self.weight = 0, scale =
 #' @param cells If set, run weight matrix on these cells only.
 #' @returns A sparse weight matrix.
 #' @export
-GetWeights <- function(object= NULL,                       
+GetWeights <- function(object= NULL,
+                       weight.matrix = "RNA_nn",
                        reduction = "pca",
                        dims = NULL,
-                       k.nn = 9,
+                       k.nn = 20,
                        spatial = FALSE,
                        self.weight = 0,
                        scale = FALSE,
-                       order.cells = NULL,
-                       cells = NULL)
+                       order.cells = NULL)
+  #cells = NULL)
 {
   if (!is.null(order.cells)) {
     return(WeightLineage(order.cells = order.cells, k.nn = k.nn, self.weight=self.weight, scale=scale))
   }
-  
-  cells <- cells %||% colnames(object)
-  
-  if (isTRUE(spatial)) {
-    message("Build weights on tissue coordiantes")
-    emb <- GetTissueCoordinates(object)
+
+  if (weight.matrix %in% names(object)) {
+    W <- object[[weight.matrix]]
   } else {
-    message(paste0("Build weights on ", reduction))
-    emb <- Embeddings(object,reduction = reduction)
-    if (!is.null(dims)) emb <- emb[,dims]
-  }
-
-  emb <- emb[cells,]
   
-  knn.rlt <- nabor::knn(data=emb, query = emb, k=k.nn)
-  ncell <- length(cells)
-  W <- sparseMatrix(i = rep(c(1:ncell), k.nn), 
-                    j = c(knn.rlt$nn.idx),
-                    x = 1,
-                    dims = c(ncell, ncell))
-
+  #cells <- cells %||% colnames(object)
+  
+    if (isTRUE(spatial)) {
+      message("Build weights on tissue coordiantes")
+      emb <- GetTissueCoordinates(object)
+    } else {
+      message(paste0("Build weights on ", reduction))
+      emb <- Embeddings(object,reduction = reduction)
+      if (!is.null(dims)) emb <- emb[,dims]
+    }
+    
+    #emb <- emb[cells,]
+    cells <- colnames(object)
+    
+    knn.rlt <- nabor::knn(data=emb, query = emb, k=k.nn)
+    ncell <- length(cells)
+    W <- sparseMatrix(i = rep(c(1:ncell), k.nn), 
+                      j = c(knn.rlt$nn.idx),
+                      x = 1,
+                      dims = c(ncell, ncell))
+  }
   diag(W) <- self.weight
   
   if (scale) W <- W/rowSums(W)
@@ -199,7 +205,7 @@ RunAutoCorr <- function(object = NULL,
     W <- GetWeights(object=object, reduction=reduction,
                     dims=dims,
                     k.nn=k.nn,
-                    cells=cells,
+                    #cells=cells,
                     order.cells=order.cells,
                     self.weight = 0,
                     scale=TRUE,
@@ -330,8 +336,8 @@ LocalCorr <- function(object = NULL,
                     dims = dims,
                     k.nn = k.nn,
                     self.weight = self.weight,
-                    scale = TRUE,
-                    cells = cells)
+                    scale = TRUE)
+    #cells = cells)
   } else {
     dims <- dim(W)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
@@ -884,8 +890,8 @@ RunTwoAssayCorr <- function(object = NULL,
   # Make weights
   if (is.null(W)) {
     W <- GetWeights(object = object, reduction = reduction, dims=dims, k.nn = k.nn,
-                    self.weight = self.weight,
-                    cells = cells)
+                    self.weight = self.weight)
+    #cells = cells)
   } else {
     dims <- dim(W)
     if (dims[1] != dims[2]) stop("Weight matrix should be a squared matrix.")
