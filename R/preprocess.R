@@ -188,6 +188,7 @@ RunAutoCorr <- function(object = NULL,
                         order.cells = NULL,
                         cells = NULL,
                         features = NULL,
+                        weight.matrix = "RNA_nn",
                         #perm = 10000,
                         threads=0)
 {
@@ -203,6 +204,7 @@ RunAutoCorr <- function(object = NULL,
   
   if (is.null(W)) {
     W <- GetWeights(object=object, reduction=reduction,
+                    weight.matrix = weight.matrix,
                     dims=dims,
                     k.nn=k.nn,
                     #cells=cells,
@@ -412,7 +414,9 @@ AddLCModule <- function(object = NULL, lc = NULL, min.features.per.module = 10, 
 getCores <- function(threads = 0)
 {
   if (threads > 0) return(threads)
-  return(detectCores())
+  threads <- detectCores() - 1
+  if (threads > 1) return(threads)
+  return(1)
 }
 
 #' @export
@@ -572,6 +576,7 @@ RunBlockCorr <- function(object = NULL,
                          W = NULL,
                          cell.size = NULL,
                          dims = NULL,
+                         weight.matrix = "RNA_nn",
                          k.nn = 9,
                          perm=1000,
                          threads = 0,
@@ -617,6 +622,7 @@ RunBlockCorr <- function(object = NULL,
     W <- GetWeights(object = object,
                     reduction = reduction,
                     dims=dims,
+                    weight.matrix = weight.matrix,
                     k.nn = k.nn,
                     order.cells = order.cells,
                     self.weight = 1,
