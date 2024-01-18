@@ -11,34 +11,6 @@
 
 #include <assert.h>
 
-
-void progress(int p) {
-    static int displayed = -1;
-    static int count = 0;
-    static char bar[] = "================================================== ";
-
-    count++;
-
-    int r = count*50;
-    
-    if (displayed==-1) {
-        if (r>50) return;
-        REprintf("|--------------------------------------------------|\n|");            
-        displayed = 0;
-    }
-
-    int toPrint = r-displayed;
-    if (toPrint==0) return;
-    bar[toPrint] = '\0';
-    REprintf("%s", bar);
-    bar[toPrint] = '=';
-    displayed = p;
-    if (p==50) {
-        REprintf("|\n");
-        displayed = -1;
-    }
-    R_FlushConsole();
-}
 // # nocov end
 static cholmod_common c;
 
@@ -426,7 +398,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             SEXP idx, SEXP bidx,
             //SEXP cidx,
             SEXP cs, SEXP _scale,
-            SEXP _sens)
+            SEXP _mode)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
@@ -436,8 +408,8 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     const int n_thread = asInteger(_threads);
     const int scale_factor = asInteger(_scale);
 
-    Rboolean sens = asLogical(_sens);
-    
+    //Rboolean sens = asLogical(_sens);
+    int mode = asInteger(_mode);
     if (A->stype) return mkString("A cannot be symmetric");
     if (B->stype) return mkString("B cannot be symmetric");
     if (W->stype) return mkString("W cannot be symmetric");
@@ -451,7 +423,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
 
     A = M_cholmod_transpose(A, (int)A->xtype, &c);
     B = M_cholmod_transpose(B, (int)B->xtype, &c);
-    W = M_cholmod_transpose(W, (int)W->xtype, &c);
+    //W = M_cholmod_transpose(W, (int)W->xtype, &c);
 
     R_CheckStack();
     const int N_cell = A->nrow;
@@ -468,13 +440,13 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     SEXP Mval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Vval  = PROTECT(allocVector(REALSXP, N_feature));
     
-    const int * const ap = (int*)A->p;
-    const int * const ai = (int*)A->i;
-    const double * const ax = (double*)A->x;
+    const int * ap = (int*)A->p;
+    const int * ai = (int*)A->i;
+    const double * ax = (double*)A->x;
 
-    const int *const bp = (int*)B->p;
-    const int *const bi = (int*)B->i;
-    const double *const bx = (double*)B->x;
+    const int * bp = (int*)B->p;
+    const int * bi = (int*)B->i;
+    const double * bx = (double*)B->x;
     
     int **ris = NULL;
     ris = R_Calloc(perm,int*);
@@ -518,7 +490,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             int cid = bi[j];
             //cid = INTEGER(cidx)[cid]-1;
             tmpb[cid] = bx[j];
-            if (sens) {
+            if (mode == 2) {
                 tmpb[cid] = tmpb[cid] - tmpa[cid];
                 if (tmpb[cid] < 0) tmpb[cid] = 0;
             }
@@ -642,7 +614,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
 
     M_cholmod_free_sparse(&A, &c);
     M_cholmod_free_sparse(&B, &c);
-    M_cholmod_free_sparse(&W, &c);
+    //M_cholmod_free_sparse(&W, &c);
 
     SEXP ta = PROTECT(allocVector(VECSXP, 7));
     SET_VECTOR_ELT(ta, 0, LXval);
@@ -855,7 +827,7 @@ SEXP D_test_cell(SEXP _A, SEXP _B, SEXP _W,
             REAL(Mval)[i]  = mean;
             REAL(Vval)[i]  = var;
         }
-}
+    }
 
     for (int pi = 0; pi < perm; ++pi) R_Free(ris[pi]);
     R_Free(ris);
@@ -922,7 +894,7 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     if (A->ncol < 2) return mkString("Too few cells."); // to do
 
     A = M_cholmod_transpose(A, (int)A->xtype, &c);
-    W = M_cholmod_transpose(W, (int)W->xtype, &c);
+    // W = M_cholmod_transpose(W, (int)W->xtype, &c);
     
     int N = A->nrow; // cells
     int nc = A->ncol; // features
@@ -930,7 +902,7 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     double N1 = N -1;
     double N2 = N -2;
     double N3 = N -3;
-    //double N4 = N -4;
+    // double N4 = N -4;
     double NN = pow(N, 2);
     double tmp1 = NN - 3 *N + 3;
     double tmp2 = N1 *N2 * N3;
@@ -940,17 +912,17 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     double EI2 = pow(EI,2);
     
     SEXP Ival = PROTECT(allocVector(REALSXP, nc));
-    SEXP Cval = PROTECT(allocVector(REALSXP, nc));
-    SEXP IXval = PROTECT(allocVector(REALSXP, nc));
-    SEXP CXval = PROTECT(allocVector(REALSXP, nc));    
+    //SEXP Cval = PROTECT(allocVector(REALSXP, nc));
+    SEXP IZval = PROTECT(allocVector(REALSXP, nc));
+    //SEXP CXval = PROTECT(allocVector(REALSXP, nc));    
     
-    const int *const ap = (int*)A->p;
-    const int *const ai = (int*)A->i;
-    const double *const ax = (double*)A->x;
+    const int * ap = (int*)A->p;
+    const int * ai = (int*)A->i;
+    const double * ax = (double*)A->x;
     
-    const int *const bp = (int*)W->p;
-    const int *const bi = (int*)W->i;
-    const double *const bx = (double*)W->x;
+    const int * bp = (int*)W->p;
+    const int * bi = (int*)W->i;
+    const double * bx = (double*)W->x;
 
     double S0 = 0,
         S1 = 0,
@@ -983,107 +955,280 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     M_cholmod_free_sparse(&WWt, &c);
 
     const double varI_norm = (NN*S1-N*S2+3*S02)/(S02*(NN-1)) - EI2;
-    const double varC_norm = ((2*S1+S2)*N1 - 4 * S02)/(2*(N+1)*S02);
+    // const double varC_norm = ((2*S1+S2)*N1 - 4 * S02)/(2*(N+1)*S02);
 
     int ci;
 #pragma omp parallel for num_threads(n_thread)
     for (ci = 0; ci < nc; ++ci) { // for each feature
-        double *tmpa = R_Calloc(N, double);
-        // progress(nc);
-        
         if (ap[ci] == ap[ci+1]) {
             REAL(Ival)[ci] = 0;
             continue;   
         }
-        
-        // memset(tmpa, 0, sizeof(double)*N);
 
-        int j;
-        double varI = 0,
-            varC = 0,
-            mn = 0,
-            xix = 0,
-            xij = 0,
-            m2 = 0,
-            m4 = 0,
-            b2,
-            sigma2 = 0,
-            C = 0;
+        double *tmpa = R_Calloc(N, double);
+        // memset(tmpa, 0, sizeof(double)*N);
         
-        for (j = ap[ci]; j < ap[ci+1]; ++j) {
-            if (ISNAN(ax[j])) continue;
-            mn += ax[j];
-        }
-        mn = mn/(double)N;
-        
-        for (j = ap[ci]; j < ap[ci+1]; ++j) {
+        /* for (j = ap[ci]; j < ap[ci+1]; ++j) { */
+        /*     if (ISNAN(ax[j])) continue; */
+        /*     mn += ax[j]; */
+        /* } */
+        /* mn = mn/(double)N; */
+
+        // scaled
+        double mn = 0;
+        for (int j = ap[ci]; j < ap[ci+1]; ++j) {
             if (ISNAN(ax[j])) continue;
             tmpa[ai[j]] = ax[j];
+            mn += ax[j];
         }
-        
-        // for (j = 0; j < N; ++j) tmpa[j] = tmpa[j] -mn;        
-        for (j = 0; j < N; ++j) { // for cells
-            xix += pow(tmpa[j]-mn,2);
-            m4 += pow(tmpa[j]-mn, 4);
+        mn = mn / N;
+
+        double xix = 0;
+        for (int j = 0; j < N; ++j) {
+            xix += pow(tmpa[j] -mn, 2);
+        }
+        double sigma = sqrt(xix/N1);
+
+        for (int j = 0; j < N; ++j) {
+            tmpa[j] = (tmpa[j] -mn)/sigma;
         }
 
-        sigma2 = xix/N1;
-        
-        int wi;
-        for (wi = 0; wi < N; ++wi) {
-            if (bp[wi] == bp[wi+1]) continue;
-            int wj;
-            for (wj = bp[wi]; wj < bp[wi+1]; ++wj) {
-                // Rprintf("W : %f, Zi : %f, Zj : %f\n", bx[wj], tmpa[wi], tmpa[bi[wj]]);
-                C += bx[wj] * pow(tmpa[wi] - tmpa[bi[wj]],2);
-            }
+        // for (j = 0; j < N; ++j) tmpa[j] = tmpa[j] -mn;
+        // xix = 0;
+        double m2 = (double)N1/N;
+        double m4 = 0;
+        for (int j = 0; j < N; ++j) { // for cells
+            //xix += pow(tmpa[j], 2);
+            m4  += pow(tmpa[j], 4);
         }
+        m4 = m4/N;
+        
+        // m2 = xix/(double)N;
 
+        /* for (wi = 0; wi < N; ++wi) { */
+        /*     if (bp[wi] == bp[wi+1]) continue; */
+        /*     int wj; */
+        /*     for (wj = bp[wi]; wj < bp[wi+1]; ++wj) { */
+        /*         // Rprintf("W : %f, Zi : %f, Zj : %f\n", bx[wj], tmpa[wi], tmpa[bi[wj]]); */
+        /*         C += bx[wj] * pow(tmpa[wi] - tmpa[bi[wj]],2); */
+        /*     } */
+        /* } */
+
+        double varI = 0;
         if (rand) { // random
-            m2 = xix/N;
-            m4 = m4/N;
-            b2 = m4/pow(m2,2);
+            //m2 = xix/N;
+            //m4 = m4/N;
+            double b2 = m4/pow(m2,2);
             varI = N*(tmp1*S1 - N*S2 + 3*S02) - b2*(tmp3*S1 - 2*N*S2 + 6*S02);
-            varI = varI/(tmp2*S02);
-            varI = varI - EI2;
-            varC = N1*S1*(NN-3*N+3-N1*b2) - N1*S2*(NN+3*N-6-(NN-N+2)*b2)/4 + S02*(NN-3-N1*N1*b2);
-            varC = varC/(N*N2*N3*S02);
+            varI = varI/(tmp2*S02) - EI2;
+            //varC = N1*S1*(NN-3*N+3-N1*b2) - N1*S2*(NN+3*N-6-(NN-N+2)*b2)/4 + S02*(NN-3-N1*N1*b2);
+            //varC = varC/(N*N2*N3*S02);
         }
-        
+
+        double xij = 0;
         for (int i = 0; i < N; ++i) {
-            for (j = bp[i]; j < bp[i+1]; ++j) {
+            for (int j = bp[i]; j < bp[i+1]; ++j) {
                 if (ISNAN(bx[j])) continue;
                 int cid = bi[j];
                 if (i == cid) continue; // i != j
-                xij += (bx[j] * (tmpa[i]-mn) * (tmpa[cid]-mn));
+                //xij += (bx[j] * (tmpa[i]-mn) * (tmpa[cid]-mn));
+                xij += bx[j] * tmpa[i] *tmpa[cid];
             }
         }
 
-        double I = N*xij/(xix*S0);
+        double I = (N*xij)/(N1*S0);
+        //Rprintf("N : %d, xij : %f, S0 : %f, mn : %f\n", N, xij, S0, mn);
+        
         //Rprintf("wC : %f, sigma : %f, S0 : %f\n", C, sigma2, S0);
-        C = C/(2*sigma2*S0);
+        // C = C/(2*sigma2*S0);
         //Rprintf("Cvar : %f, %f\n", varC, varC_norm);
         R_Free(tmpa);
 #pragma omp critical
         {
             REAL(Ival)[ci] = I;
-            REAL(Cval)[ci] = C;
-            REAL(IXval)[ci] = rand ? (I - EI)/sqrt(varI) : (I - EI)/sqrt(varI_norm);
-            REAL(CXval)[ci] = rand ? (C - 1)/sqrt(varC) : (C - 1)/sqrt(varC_norm);
+            // REAL(Cval)[ci] = C;
+            REAL(IZval)[ci] = rand ? (I-EI)/sqrt(varI) : (I-EI)/sqrt(varI_norm);
+            // REAL(CXval)[ci] = rand ? (C-1)/sqrt(varC) : (C-1)/sqrt(varC_norm);
         }
     }
 
 
     M_cholmod_free_sparse(&A, &c);
-    M_cholmod_free_sparse(&W, &c);
+    // M_cholmod_free_sparse(&W, &c);
     
-    SEXP ta = PROTECT(allocVector(VECSXP, 4));
+    SEXP ta = PROTECT(allocVector(VECSXP, 2));
     SET_VECTOR_ELT(ta, 0, Ival);
-    SET_VECTOR_ELT(ta, 1, Cval);
-    SET_VECTOR_ELT(ta, 2, IXval);
-    SET_VECTOR_ELT(ta, 3, CXval);
+    // SET_VECTOR_ELT(ta, 1, Cval);
+    SET_VECTOR_ELT(ta, 1, IZval);
+    // SET_VECTOR_ELT(ta, 3, CXval);
 
-    UNPROTECT(5);
+    UNPROTECT(3);
     return ta;
+}
+
+SEXP moransi_perm_test(SEXP _A, SEXP _W, SEXP _scaled, SEXP _threads, SEXP _binarized, SEXP _perm)
+{
+    CHM_SP A = AS_CHM_SP__(_A);
+    CHM_SP W = AS_CHM_SP__(_W);
+    Rboolean scaled = asLogical(_scaled);
+    int n_thread = asInteger(_threads);
+    Rboolean binarized = asLogical(_binarized);
+    int perm = asInteger(_perm);
+    
+    if (A->stype) return mkString("A cannot be symmetric");
+    if (W->stype) return mkString("W cannot be symmetric");
+
+    R_CheckStack();
+
+    if (A->ncol != W->ncol) return mkString("A column and W row do not match.");
+    if (W->nrow != W->ncol) return mkString("W is not a square matrix");
+    if (A->ncol < 2) return mkString("Too few cells.");
+
+    A = M_cholmod_transpose(A, (int)A->xtype, &c);
+    //W = M_cholmod_transpose(W, (int)W->xtype, &c);
+    
+    int N = A->nrow;
+    int nc = A->ncol; // features
+
+    const int * ap = (int*)A->p;
+    const int * ai = (int*)A->i;
+    const double * ax = (double*)A->x;
+    
+    const int *bp = (int*)W->p;
+    const int *bi = (int*)W->i;
+    const double  *bx = (double*)W->x;
+
+    double S0 = 0;
+    
+    int i;
+    for (i = 0; i < W->nzmax; ++i) {
+        if (bx[i] <= 0) continue;
+        if (binarized) {
+            S0++;
+        } else {
+            S0 += bx[i];
+        }
+    }
+
+    SEXP Ival = PROTECT(allocVector(REALSXP, nc));
+    SEXP Tval = PROTECT(allocVector(REALSXP, nc));
+
+    int **ris = NULL;
+    if (perm > 0) {
+        ris = R_Calloc(perm, int*);
+        for (int pi = 0; pi < perm; ++pi) {
+            ris[pi] = random_idx(N);
+        }
+    }
+
+    double t = 0;
+    
+#pragma omp parallel for num_threads(n_thread)
+    for (i = 0; i < nc; ++i) {
+        if (ap[i] == ap[i+1]) {
+            REAL(Ival)[i] = 0;
+            REAL(Tval)[i] = 0;
+            continue;
+        }
+
+        double *tmpa = R_Calloc(N, double);
+        for (int j = ap[i]; j < ap[i+1]; ++j) {
+            if (ISNAN(ax[j])) continue;                
+            tmpa[ai[j]] = ax[j];
+        }
+            
+        if (!scaled) {
+            double mn = 0;
+            double xix = 0;
+            double sigma = 0;
+            int N1 = N-1;
+            int j;
+            for (j = ap[i]; j < ap[i+1]; ++j) {
+                if (ISNAN(ax[j])) continue;                
+                mn += ax[j];
+            }
+            mn = mn / N;
+            for (j = 0; j < N; ++j) {
+                xix += pow(tmpa[j] -mn, 2);
+            }
+            sigma = sqrt(xix/N1);
+            for (j = 0; j < N; ++j) {
+                tmpa[j] = (tmpa[j] -mn)/sigma;
+            }
+        }
+        
+        double z2 = 0;
+        for (int j = 0; j < N; ++j) {
+            z2 += pow(tmpa[j],2);
+        }
+
+        double C = 0;
+        for (int wi = 0; wi < N; ++wi) {
+            if (bp[wi] == bp[wi+1]) continue;         
+            for (int wj = bp[wi]; wj < bp[wi+1]; ++wj) {
+                if (ISNAN(bx[wj])) continue;
+                if (bx[wj] <= 0) continue;
+                if (binarized) {
+                    C += tmpa[wi] * tmpa[bi[wj]];
+                } else {
+                    C += bx[wj] * tmpa[wi] * tmpa[bi[wj]];
+                }
+            }
+        }
+
+        if (perm > 0) {
+            double *Cs = R_Calloc(perm, double);
+            double mn = 0;
+            for (int k = 0; k < perm; ++k) {
+                shuffle(tmpa, ris[k], N);
+                Cs[k] = 0;
+                for (int wi = 0; wi < N; ++wi) {
+                    if (bp[wi] == bp[wi+1]) continue;         
+                    for (int wj = bp[wi]; wj < bp[wi+1]; ++wj) {
+                        if (ISNAN(bx[wj])) continue;
+                        if (bx[wj] <= 0) continue;
+                        if (binarized) {
+                            Cs[k] += tmpa[wi] * tmpa[bi[wj]];
+                        } else {
+                            Cs[k] += bx[wj] * tmpa[wi] * tmpa[bi[wj]];
+                        }
+                    }
+                }
+                mn += Cs[k];
+            }
+            mn = mn/perm;
+            double var = 0;
+            for (int k = 0; k < perm; ++k) {
+                var += pow((Cs[k]-mn),2);
+            }
+            var = sqrt(var/perm);
+            
+            t = (C - mn)/var;
+            R_Free(Cs);
+        }
+        
+        R_Free(tmpa);
+     
+#pragma omp critical
+        {
+            REAL(Ival)[i] = N/S0 * C/z2;
+            REAL(Tval)[i] = t;
+        }
+    }
+
+    if (perm > 0) {
+        for (int pi = 0; pi < perm; ++pi) R_Free(ris[pi]);
+        R_Free(ris);
+    }
+
+    M_cholmod_free_sparse(&A, &c);
+    //M_cholmod_free_sparse(&W, &c);
+
+    SEXP ta = PROTECT(allocVector(VECSXP, 2));
+    SET_VECTOR_ELT(ta, 0, Ival);
+    SET_VECTOR_ELT(ta, 1, Tval);
+
+    UNPROTECT(3);
+    return(ta);
 }
 
