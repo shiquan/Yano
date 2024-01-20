@@ -8,7 +8,7 @@ SetAutoCorrFeatures(
   object = NULL,
   moransi.min = 0,
   assay = DefaultAssay(object),
-  p.cutoff = 0.05,
+  p.cutoff = 0.01,
   prefix = "moransi"
 )
 }

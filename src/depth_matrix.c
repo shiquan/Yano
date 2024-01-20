@@ -13,7 +13,8 @@
 
 SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
                   SEXP _split, SEXP _tag, SEXP _umi_tag,
-                  SEXP _mapq_thres, SEXP _cells, SEXP _n_cell, SEXP _group, SEXP _group_names)
+                  SEXP _mapq_thres, SEXP _cells, SEXP _n_cell, SEXP _group, SEXP _group_names,
+                  SEXP _junc)
 {
     if (!Rf_isString(_fname)) error_return("Input is not String");
     
@@ -31,7 +32,7 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
     }
     
     Rboolean split_by_bc = Rf_asLogical(_split);
-
+    Rboolean junc = Rf_asLogical(_junc);
     const char *tag = NULL;
     if (!Rf_StringBlank(_tag))
         tag = translateChar(STRING_ELT(_tag, 0));
@@ -101,7 +102,7 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
 
     struct depth *d = bam2depth(idx, tid, start, end, strand, fp, mapq_thres, ignore_strand,
                                 bc, tag, umi_tag, split_by_bc, alias_tag,
-                                alias, fix_barcodes);
+                                alias, fix_barcodes, junc);
     // return matrix
     hts_close(fp);
     hts_idx_destroy(idx);
@@ -119,6 +120,7 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
     if (strand == -1) n = n*2;
     
     SEXP pos = PROTECT(allocVector(INTSXP, n));
+    SEXP pos1 = PROTECT(allocVector(INTSXP, n));
     SEXP stra = PROTECT(allocVector(INTSXP, n));
     SEXP depth = PROTECT(allocVector(INTSXP, n));
     SEXP label = PROTECT(allocVector(STRSXP, n));
@@ -127,6 +129,7 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
     r = d;
     for (; r; ) {
         INTEGER(pos)[i] = r->pos;
+        INTEGER(pos1)[i] = r->end;
         INTEGER(stra)[i] = 0;
         INTEGER(depth)[i] = r->dep1;
         if (r->id == -1) {
@@ -142,6 +145,7 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
         
         if (strand == -1) {
             INTEGER(pos)[i] = r->pos;
+            INTEGER(pos1)[i] = r->end;
             INTEGER(stra)[i] = 1;
             INTEGER(depth)[i] = r->dep2;
             if (r->id == -1) {
@@ -163,13 +167,14 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
 
     dict_destroy(bc);
     
-    SEXP df = PROTECT(Rf_allocVector(VECSXP,4));
+    SEXP df = PROTECT(Rf_allocVector(VECSXP,5));
     SET_VECTOR_ELT(df, 0, pos);
-    SET_VECTOR_ELT(df, 1, stra);
-    SET_VECTOR_ELT(df, 2, depth);
-    SET_VECTOR_ELT(df, 3, label);
+    SET_VECTOR_ELT(df, 1, pos1);
+    SET_VECTOR_ELT(df, 2, stra);
+    SET_VECTOR_ELT(df, 3, depth);
+    SET_VECTOR_ELT(df, 4, label);
 
-    UNPROTECT(5);
+    UNPROTECT(6);
     return df;
 }
 
