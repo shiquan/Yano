@@ -66,7 +66,7 @@ GetWeights <- function(snn = NULL,
     pos.dist[pos.dist > prune.distance] <- 0
     W <- 1/pos.dist^2
     diag(x = W) <- diag.value
-    #W <- W/rowSums(W)
+    W <- W/rowSums(W)
     cells <- rownames(pos)
 
     if (!is.null(cells)) {
@@ -91,7 +91,7 @@ GetWeights <- function(snn = NULL,
     pos.dist[pos.dist > prune.distance] <- 0
     W <- 1/pos.dist^2
     diag(x = W) <- diag.value
-    #W <- W/rowSums(W)
+    W <- W/rowSums(W)
     colnames(W) <- order.cells
     rownames(W) <- order.cells
     return(W)

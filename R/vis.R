@@ -186,11 +186,7 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, highl
   p <- p + theme_minimal()
   p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(),
                  axis.title =element_blank(), 
-                 axis.ticks =element_blank(),
-                 legend.position="left",
-                 legend.justification="right",
-                 legend.box.spacing = unit(-10, "pt"),
-                 legend.margin=margin(0,0,0,0))
+                 axis.ticks =element_blank())
   p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start(region), end(region)), expand=FALSE)
   p <- p + ylim(0,max(trans0$idx)+1)
   p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
@@ -240,7 +236,8 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
                      max.depth = 0,
                      split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
                      cell.group=NULL, log.scaled = log.scaled, start0 = -1, end0 = -1,
-                     highlights=NULL)
+                     highlights=NULL,
+                     junc=FALSE, junc.min.depth = 10)
 {
   if (is.null(chr) || start == -1 || end == -1) stop("Require a genomic region.")
 
@@ -263,16 +260,43 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     bc <- bind_rows(dl) %>%  group_by(pos, label, strand) %>% summarise(sum(depth, na.rm = TRUE))
     ss <- table(unlist(bc))
     colnames(bc) <- c("pos", "label", "strand", "depth")
+
+    if (junc) {
+      if (is.list(cell.group)) {
+        dl <- lapply(nm, function(x) {
+          bamjunc(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
+                  split.bc=split.bc,
+                  cell.group=cell.group[[x]], cell.tag=cell.tag, umi.tag=umi.tag)
+        })
+      } else {
+        dl <- lapply(nm, function(x) {
+          bamjunc(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
+                  split.bc=split.bc,
+                  cell.group=cell.group, cell.tag=cell.tag, umi.tag=umi.tag)
+        })
+      }
+
+      juncs <- bind_rows(dl) %>%  group_by(start, end , label, strand) %>% summarise(sum(depth, na.rm = TRUE))
+      colnames(juncs) <- c("start", "end", "label", "strand", "depth")
+    }
   } else {
-    bc <- bamcov(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand, split.bc=split.bc,
+    bc <- bamcov(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
+                 split.bc=split.bc,
                  cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+
+    if (junc) {
+      juncs <- bamjunc(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
+                      split.bc=split.bc,
+                      cell.group=cell.group, cell.tag=cell.tag, umi.tag=umi.tag)
+    }
   }
 
   bc$label <- as.character(bc$label)
   bc$label <- factor(bc$label, levels=gtools::mixedsort(unique(bc$label)))
+  
   if (!is.null(cell.group)) {
     ss <- table(unlist(cell.group))
-    bc$depth <- bc$depth/as.vector(ss[bc$label]) *1000
+    bc$depth <- bc$depth/as.vector(ss[bc$label])
   }
   
   if (isTRUE(log.scaled)) {
@@ -287,8 +311,47 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
 
   ymax <- max(bc$depth)
   ymin <- min(bc$depth)
-  
+
+  posmax <- max(bc$pos)
+  posmin <- min(bc$pos)
+
   p1 <- ggplot(bc, aes(x=pos,y=depth,fill=strand)) + geom_area(stat = "identity")
+
+  if (junc) {
+    juncs$label <- as.character(juncs$label)
+    juncs$label <- factor(juncs$label, levels=gtools::mixedsort(unique(juncs$label)))
+    juncs <- subset(juncs, depth >= junc.min.depth)
+        
+    if (!is.null(cell.group)) {
+      juncs$depth <- juncs$depth / as.vector(ss[juncs$label])
+    }
+
+    #juncs[["width"]] <- juncs$end - juncs$start
+    #juncs[["curvature"]] <- -1 * as.integer((1- juncs$width/(posmax-posmin))*10)/10
+    
+    juncs[["y"]] <- juncs$depth
+    juncs[["yend"]] <- juncs$depth
+
+    ## idx <- which(juncs$start < posmin)
+    ## juncs["start"][idx,] <- posmin
+    ## juncs["y"][idx,] <- ymax
+
+    ## idx <- which(juncs$end > posmax)
+    ## juncs["end"][idx,] <- posmax
+    ## juncs["yend"][idx,] <- ymax
+    juncs <- subset(juncs, end > start)
+    idx <- which (juncs$strand == "-")
+    
+    juncs["y"][idx,] <- juncs["y"][idx,] * -1
+    juncs["yend"][idx,] <- juncs["yend"][idx,] * -1
+    #juncs["curvature"][idx,] <- juncs["curvature"][idx,] * -1
+    
+    #p1 <- p1 + Map(function(cur, col) { geom_curve(data = juncs, aes(x=start, y = y, xend = end, yend = yend, color=col), curvature = cur) }, cur = juncs$curvature, col=juncs$depth)
+    p1 <- p1 + geom_curve(data = subset(juncs, strand=="+"), aes(x=start, y = y, xend = end, yend = yend, alpha=depth, size=depth), curvature = -0.5)
+    p1 <- p1 + geom_curve(data = subset(juncs, strand=="-"), aes(x=start, y = y, xend = end, yend = yend, alpha=depth, size=depth), curvature = 0.5)
+    p1 <- p1 + scale_color_gradient(low="grey", high = "black")
+  }
+  
   if (!is.null(highlights)) {
     df <- as.data.frame(highlights)
     df$ymin <- ymin
@@ -300,7 +363,14 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
   p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), expand=FALSE)
   # scale_x_continuous(limits=c(start, end),expand=c(0,0))
-  p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue"))  
+  p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue"))
+  p1 <- p1 + theme_cov()
+  p1 <- p1 + theme(panel.spacing.y = unit(0.1, "lines"))
+  p1 <- p1 + theme(legend.position="left",
+                   legend.justification="right",
+                   legend.box.spacing = unit(-10, "pt"),
+                   legend.margin=margin(0,0,0,0))
+  
   ## if (start0 != -1 & start0 > start & end0 != -1 & end0 < end) {
   ##   p1 <- p1 + annotate("rect",
   ##                       xmin = start0,
@@ -350,7 +420,7 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
   bc$label <- factor(bc$label, levels=gtools::mixedsort(unique(bc$label)))
   if (!is.null(cell.group)) {
     ss <- table(unlist(cell.group))
-    bc$depth <- bc$depth/as.vector(ss[bc$label]) *1000
+    bc$depth <- bc$depth/as.vector(ss[bc$label])
   }
   
   if (isTRUE(log.scaled)) {
@@ -384,7 +454,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
                         atac.log.scaled = FALSE,
                         atac.max.depth = 0,
                         anno.col = "blue", type.col = NULL, layout_heights =c(1,10,2),
-                        highlights = NULL,
+                        highlights = NULL, junc = FALSE,
                         ...)
                         
 {
@@ -419,9 +489,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
   
   p1 <- plot.cov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
                  bin=bin, cell.tag=cell.tag, umi.tag=umi.tag, cell.group=cell.group,
-                 log.scaled=log.scaled, max.depth = max.depth, highlights=df)
-  p1 <- p1 + theme_cov()
-  p1 <- p1 + theme(panel.spacing.y = unit(0.1, "lines"))
+                 log.scaled=log.scaled, max.depth = max.depth, highlights=df, junc=junc)
   p1 <- p1 + theme(strip.text = element_text(size = group.title.size))
   
   p0 <- NULL

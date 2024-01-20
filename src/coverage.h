@@ -9,7 +9,7 @@
 
 struct depth {
     int pos;
-    
+    int end;
     int dep1; // unknown strand or forward
     int dep2; // reverse strand
     struct dict *bc1;
@@ -42,8 +42,8 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
                         const int split_by_tag,
                         const int alias_tag,
                         const int *alias_idx,
-                        int fix_barcodes
-    );
+                        int fix_barcodes,
+                        const int junc);
 
 struct depth *fragment2depth(tbx_t *tbx, const char *seqname, int start, int end, BGZF *fp,
                              struct dict *bc, const int* alias_idx); //, int fix_barcodes);
