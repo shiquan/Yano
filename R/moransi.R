@@ -69,8 +69,15 @@ RunAutoCorr <- function(object = NULL,
     W <- GetWeightsFromSpatial(object = object, prune.distance = prune.distance, ...)
   }
 
+  ncell <- ncol(object)
+  cells1 <- colnames(W)
+  cells2 <- setdiff(colnames(object), cells1)
+  cells1 <- c(cells1, cells2)
+  
+  W <- Matrix::sparseMatrix(i = W@i, p = W@p, x = W@x, dims = c(ncell,ncell))
+  colnames(W) <- cells1
+  rownames(W) <- cells1
   W <- W[colnames(object), colnames(object)]
-  W[is.na(W)] <- 0
   W <- as(W, "Graph")
   object[[weight.matrix.name]] <- W
   
