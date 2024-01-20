@@ -49,8 +49,8 @@ RunBlockCorr <- function(object = NULL,
   }
   
   tt <- Sys.time()
-  cells <- cells %||% colnames(object)
-  cells <- intersect(cells, colnames(object))
+  #cells <- cells %||% colnames(object)
+  #cells <- intersect(cells, colnames(object))
   
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
@@ -104,7 +104,7 @@ RunBlockCorr <- function(object = NULL,
   #cells <- intersect(cells,names(which(cs > 0)))
   #W <- W[cells, cells]
 
-  #cells <- colnames(W)  
+  cells <- colnames(W)  
   ncell <- length(cells)
 
   x <- x[,cells]
