@@ -73,8 +73,8 @@ RunAutoCorr <- function(object = NULL,
   cells1 <- colnames(W)
   cells2 <- setdiff(colnames(object), cells1)
   cells1 <- c(cells1, cells2)
-  
-  W <- Matrix::sparseMatrix(i = W@i+1, p = W@p, x = W@x, dims = c(ncell,ncell))
+  W <- as(W, "dgCMatrix")
+  W <- Matrix::sparseMatrix(i = W@i+1, j = W@j+1, x = W@x, dims = c(ncell,ncell))
   colnames(W) <- cells1
   rownames(W) <- cells1
   W <- W[colnames(object), colnames(object)]
