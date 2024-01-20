@@ -69,6 +69,8 @@ RunAutoCorr <- function(object = NULL,
     W <- GetWeightsFromSpatial(object = object, prune.distance = prune.distance, ...)
   }
 
+  W <- W[colnames(object), colnames(object)]
+  W[is.na(W)] <- 0
   W <- as(W, "Graph")
   object[[weight.matrix.name]] <- W
   
@@ -79,7 +81,7 @@ RunAutoCorr <- function(object = NULL,
   ## if (perm < 10) {
   ##   perm <- 0
   ## }
-  
+  W <- W[cells, cells]
   message(paste0("Run autocorrelation test for ", length(features), " features."))
   #moransi.vals <- .Call("moransi_perm_test", x0, W, TRUE, threads, FALSE, perm)
   moransi.vals <- .Call("autocorrelation_test", x0, W, TRUE, threads)
