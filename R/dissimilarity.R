@@ -65,7 +65,7 @@ RunBlockCorr <- function(object = NULL,
   threads <- getCores(threads)
 
   W <- object[[weight.matrix.name]]
-  W <- W[cells, cells]
+  #W <- W[cells, cells]
   tab <- object[[assay]]@meta.features
 
   if (bind.name %ni% colnames(tab)) {
