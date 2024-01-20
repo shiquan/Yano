@@ -49,7 +49,6 @@ RunBlockCorr <- function(object = NULL,
   }
   
   tt <- Sys.time()
-  cells <- order.cells %||% cells 
   cells <- cells %||% colnames(object)
   cells <- intersect(cells, colnames(object))
   
