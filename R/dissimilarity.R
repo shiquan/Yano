@@ -49,9 +49,9 @@ RunBlockCorr <- function(object = NULL,
   }
   
   tt <- Sys.time()
-  #cells <- cells %||% order.cells
-  #cells <- cells %||% colnames(object)
-  #cells <- intersect(cells, colnames(object))
+  cells <- order.cells %||% cells 
+  cells <- cells %||% colnames(object)
+  cells <- intersect(cells, colnames(object))
   
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
@@ -66,7 +66,7 @@ RunBlockCorr <- function(object = NULL,
   threads <- getCores(threads)
 
   W <- object[[weight.matrix.name]]
-  
+  W <- W[cells, cells]
   tab <- object[[assay]]@meta.features
 
   if (bind.name %ni% colnames(tab)) {
@@ -105,7 +105,7 @@ RunBlockCorr <- function(object = NULL,
   #cells <- intersect(cells,names(which(cs > 0)))
   #W <- W[cells, cells]
 
-  cells <- colnames(W)  
+  #cells <- colnames(W)  
   ncell <- length(cells)
 
   x <- x[,cells]
