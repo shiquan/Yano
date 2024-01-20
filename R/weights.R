@@ -91,13 +91,12 @@ GetWeights <- function(snn = NULL,
   if (!is.null(order.cells)) {
     pos.dist <- as.matrix(dist(x=c(1:length(order.cells))))
     pos.dist[pos.dist > prune.distance] <- 0
-    W <- 1/pos.dist^2
-    W[is.na(W)] <- 0
+    W <- as(pos.dist, "CsparseMatrix")
+    W@x <- 1/W@x^2
     diag(x = W) <- diag.value
     W <- W/rowSums(W)
     colnames(W) <- order.cells
     rownames(W) <- order.cells
-    W <- as(W, "dgCMatrix")
     return(W)
   }
 }
