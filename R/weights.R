@@ -74,7 +74,7 @@ GetWeights <- function(snn = NULL,
       colnames(W) <- cells
       rownames(W) <- cells
     }
-    W <- as(W, "CsparseMatrix")
+    W <- as(W, "dgCMatrix")
     return(W)
   }
 
@@ -97,7 +97,7 @@ GetWeights <- function(snn = NULL,
     W <- W/rowSums(W)
     colnames(W) <- order.cells
     rownames(W) <- order.cells
-    W <- as(W, "CsparseMatrix")
+    W <- as(W, "dgCMatrix")
     return(W)
   }
 }
