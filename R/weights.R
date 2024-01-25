@@ -56,7 +56,7 @@ GetWeights <- function(snn = NULL,
 
   if (!is.null(snn)) {
     diag(snn) <- diag.value
-    snn[snn<=prune.snn] <- 0
+    snn@x[snn@x <= prune.snn] <- 0
     snn <- snn/(rowSums(snn)+0.0001)
     return(snn)
   }
@@ -64,8 +64,8 @@ GetWeights <- function(snn = NULL,
   if (!is.null(pos)) {
     pos.dist <- as.matrix(dist(x=pos))
     pos.dist[pos.dist > prune.distance] <- 0
-    W <- 1/pos.dist^2
-    W[is.na(W)] <- 0
+    W <- as(pos.dist, "CsparseMatrix")
+    W@x <- 1/W@x^2
     diag(x = W) <- diag.value
     W <- W/rowSums(W)
     cells <- rownames(pos)
@@ -74,7 +74,6 @@ GetWeights <- function(snn = NULL,
       colnames(W) <- cells
       rownames(W) <- cells
     }
-    W <- as(W, "dgCMatrix")
     return(W)
   }
 
