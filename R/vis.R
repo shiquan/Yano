@@ -6,39 +6,8 @@
 #'@importFrom scattermore geom_scattermore
 #' 
 #'@export
-FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), raster = NULL, types = NULL, point.label = NULL, arrange.type = FALSE, label.size=3,...)
+FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), point.label = NULL, arrange.type = FALSE, label.size=3,...)
 {
-  assay <- assay %||% DefaultAssay(object)
-  tab0 <- object[[assay]]@meta.features
-  cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
-  
-  if (is.null(val)) stop("No value name specified.")  
-  if (chr %ni% colnames(tab0)) stop("No chr name found.")
-  if (start %ni% colnames(tab0)) stop("No start name found.")
-  if (val %ni% colnames(tab0)) stop("No val name found.")
-  
-  if (!is.null(sel.chrs)) {
-    tab0 <- tab0 %>% filter (chr %in% sel.chrs)
-  }
-
-  if (!is.null(types)) {
-    if ("type" %ni% colnames(tab0)) stop("No type found.")
-    tab0 <- subset(tab0, type %in% types)
-    if (nrow(tab0) == 0) stop("Empty records.")
-  }
-  lv <- mixedsort(unique(tab0[[chr]]))
-  
-  tab <- data.frame(chr = factor(tab0[[chr]], levels = lv),
-                    start = as.numeric(tab0[[start]]),
-                    pval = -log10(as.numeric(tab0[[val]])),
-                    row.names = rownames(tab0))
-  
-  if (!is.null(col.by)) {
-    tab[[col.by]] <- tab0[[col.by]]
-  }
-
-  tab <- subset(tab, !is.na(pval))
-  
   data_cum <- tab %>% group_by(chr) %>% summarise(max_bp = max(start)) %>%
     mutate(bp_add = lag(cumsum(max_bp), default = 0)) %>% select(chr, bp_add)
   
@@ -72,22 +41,11 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
   xi <- xi[-1]
   p <- ggplot(data) + geom_vline(xintercept = xi, color="red", linetype="dotted")
 
-  raster <- raster %||% (nrow(x = data) > 1e5)
-  
   if (!is.null(col.by)) {
-    if (raster) {
-      p <- p + geom_scattermore(mapping = aes(x=bp_cum, y = pval, col = .data[[col.by]]),shape=21,...)
-      p <- p + scale_color_manual(values = cols)
-    } else {
-      p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]]), shape=21,...)
-      p <- p + scale_fill_manual(values = cols)
-    }
+    p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]]), shape=21,...)
+    p <- p + scale_fill_manual(values = cols)
   } else {
-    if (raster) {
-      p <- p + geom_scattermore(aes(x=bp_cum, y=pval),  ...)    
-    } else {
-      p <- p + geom_point(aes(x=bp_cum, y=pval),  ...)    
-    }
+    p <- p + geom_point(aes(x=bp_cum, y=pval),  ...)    
   }
   p <- p + scale_x_continuous(label = axis_set$chr, breaks = axis_set$center,
                               limits = c(min(data$bp_cum), max(data$bp_cum)),
@@ -102,6 +60,40 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
     }
   }
   p
+}
+FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), types = NULL, point.label = NULL, arrange.type = FALSE, label.size=3,...)
+{
+  assay <- assay %||% DefaultAssay(object)
+  tab0 <- object[[assay]]@meta.features
+  cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
+  
+  if (is.null(val)) stop("No value name specified.")  
+  if (chr %ni% colnames(tab0)) stop("No chr name found.")
+  if (start %ni% colnames(tab0)) stop("No start name found.")
+  if (val %ni% colnames(tab0)) stop("No val name found.")
+  
+  if (!is.null(sel.chrs)) {
+    tab0 <- tab0 %>% filter (chr %in% sel.chrs)
+  }
+
+  if (!is.null(types)) {
+    if ("type" %ni% colnames(tab0)) stop("No type found.")
+    tab0 <- subset(tab0, type %in% types)
+    if (nrow(tab0) == 0) stop("Empty records.")
+  }
+  lv <- mixedsort(unique(tab0[[chr]]))
+  
+  tab <- data.frame(chr = factor(tab0[[chr]], levels = lv),
+                    start = as.numeric(tab0[[start]]),
+                    pval = -log10(as.numeric(tab0[[val]])),
+                    row.names = rownames(tab0))
+  
+  if (!is.null(col.by)) {
+    tab[[col.by]] <- tab0[[col.by]]
+  }
+
+  tab <- subset(tab, !is.na(pval))
+  FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size, ...)
 }
 
 theme_cov <- function(...) {
