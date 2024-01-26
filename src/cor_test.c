@@ -17,15 +17,16 @@ static cholmod_common c;
 #define CACHE_PER_BATCH 10000
 #define MIN_HIT 1
 
-void shuffle_double_arr(double *a, const int n)
+double * shuffle_double_arr(double *a, const int n)
 {
+    double *s = R_Calloc(n, double);
     int i;
     for (i = 0; i < n-1; ++i) {
         int j = i + rand() / (RAND_MAX / (n - i) + 1);
-        double t = a[j];
-        a[j] = a[i];
-        a[i] = t;
+        s[i] = a[j];
+        s[j] = a[i];
     }
+    return(s);
 }
 int *random_idx(const int n)
 {
@@ -392,13 +393,14 @@ SEXP smooth_test(SEXP _A, SEXP _W,
     UNPROTECT(N_feature+1);
     return ta;
 }
+
 SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             SEXP _permut,
             SEXP _threads,
             SEXP idx, SEXP bidx,
             //SEXP cidx,
-            SEXP cs, SEXP _scale,
-            SEXP _mode)
+            SEXP cs, SEXP _factor,
+            SEXP _mode, SEXP _scale)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
@@ -406,8 +408,8 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
 
     const int perm = asInteger(_permut);
     const int n_thread = asInteger(_threads);
-    const int scale_factor = asInteger(_scale);
-
+    const int scale_factor = asInteger(_factor);
+    Rboolean scale = asLogical(_scale);
     //Rboolean sens = asLogical(_sens);
     int mode = asInteger(_mode);
     if (A->stype) return mkString("A cannot be symmetric");
@@ -508,6 +510,25 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             mna += tmpa[cid];
         }
         mna = mna/N_cell;
+
+        if (scale) {
+            double sd1 = 0;
+            double sd2 = 0;
+            for (j = 0; j < N_cell; ++j) {
+                sd1 += pow(tmpa[j] - mna, 2);
+                sd2 += pow(tmpb[j] - mnb, 2);
+            }
+            sd1 = sqrt(sd1/N_cell);
+            sd2 = sqrt(sd2/N_cell);
+
+            for (j = 0; j < N_cell; ++j) {
+                tmpa[j] = (tmpa[j] - mna)/sd1;
+                tmpb[j] = (tmpb[j] - mnb)/sd2;
+            }
+
+            mna = 0;
+            mnb = 0;
+        }
         
         double *tmpa_s = R_Calloc(N_cell, double);
         double *tmpb_s = R_Calloc(N_cell, double);
@@ -628,6 +649,137 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     UNPROTECT(8);
     return ta;
 }
+
+SEXP D_distribution_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
+{
+    int la = length(_A);
+    int lb = length(_B);
+    
+    CHM_SP W = AS_CHM_SP__(_W);
+    
+    const int perm = asInteger(_permut);
+    const int n_thread = asInteger(_threads);
+    
+    if (W->stype) return mkString("W cannot be symmetric");
+    if (la != lb) return mkString("Unequal length of A and B");
+   
+    const int N = W->nrow;
+    
+    if (la != N) return mkString("Unequal length of A and W");
+    
+    SEXP X = PROTECT(allocVector(REALSXP, perm));
+
+    double *a = R_Calloc(N, double);
+    double *b = R_Calloc(N, double);
+    
+    double mn1 = 0;
+    double mn2 = 0;
+    int i;
+    for (i = 0; i < N; ++i) {
+        a[i] = REAL(_A)[i];
+        b[i] = REAL(_B)[i];
+        mn1 += a[i];
+        mn2 += b[i];
+    }
+
+    mn1 = mn1/N;
+    mn2 = mn2/N;
+
+    double *tmpb_s = R_Calloc(N, double);
+    smooth_W(b, tmpb_s, N, W);
+
+    double mnb_s = 0;
+    for (i = 0; i < N; ++i) {
+        mnb_s += tmpb_s[i];
+    }
+    mnb_s = mnb_s/N;
+
+    double *tmpa_s = R_Calloc(N, double);
+    smooth_W(a, tmpa_s, N, W);
+    double mna_s = 0;
+    int j;
+    for (j = 0; j < N; ++j) {
+        mna_s += tmpa_s[j];
+    }
+    mna_s = mna_s/N;
+        
+    double Lx1 = 0,
+        Lx2 = 0,
+        ra  = 0,
+        rb1 = 0,
+        rb2 = 0;
+    for (j = 0; j < N; ++j) {
+        Lx1 += pow(tmpa_s[j]-mn1,2);
+        Lx2 += pow(a[j]-mn1,2);
+            
+        tmpa_s[j] = tmpa_s[j] - mna_s;
+        tmpb_s[j] = tmpb_s[j] - mnb_s;
+        ra  += tmpa_s[j] * tmpb_s[j];
+        rb1 += pow(tmpa_s[j],2);
+        rb2 += pow(tmpb_s[j],2);
+    }
+        
+    rb1 = sqrt(rb1);
+    rb2 = sqrt(rb2);
+
+    R_Free(tmpa_s);
+    
+    double Lx = Lx1/Lx2;
+    double r = ra/(rb1*rb2);
+    double e = sqrt(Lx) * (1-r);
+    Rprintf("r : %f\tD : %f\n", r, e);
+        
+#pragma omp parallel for num_threads(n_thread)
+    for (i = 0; i < perm; ++i) {
+        double *s = shuffle_double_arr(a, N);
+        double *tmpa_s = R_Calloc(N, double);
+        smooth_W(s, tmpa_s, N, W);
+        double mna_s = 0;
+        int j;
+        for (j = 0; j < N; ++j) {
+            mna_s += tmpa_s[j];
+        }
+        mna_s = mna_s/N;
+        
+        double Lx1 = 0,
+            Lx2 = 0,
+            ra  = 0,
+            rb1 = 0,
+            rb2 = 0;
+        for (j = 0; j < N; ++j) {
+            Lx1 += pow(tmpa_s[j]-mn1,2);
+            Lx2 += pow(s[j]-mn1,2);
+            
+            tmpa_s[j] = tmpa_s[j] - mna_s;
+            tmpb_s[j] = tmpb_s[j] - mnb_s;
+            ra  += tmpa_s[j] * tmpb_s[j];
+            rb1 += pow(tmpa_s[j],2);
+            rb2 += pow(tmpb_s[j],2);
+        }
+        
+        rb1 = sqrt(rb1);
+        rb2 = sqrt(rb2);
+
+        R_Free(tmpa_s);
+        R_Free(s);
+        
+        double Lx = Lx1/Lx2;
+        double r = ra/(rb1*rb2);
+        double e = sqrt(Lx) * (1-r);
+#pragma omp critical
+        {
+            REAL(X)[i]  = e;
+        }
+    }
+
+    R_Free(tmpb_s);
+    R_Free(a);
+    R_Free(b);
+    UNPROTECT(1);
+    return X;
+}
+
+
 SEXP D_test_cell(SEXP _A, SEXP _B, SEXP _W,
                  SEXP _permut,
                  SEXP _threads,

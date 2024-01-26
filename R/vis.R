@@ -3,7 +3,6 @@
 #'@importFrom ggrepel geom_label_repel
 #'@import ggplot2
 #'@import ggrepel
-#'@importFrom scattermore geom_scattermore
 #' 
 #'@export
 FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), point.label = NULL, arrange.type = FALSE, label.size=3,...)
@@ -61,6 +60,8 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, xlab = "Chromosome"
   }
   p
 }
+
+#'@export
 FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), types = NULL, point.label = NULL, arrange.type = FALSE, label.size=3,...)
 {
   assay <- assay %||% DefaultAssay(object)
