@@ -7,21 +7,13 @@ RunBlockCorr <- function(object = NULL,
                          bind.assay = NULL,
                          bind.features = NULL,
                          prefix = NULL,
-                         #cells = NULL,
-                         #order.cells = NULL,
                          feature.types = NULL,                         
                          min.features.per.block = 2,
                          scale.factor = 1e4,
                          weight.matrix.name = "WeightMatrix",
-                         #reduction = "pca",
                          mode = 1,
-                         #sensitive.mode = FALSE,
-                         #spatial = FALSE,
-                         #W = NULL,
                          cell.size = NULL,
-                         #dims = NULL,
-                         #weight.matrix = "RNA_nn",
-                         #k.nn = 9,
+                         scale = FALSE,
                          perm=100,
                          threads = 0,
                          block.name = NULL,
@@ -145,7 +137,7 @@ RunBlockCorr <- function(object = NULL,
   
   message(paste0("Test dissimlarity of binding features with ", threads, " threads."))
   gc()
-  ta <- .Call("D_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode);
+  ta <- .Call("D_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode, scale);
   if (length(ta) == 1) stop(ta[[1]])
 
   Lx <- ta[[1]]
@@ -177,4 +169,11 @@ RunBlockCorr <- function(object = NULL,
   
   message(paste0("Runtime : ",format(tt)));
   object
+}
+
+#' @export
+cor_dist <- function(x = NULL, y = NULL, W = NULL, perm = 1000, thread = 1)
+{
+  ta <- .Call("D_distribution_test", x, y, W, perm, thread)
+  ta
 }
