@@ -94,12 +94,13 @@ RunBlockCorr <- function(object = NULL,
   # cell sizes
   cs <- cell.size %||% colSums(x)  
   
-  cells <- colnames(W)  
+  #cells <- colnames(W)
+  cells <- names(which(rowSums(W) > 0))
   ncell <- length(cells)
 
   x <- x[,cells]
   cs <- cs[cells]
-  
+  W <- W[cells,cells]
   ## all.features <- rownames(tab)
   if (bind.assay %ni% names(object)) {
     message("Aggregate counts..")
