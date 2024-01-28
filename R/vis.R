@@ -361,8 +361,8 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   p1 <- p1 + theme(panel.spacing.y = unit(0.1, "lines"))
   p1 <- p1 + theme(legend.position="left",
                    legend.justification="right",
-                   legend.box.spacing = unit(-10, "pt"),
-                   legend.margin=margin(0,0,0,0))
+                   legend.box.spacing = unit(-10, "pt"))
+                   #legend.margin=margin(0,0,0,0))
   
   ## if (start0 != -1 & start0 > start & end0 != -1 & end0 < end) {
   ##   p1 <- p1 + annotate("rect",

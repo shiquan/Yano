@@ -93,9 +93,7 @@ RunBlockCorr <- function(object = NULL,
   
   # cell sizes
   cs <- cell.size %||% colSums(x)  
-  #cells <- intersect(cells,names(which(cs > 0)))
-  #W <- W[cells, cells]
-
+  
   cells <- colnames(W)  
   ncell <- length(cells)
 
@@ -123,8 +121,11 @@ RunBlockCorr <- function(object = NULL,
     blocks <- intersect(blocks, rownames(object))
     tab <- subset(tab, tab[[bind.name]] %in% blocks)
 
-    y <- GetAssayData(object, assay = bind.assay, slot = "counts")#[blocks,cells]
+    y <- GetAssayData(object, assay = bind.assay, slot = "counts")
 
+    cs <- cell.size %||% colSums(y)
+    cs <- cs[cells]
+    
     DefaultAssay(object) <- old.assay
     y <- y[,cells]
   }
