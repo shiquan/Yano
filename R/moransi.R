@@ -58,7 +58,7 @@ RunAutoCorr <- function(object = NULL,
   threads <- getCores(threads)
 
   if (!is.null(snn.name)) {
-    W <- GetWeightsFromSNN(object=object, name = snn.name, prune.snn = prune.snn)
+    W <- GetWeightsFromSNN(object=object, name = snn.name, prune.snn = prune.snn, cells = cells)
   }
 
   if (!is.null(order.cells)) {

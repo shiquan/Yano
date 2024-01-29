@@ -41,7 +41,8 @@ GetWeights <- function(snn = NULL,
                        k.nn = 20,
                        prune.distance = 20,
                        prune.snn = 1/10,
-                       diag.value = 0)
+                       diag.value = 0,
+                       cells = NULL)
 {
   check.par <- 0
   
@@ -56,6 +57,9 @@ GetWeights <- function(snn = NULL,
 
   if (!is.null(snn)) {
     diag(snn) <- diag.value
+    if (!is.null(cells)) {
+      snn <- snn[cells, cells]
+    }
     snn@x[snn@x <= prune.snn] <- 0
     snn <- snn/(rowSums(snn)+0.0001)
     return(snn)
@@ -78,7 +82,8 @@ GetWeights <- function(snn = NULL,
   }
 
   if (!is.null(emb)) {
-    cells <- rownames(emb)
+    cells <- celles %||% rownames(emb)
+    emb <- emb[cells,]
     knn <- buildKNN(emb, k.nn=k.nn)
     snn <- buildSNN(knn)    
     colnames(snn) <- cells
@@ -102,14 +107,14 @@ GetWeights <- function(snn = NULL,
 
 #'
 #' @export
-GetWeightsFromSNN <- function(object = NULL, name = "RNA_snn", prune.snn = 1/15)
+GetWeightsFromSNN <- function(object = NULL, name = "RNA_snn", prune.snn = 1/15, cells = NULL)
 {
   if (name %ni% names(object)) {
     stop(paste0("No ", name, " found at object. Run FindNeighbors on RNA assay first."))
   }
 
   snn <- object[[name]]
-  W <- GetWeights(snn=snn, prune.snn = prune.snn)
+  W <- GetWeights(snn=snn, prune.snn = prune.snn, cells = cells)
   return(W)
 }
 
