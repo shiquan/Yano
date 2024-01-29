@@ -91,7 +91,7 @@ GetWeights <- function(snn = NULL,
     pos.dist <- as.matrix(dist(x=c(1:length(order.cells))))
     pos.dist[pos.dist > prune.distance] <- 0
     W <- as(pos.dist, "CsparseMatrix")
-    W@x <- 1/W@x^2
+    W@x <- 1/W@x
     diag(x = W) <- diag.value
     W <- W/rowSums(W)
     colnames(W) <- order.cells
