@@ -99,7 +99,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
 
 theme_cov <- function(...) {
   theme(
-    legend.text = element_blank(),
+    #legend.text = element_blank(),
     axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
     axis.title.x = element_blank(),
     axis.text.y = element_text(family = "Helvetica",color = "black",size = rel(1)),
@@ -107,7 +107,7 @@ theme_cov <- function(...) {
     axis.line = element_blank(),
     axis.ticks = element_blank(),
     panel.background = element_rect(fill = "whitesmoke"),
-    legend.position = "none",
+    #legend.position = "none",
     plot.title = element_blank(),
     ...
   )
@@ -319,27 +319,15 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
       juncs$depth <- juncs$depth / as.vector(ss[juncs$label])
     }
 
-    #juncs[["width"]] <- juncs$end - juncs$start
-    #juncs[["curvature"]] <- -1 * as.integer((1- juncs$width/(posmax-posmin))*10)/10
-    
     juncs[["y"]] <- juncs$depth
     juncs[["yend"]] <- juncs$depth
 
-    ## idx <- which(juncs$start < posmin)
-    ## juncs["start"][idx,] <- posmin
-    ## juncs["y"][idx,] <- ymax
-
-    ## idx <- which(juncs$end > posmax)
-    ## juncs["end"][idx,] <- posmax
-    ## juncs["yend"][idx,] <- ymax
     juncs <- subset(juncs, end > start)
     idx <- which (juncs$strand == "-")
     
     juncs["y"][idx,] <- juncs["y"][idx,] * -1
     juncs["yend"][idx,] <- juncs["yend"][idx,] * -1
-    #juncs["curvature"][idx,] <- juncs["curvature"][idx,] * -1
-    
-    #p1 <- p1 + Map(function(cur, col) { geom_curve(data = juncs, aes(x=start, y = y, xend = end, yend = yend, color=col), curvature = cur) }, cur = juncs$curvature, col=juncs$depth)
+
     p1 <- p1 + geom_curve(data = subset(juncs, strand=="+"), aes(x=start, y = y, xend = end, yend = yend, alpha=depth, size=depth), curvature = -0.2)
     p1 <- p1 + geom_curve(data = subset(juncs, strand=="-"), aes(x=start, y = y, xend = end, yend = yend, alpha=depth, size=depth), curvature = 0.2)
     p1 <- p1 + scale_color_gradient(low="grey", high = "black")
@@ -355,7 +343,6 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   p1 <- p1 + scale_y_continuous(breaks=pretty_breaks(),guide=guide_axis(check.overlap = T))
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
   p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), expand=FALSE)
-  # scale_x_continuous(limits=c(start, end),expand=c(0,0))
   p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue"))
   p1 <- p1 + theme_cov()
   p1 <- p1 + theme(panel.spacing.y = unit(0.1, "lines"))
