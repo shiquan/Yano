@@ -340,8 +340,8 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     #juncs["curvature"][idx,] <- juncs["curvature"][idx,] * -1
     
     #p1 <- p1 + Map(function(cur, col) { geom_curve(data = juncs, aes(x=start, y = y, xend = end, yend = yend, color=col), curvature = cur) }, cur = juncs$curvature, col=juncs$depth)
-    p1 <- p1 + geom_curve(data = subset(juncs, strand=="+"), aes(x=start, y = y, xend = end, yend = yend, alpha=depth, size=depth), curvature = -0.5)
-    p1 <- p1 + geom_curve(data = subset(juncs, strand=="-"), aes(x=start, y = y, xend = end, yend = yend, alpha=depth, size=depth), curvature = 0.5)
+    p1 <- p1 + geom_curve(data = subset(juncs, strand=="+"), aes(x=start, y = y, xend = end, yend = yend, alpha=depth, size=depth), curvature = -0.2)
+    p1 <- p1 + geom_curve(data = subset(juncs, strand=="-"), aes(x=start, y = y, xend = end, yend = yend, alpha=depth, size=depth), curvature = 0.2)
     p1 <- p1 + scale_color_gradient(low="grey", high = "black")
   }
   
@@ -359,9 +359,8 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue"))
   p1 <- p1 + theme_cov()
   p1 <- p1 + theme(panel.spacing.y = unit(0.1, "lines"))
-  p1 <- p1 + theme(legend.position="left",
-                   legend.justification="right",
-                   legend.box.spacing = unit(-10, "pt"))
+  p1 <- p1 + theme(legend.position="left",legend.justification="right")
+                              #legend.box.spacing = unit(-10, "pt"))
                    #legend.margin=margin(0,0,0,0))
   
   ## if (start0 != -1 & start0 > start & end0 != -1 & end0 < end) {
