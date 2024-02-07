@@ -244,7 +244,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   
   if (!is.null(cell.group)) {
     ss <- table(unlist(cell.group))
-    bc$depth <- bc$depth/as.vector(ss[bc$label])
+    bc$depth <- bc$depth/as.vector(ss[as.character(bc$label)])
   }
   
   if (isTRUE(log.scaled)) {
@@ -269,7 +269,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     juncs <- subset(juncs, depth >= junc.min.depth)
         
     if (!is.null(cell.group)) {
-      juncs$depth <- juncs$depth / as.vector(ss[juncs$label])
+      juncs$depth <- juncs$depth / as.vector(ss[as.character(juncs$label)])
     }
 
     if (isTRUE(log.scaled)) {
@@ -322,7 +322,7 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
 
   if (!is.null(cell.group)) {
     ss <- table(unlist(cell.group))
-    bc$depth <- bc$depth/as.vector(ss[bc$label])
+    bc$depth <- bc$depth/as.vector(ss[as.character(bc$label)])
   }
   
   if (isTRUE(log.scaled)) {
