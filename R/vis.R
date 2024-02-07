@@ -317,8 +317,12 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
       juncs$depth <- juncs$depth / as.vector(ss[juncs$label])
     }
 
+    if (isTRUE(log.scaled)) {
+    juncs$depth <- log1p(juncs$depth)
+  }
+
     juncs[["y"]] <- 0
-    juncs[['height']] <- juncs$depth/ymax
+    juncs[['height']] <- ifelse(juncs$depth/ymax >1, 1, juncs$depth/ymax >1)
     #juncs[["yend"]] <- juncs$depth
 
     juncs <- subset(juncs, end > start)
