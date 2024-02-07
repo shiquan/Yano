@@ -318,19 +318,19 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     }
 
     if (isTRUE(log.scaled)) {
-    juncs$depth <- log1p(juncs$depth)
-  }
+      juncs$depth <- log1p(juncs$depth)
+    }
 
+    juncs$depth <- juncs$depth/ymax 
+    juncs$depth[which(juncs$depth>1)] <- 1
     juncs[["y"]] <- 0
-    juncs[['height']] <- ifelse(juncs$depth/ymax >1, 1, juncs$depth/ymax >1)
-    #juncs[["yend"]] <- juncs$depth
 
     juncs <- subset(juncs, end > start)
     idx <- which (juncs$strand == "-")
     
-    juncs["height"][idx,] <- juncs["height"][idx,] * -1
+    juncs["depth"][idx,] <- juncs["depth"][idx,] * -1
     
-    p1 <- p1 + geom_splice(data=juncs, aes(x=start, xend = end, y = y, height = height))
+    p1 <- p1 + geom_splice(data=juncs, aes(x=start, xend = end, y = y, height = depth))
   }
   
   if (!is.null(highlights)) {
@@ -339,9 +339,8 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     df$ymax <- ymax
     p1 <- p1 + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
   }
-
- 
-  #p1 <- p1 + scale_y_continuous(breaks=pretty_breaks(),guide=guide_axis(check.overlap = T))
+  
+  p1 <- p1 + scale_y_continuous(breaks=pretty_breaks(),guide=guide_axis(check.overlap = T))
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
   p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), expand=FALSE)
   p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue"))
