@@ -231,59 +231,16 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
                      junc=FALSE, junc.min.depth = 10)
 {
   if (is.null(chr) || start == -1 || end == -1) stop("Require a genomic region.")
-
-  if (is.list(bamfile)) {
-    nm <- names(bamfile)
-    if (is.list(cell.group)) {
-      dl <- lapply(nm, function(x) {
-        bamcov(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
-               split.bc=split.bc,
-               cell.group=cell.group[[x]], bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
-      })
-    } else {
-      dl <- lapply(nm, function(x) {
-        bamcov(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
+  
+  bc <- bamcov(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
                split.bc=split.bc,
                cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
-      })
-    }
 
-    bc <- bind_rows(dl) %>%  group_by(pos, label, strand) %>% summarise(sum(depth, na.rm = TRUE))
-    ss <- table(unlist(bc))
-    colnames(bc) <- c("pos", "label", "strand", "depth")
-
-    if (junc) {
-      if (is.list(cell.group)) {
-        dl <- lapply(nm, function(x) {
-          bamjunc(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
-                  split.bc=split.bc,
-                  cell.group=cell.group[[x]], cell.tag=cell.tag, umi.tag=umi.tag)
-        })
-      } else {
-        dl <- lapply(nm, function(x) {
-          bamjunc(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
-                  split.bc=split.bc,
-                  cell.group=cell.group, cell.tag=cell.tag, umi.tag=umi.tag)
-        })
-      }
-
-      juncs <- bind_rows(dl) %>%  group_by(start, end , label, strand) %>% summarise(sum(depth, na.rm = TRUE))
-      colnames(juncs) <- c("start", "end", "label", "strand", "depth")
-    }
-  } else {
-    bc <- bamcov(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
-                 split.bc=split.bc,
-                 cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
-
-    if (junc) {
-      juncs <- bamjunc(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
-                      split.bc=split.bc,
-                      cell.group=cell.group, cell.tag=cell.tag, umi.tag=umi.tag)
-    }
+  if (junc) {
+    juncs <- bamjunc(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
+                     split.bc=split.bc,
+                     cell.group=cell.group, cell.tag=cell.tag, umi.tag=umi.tag)
   }
-
-  bc$label <- as.character(bc$label)
-  bc$label <- factor(bc$label, levels=gtools::mixedsort(unique(bc$label)))
   
   if (!is.null(cell.group)) {
     ss <- table(unlist(cell.group))
@@ -309,8 +266,6 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   p1 <- ggplot() + geom_area(data=bc, aes(x=pos,y=depth,fill=strand), stat = "identity")
   
   if (junc) {
-    juncs$label <- as.character(juncs$label)
-    juncs$label <- factor(juncs$label, levels=gtools::mixedsort(unique(juncs$label)))
     juncs <- subset(juncs, depth >= junc.min.depth)
         
     if (!is.null(cell.group)) {
@@ -362,31 +317,9 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
                       cell.group=NULL, log.scaled = FALSE, start0 = -1, end0 = -1)
 {
   if (is.null(chr) || start == -1 || end == -1) stop("Require a genomic region.")
-
-  if (is.list(fragfile)) {
-    nm <- names(fragfile)
-    if (is.list(cell.group)) {
-      dl <- lapply(nm, function(x) {
-        fragcov(fragfile=fragfile[[x]], chr=as.character(chr), start=start, end=end,
-                split.bc=split.bc,cell.group=cell.group[[x]], bin=bin)
-      })
-    } else {
-      dl <- lapply(nm, function(x) {
-        fragcov(fragfile=fragfile[[x]], chr=as.character(chr), start=start, end=end,
+  bc <- fragcov(fragfile=fragfile, chr=as.character(chr), start=start, end=end,
                 split.bc=split.bc, cell.group=cell.group, bin=bin)
-      })
-    }
 
-    bc <- bind_rows(dl) %>%  group_by(pos, label, strand) %>% summarise(sum(depth, na.rm = TRUE))
-    ss <- table(unlist(bc))
-    colnames(bc) <- c("pos", "label", "strand", "depth")
-  } else {
-    bc <- fragcov(fragfile=fragfile, chr=as.character(chr), start=start, end=end,
-                  split.bc=split.bc, cell.group=cell.group, bin=bin)
-  }
-  
-  bc$label <- as.character(bc$label)
-  bc$label <- factor(bc$label, levels=gtools::mixedsort(unique(bc$label)))
   if (!is.null(cell.group)) {
     ss <- table(unlist(cell.group))
     bc$depth <- bc$depth/as.vector(ss[bc$label])
