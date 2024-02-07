@@ -12,7 +12,8 @@ GetWeights(
   k.nn = 20,
   prune.distance = 20,
   prune.snn = 1/10,
-  diag.value = 0
+  diag.value = 0,
+  cells = NULL
 )
 }
 \arguments{

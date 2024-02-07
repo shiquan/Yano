@@ -12,9 +12,17 @@ RoxygenNote: 7.2.3
 LinkingTo: Rhtslib (>= 1.13.1), S4Vectors, Biostrings, XVector, IRanges, Matrix
 Depends:
     R (>= 4.0.0),
+    ggplot2,
     Matrix
+Suggests:
+    testthat,
+    gridExtra
 Imports:
+    utils,
+    graphics,
+    grDevices,
     data.table,
+    grid,
     Seurat
 NeedsCompilation: yes
 SystemRequirements: GNU make

@@ -1,7 +1,6 @@
 #'@importFrom dplyr %>%
 #'@importFrom gtools mixedsort
 #'@importFrom ggrepel geom_label_repel
-#'@import ggplot2
 #'@import ggrepel
 #' 
 #'@export
@@ -113,7 +112,6 @@ theme_cov <- function(...) {
   )
 }
 
-#' @import dplyr
 #' @importFrom IRanges subsetByOverlaps
 #' @importFrom GenomeInfoDb sortSeqlevels
 #' @export
@@ -219,8 +217,8 @@ plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.s
 
   return(p)
 }
+
 #' @import patchwork
-#' @import dplyr
 #' @importFrom GenomicRanges seqnames
 #' @importFrom scales pretty_breaks
 #' @export
@@ -308,8 +306,8 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   posmax <- max(bc$pos)
   posmin <- min(bc$pos)
 
-  p1 <- ggplot(bc, aes(x=pos,y=depth,fill=strand)) + geom_area(stat = "identity")
-
+  p1 <- ggplot() + geom_area(data=bc, aes(x=pos,y=depth,fill=strand), stat = "identity")
+  
   if (junc) {
     juncs$label <- as.character(juncs$label)
     juncs$label <- factor(juncs$label, levels=gtools::mixedsort(unique(juncs$label)))
@@ -319,18 +317,16 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
       juncs$depth <- juncs$depth / as.vector(ss[juncs$label])
     }
 
-    juncs[["y"]] <- juncs$depth
-    juncs[["yend"]] <- juncs$depth
+    juncs[["y"]] <- 0
+    juncs[['height']] <- juncs$depth/ymax
+    #juncs[["yend"]] <- juncs$depth
 
     juncs <- subset(juncs, end > start)
     idx <- which (juncs$strand == "-")
     
-    juncs["y"][idx,] <- juncs["y"][idx,] * -1
-    juncs["yend"][idx,] <- juncs["yend"][idx,] * -1
-
-    p1 <- p1 + geom_curve(data = subset(juncs, strand=="+"), aes(x=start, y = y, xend = end, yend = yend, alpha=depth, size=depth), curvature = -0.2)
-    p1 <- p1 + geom_curve(data = subset(juncs, strand=="-"), aes(x=start, y = y, xend = end, yend = yend, alpha=depth, size=depth), curvature = 0.2)
-    p1 <- p1 + scale_color_gradient(low="grey", high = "black")
+    juncs["height"][idx,] <- juncs["height"][idx,] * -1
+    
+    p1 <- p1 + geom_splice(data=juncs, aes(x=start, xend = end, y = y, height = height))
   }
   
   if (!is.null(highlights)) {
@@ -339,26 +335,16 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     df$ymax <- ymax
     p1 <- p1 + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
   }
-  
-  p1 <- p1 + scale_y_continuous(breaks=pretty_breaks(),guide=guide_axis(check.overlap = T))
+
+ 
+  #p1 <- p1 + scale_y_continuous(breaks=pretty_breaks(),guide=guide_axis(check.overlap = T))
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
   p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), expand=FALSE)
   p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue"))
   p1 <- p1 + theme_cov()
   p1 <- p1 + theme(panel.spacing.y = unit(0.1, "lines"))
-  p1 <- p1 + theme(legend.position="left",legend.justification="right")
-                              #legend.box.spacing = unit(-10, "pt"))
-                   #legend.margin=margin(0,0,0,0))
-  
-  ## if (start0 != -1 & start0 > start & end0 != -1 & end0 < end) {
-  ##   p1 <- p1 + annotate("rect",
-  ##                       xmin = start0,
-  ##                       xmax = end0,
-  ##                       ymin = ymin,
-  ##                       ymax = ymax,
-  ##                       alpha = .1,
-  ##                       fill = "blue")
-  ## }
+  p1 <- p1 + theme(legend.position="none")
+
   return(p1)
 }
 
@@ -486,9 +472,6 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
     gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
     p0 <- plot.bed(region = gr, peaks = peaks, type.col=type.col, highlights = df)
 
-    ## if (start0 > start & end0 < end) {
-    ##   p2 <- p2 + annotate("rect", xmin = start0, xmax = end0, ymin = 0, ymax = 1, alpha = .1,fill = anno.col)
-    ## }    
   } 
 
   p3 <- NULL
