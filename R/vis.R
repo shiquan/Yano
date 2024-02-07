@@ -321,7 +321,8 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
       juncs$depth <- log1p(juncs$depth)
     }
 
-    juncs$depth <- juncs$depth/ymax 
+    ymax0 <- max(abs(bc$depth))
+    juncs$depth <- juncs$depth/ymax0
     juncs$depth[which(juncs$depth>1)] <- 1
     juncs[["y"]] <- 0
 
