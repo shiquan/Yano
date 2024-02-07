@@ -1,6 +1,7 @@
-#'@useDynLib Yano depth2matrix
+#'@importFrom reshape2 melt
+#' @useDynLib Yano depth2matrix
 #'@export
-bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, bin=1000, cell.tag = "CB", umi.tag = "UB")
+bamcov0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, bin=1000, cell.tag = "CB", umi.tag = "UB")
 {
   if (is.null(bamfile)) stop("No BAM.")
   if (is.null(chr)) stop("No chromosome name")
@@ -17,7 +18,6 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
     win <- as.integer(len/bin)
   }
   
-  #bamfile <- normalizePath(bamfile)
   message(paste0("Process read coverage of ", bamfile))
 
   strand.flag <- -1
@@ -26,11 +26,9 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
   else if (strand == "ignore") strand.flag <- -2
 
   if (!is.null(cell.group)) {
-    #if (length(cell.group)) stop("cell.group should be a vector of cell groups with cell names.")    
     cell.names <- names(cell.group)
     if (is.null(cell.names)) stop("Names of cell.group should not be empty.")
     cell.group <- as.character(cell.group)
-    
     groups <- levels(cell.group) %||% unique(cell.group)
     group.ids <- match(cell.group, groups)
     n <- length(cell.group)
@@ -90,9 +88,53 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
 
   return(tab)
 }
+#' @export
+bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, bin=1000, cell.tag = "CB", umi.tag = "UB")
+{
+  if (is.null(bamfile)) stop("No BAM.")
+  if (is.null(chr)) stop("No chromosome name")
+  if (start == -1) stop("Start position.")
+  if (end == -1) stop("End position")
+
+  len <- end - start
+  if (len > 10000000) { ## 10M
+    stop("Too large region, try to shrink it before querying.")
+  }
+
+  if (is.list(bamfile)) {
+    nm <- names(bamfile)
+    if (is.list(cell.group)) {
+      dl <- lapply(nm, function(x) {
+        bamcov0(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
+                split.bc=split.bc,
+                cell.group=cell.group[[x]], bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+      })
+    } else {
+      dl <- lapply(nm, function(x) {
+        bamcov0(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
+               split.bc=split.bc,
+               cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+      })
+    }
+    
+    bc <- bind_rows(dl) %>% group_by(pos, label, strand) %>% summarise(sum(depth, na.rm = TRUE))
+    ss <- table(unlist(bc))
+    colnames(bc) <- c("pos", "label", "strand", "depth")
+  } else {
+    bc <- bamcov0(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
+                 split.bc=split.bc,
+                 cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+  }
+  
+  bc$label <- as.character(bc$label)
+  bc$label <- factor(bc$label, levels=gtools::mixedsort(unique(bc$label)))
+
+  return(bc)
+}
+
 #'@useDynLib Yano depth2matrix
 #'@export
-bamjunc <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, cell.tag = "CB", umi.tag = "UB")
+bamjunc0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, cell.tag = "CB", umi.tag = "UB")
 {
   if (is.null(bamfile)) stop("No BAM.")
   if (is.null(chr)) stop("No chromosome name")
@@ -112,11 +154,9 @@ bamjunc <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "
   else if (strand == "ignore") strand.flag <- -2
 
   if (!is.null(cell.group)) {
-    #if (length(cell.group)) stop("cell.group should be a vector of cell groups with cell names.")    
     cell.names <- names(cell.group)
     if (is.null(cell.names)) stop("Names of cell.group should not be empty.")
     cell.group <- as.character(cell.group)
-    
     groups <- levels(cell.group) %||% unique(cell.group)
     group.ids <- match(cell.group, groups)
     n <- length(cell.group)
@@ -135,9 +175,52 @@ bamjunc <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "
   
   return(tab)
 }
+#' @export
+bamjunc <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, cell.tag = "CB", umi.tag = "UB")
+{
+  if (is.null(bamfile)) stop("No BAM.")
+  if (is.null(chr)) stop("No chromosome name")
+  if (start == -1) stop("Start position.")
+  if (end == -1) stop("End position")
+
+  len <- end - start
+  if (len > 10000000) { ## 10M
+    stop("Too large region, try to shrink it before querying.")
+  }
+
+  if (is.list(bamfile)) {
+    nm <- names(bamfile)
+    if (is.list(cell.group)) {
+      dl <- lapply(nm, function(x) {
+        bamjunc0(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
+                 split.bc=split.bc,
+                 cell.group=cell.group[[x]], cell.tag=cell.tag, umi.tag=umi.tag)
+      })
+    } else {
+      dl <- lapply(nm, function(x) {
+        bamjunc0(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,
+                 split.bc=split.bc,
+                 cell.group=cell.group, cell.tag=cell.tag, umi.tag=umi.tag)
+      })
+    }
+    
+    juncs <- bind_rows(dl) %>%  group_by(start, end , label, strand) %>% summarise(sum(depth, na.rm = TRUE))
+    colnames(juncs) <- c("start", "end", "label", "strand", "depth")
+
+  } else {
+    juncs <- bamjunc0(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
+                      split.bc=split.bc,
+                      cell.group=cell.group, cell.tag=cell.tag, umi.tag=umi.tag)
+  }
+  juncs$label <- as.character(juncs$label)
+  juncs$label <- factor(juncs$label, levels=gtools::mixedsort(unique(juncs$label)))
+
+  return(juncs)
+}
+
 #'@useDynLib Yano depth2matrix
 #'@export
-fragcov <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc = FALSE, cell.group = NULL, bin=1000)
+fragcov0 <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc = FALSE, cell.group = NULL, bin=1000)
 {
   if (is.null(fragfile)) stop("No fragment file.")
   if (is.null(chr)) stop("No chromosome name")
@@ -154,13 +237,10 @@ fragcov <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc 
     win <- as.integer(len/bin)
   }
   message(paste0("Process ", fragfile))
-
   if (!is.null(cell.group)) {
-    #if (length(cell.group)) stop("cell.group should be a vector of cell groups with cell names.")    
     cell.names <- names(cell.group)
     if (is.null(cell.names)) stop("Names of cell.group should not be empty.")
     cell.group <- as.character(cell.group)
-    
     groups <- levels(cell.group) %||% unique(cell.group)
     group.ids <- match(cell.group, groups)
     n <- length(cell.group)
@@ -196,3 +276,42 @@ fragcov <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc 
   return(tab)
 }
 
+#' @export
+fragcov <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc = FALSE, cell.group = NULL, bin=1000)
+{
+  if (is.null(fragfile)) stop("No fragment file.")
+  if (is.null(chr)) stop("No chromosome name")
+  if (start == -1) stop("No start position.")
+  if (end == -1) stop("No end position")
+
+  len <- end - start
+  if (len > 10000000) { ## 10M
+    stop("Too large region, try to shrink it before querying.")
+  }
+
+  if (is.list(fragfile)) {
+    nm <- names(fragfile)
+    if (is.list(cell.group)) {
+      dl <- lapply(nm, function(x) {
+        fragcov0(fragfile=fragfile[[x]], chr=as.character(chr), start=start, end=end,
+                split.bc=split.bc,cell.group=cell.group[[x]], bin=bin)
+      })
+    } else {
+      dl <- lapply(nm, function(x) {
+        fragcov0(fragfile=fragfile[[x]], chr=as.character(chr), start=start, end=end,
+                split.bc=split.bc, cell.group=cell.group, bin=bin)
+      })
+    }
+
+    bc <- bind_rows(dl) %>%  group_by(pos, label, strand) %>% summarise(sum(depth, na.rm = TRUE))
+    ss <- table(unlist(bc))
+    colnames(bc) <- c("pos", "label", "strand", "depth")
+  } else {
+    bc <- fragcov0(fragfile=fragfile, chr=as.character(chr), start=start, end=end,
+                  split.bc=split.bc, cell.group=cell.group, bin=bin)
+  }
+  
+  bc$label <- as.character(bc$label)
+  bc$label <- factor(bc$label, levels=gtools::mixedsort(unique(bc$label)))
+  return(bc)
+}
