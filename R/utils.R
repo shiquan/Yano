@@ -4,7 +4,7 @@ AggAndCoClust <- function(object = NULL, assay = "EPT", features = NULL,
                          bind.assay = "RNA", bind.name = "gene_name")
 {
   agg <- AggregateExpression(object, assays = assay, return.seurat = TRUE)
-  agg1 <- AggregateExpression(obj, assays = bind.assay, return.seurat = TRUE)
+  agg1 <- AggregateExpression(object, assays = bind.assay, return.seurat = TRUE)
 
   agg <- NormalizeData(agg)
   agg <- ScaleData(agg, features = features)
