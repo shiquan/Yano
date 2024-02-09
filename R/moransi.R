@@ -73,7 +73,7 @@ RunAutoCorr <- function(object = NULL,
   cells1 <- colnames(W)
   cells2 <- setdiff(colnames(object), cells1)
   cells1 <- c(cells1, cells2)
-  W <- as(W, "dgTMatrix")
+  W <- as(W, "TsparseMatrix")
   W <- Matrix::sparseMatrix(i = W@i+1, j = W@j+1, x = W@x, dims = c(ncell,ncell))
   colnames(W) <- cells1
   rownames(W) <- cells1
@@ -84,7 +84,7 @@ RunAutoCorr <- function(object = NULL,
   x0 <- GetAssayData(object, assay = assay, slot = slot)[,cells]
   features <- intersect(rownames(x0), features)
   x0 <- x0[features,]
-  x0 <- as(x0, "dgCMatrix")
+  x0 <- as(x0, "CsparseMatrix")
   ## if (perm < 10) {
   ##   perm <- 0
   ## }
