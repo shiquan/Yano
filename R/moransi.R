@@ -18,7 +18,7 @@
 #' @export
 RunAutoCorr <- function(object = NULL,
                         assay = NULL,                       
-                        slot = "data",
+                        layer = "data",
                         spatial = FALSE,
                         snn.name = NULL,
                         order.cells = NULL,
@@ -43,6 +43,11 @@ RunAutoCorr <- function(object = NULL,
   
   if (check.par == 0) snn.name <- "RNA_snn"
 
+  layer <- Layers(object = object, search = layer)
+  if (is.null(layer)) {
+    abort("No layer found. Please run NormalizeData or RunTFIDF and retry..")
+  }
+  
   tt <- Sys.time()
   
   assay <- assay %||% DefaultAssay(object = object)
@@ -56,7 +61,7 @@ RunAutoCorr <- function(object = NULL,
   features <- intersect(rownames(object),features)
 
   threads <- getCores(threads)
-
+  
   if (!is.null(snn.name)) {
     W <- GetWeightsFromSNN(object=object, name = snn.name, prune.snn = prune.snn, cells = cells)
   }
@@ -85,12 +90,9 @@ RunAutoCorr <- function(object = NULL,
   features <- intersect(rownames(x0), features)
   x0 <- x0[features,]
   x0 <- as(x0, "CsparseMatrix")
-  ## if (perm < 10) {
-  ##   perm <- 0
-  ## }
+
   W <- W[cells, cells]
   message(paste0("Run autocorrelation test for ", length(features), " features."))
-  #moransi.vals <- .Call("moransi_perm_test", x0, W, TRUE, threads, FALSE, perm)
   moransi.vals <- .Call("autocorrelation_test", x0, W, TRUE, threads)
 
   if (length(moransi.vals) == 1) stop(moransi.vals[[1]])
@@ -98,22 +100,17 @@ RunAutoCorr <- function(object = NULL,
   Ivals <- moransi.vals[[1]]
   names(Ivals) <- features
 
-  ## if (perm > 1) {
-  ##   Tvals <- moransi.vals[[2]]
-  ##   names(Tvals) <- features
-  ##   pvals <- pt(Tvals, df = perm - 1, lower.tail = FALSE)
-  ##   names(pvals) <- features
-  ##   prefix.p <- paste0(prefix, ".pval")
-  ##   object[[assay]]@meta.features[[prefix.p]] <- pvals[rownames(object)]
-  ## }
-
   Zvals <- moransi.vals[[2]]
   names(Zvals) <- features
   pvals <- pnorm(Zvals, lower.tail = FALSE)
   names(pvals) <- features
   prefix.p <- paste0(prefix, ".pval")
-  object[[assay]]@meta.features[[prefix.p]] <- pvals[rownames(object)]
-  object[[assay]]@meta.features[[prefix]] <- Ivals[rownames(object)]
+
+  object0 <- object[[assay]]
+  object0[[prefix.p]] <- pvals[rownames(object)]
+  object0[[prefix]] <- Ivals[rownames(object)]
+
+  object[[assay]] <- object0
   
   rm(moransi.vals)
   gc()
@@ -131,20 +128,22 @@ SetAutoCorrFeatures <- function(object = NULL,
                                 p.cutoff = 0.01,
                                 prefix = "moransi")
 {
-  tab <- object[[assay]]@meta.features
+  object0 <- object[[assay]]
 
-  cn <- colnames(tab)
+  cn <- colnames(object0[[]])
   prefix.p <- paste0(prefix,".pval")
+  
   if (prefix %ni% cn | prefix.p %ni% cn) {
     stop("No Morans'I value found, use RunAutoCorr first.")
   }
 
-  idx <- which(tab[[prefix]] > moransi.min & tab[[prefix.p]] <= p.cutoff)
+  idx <- which(object0[[prefix]] > moransi.min & object0[[prefix.p]] <= p.cutoff)
 
   message(paste0(length(idx), " autocorrelated features."))
-  tab[["autocorr.variable"]] <- FALSE
-  tab[idx,][["autocorr.variable"]] <- TRUE
-  object[[assay]]@meta.features <- tab
+  object0[["autocorr.variable"]] <- FALSE
+  object0[["autocorr.variable"]][idx,] <- TRUE
+  
+  object[[assay]] <- object0
   
   object
 }
@@ -152,10 +151,11 @@ SetAutoCorrFeatures <- function(object = NULL,
 AutoCorrFeatures <- function(object = NULL, assay = NULL)
 {
   assay <- assay %||% DefaultAssay(object)
-  tab <- object[[assay]]@meta.features
 
-  if ('autocorr.variable' %ni% colnames(tab)) {
+  object0 <- object[[assay]]
+
+  if ('autocorr.variable' %ni% colnames(object0[[]])) {
     stop("No autocorrelation flag found, run SetAutoCorrFeatures() first.")
   }
-  rownames(object)[which(tab[['autocorr.variable']])]
+  rownames(object)[which(object0[['autocorr.variable']])]
 }

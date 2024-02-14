@@ -400,7 +400,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             SEXP idx, SEXP bidx,
             //SEXP cidx,
             SEXP cs, SEXP _factor,
-            SEXP _mode, SEXP _scale)
+            SEXP _mode, SEXP _scale, SEXP _norm)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
@@ -410,7 +410,8 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     const int n_thread = asInteger(_threads);
     const int scale_factor = asInteger(_factor);
     Rboolean scale = asLogical(_scale);
-    //Rboolean sens = asLogical(_sens);
+    Rboolean norm = asLogical(_norm);
+    
     int mode = asInteger(_mode);
     if (A->stype) return mkString("A cannot be symmetric");
     if (B->stype) return mkString("B cannot be symmetric");
@@ -496,8 +497,9 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
                 tmpb[cid] = tmpb[cid] - tmpa[cid];
                 if (tmpb[cid] < 0) tmpb[cid] = 0;
             }
-
-            tmpb[cid] = log(tmpb[cid]/REAL(cs)[cid]*scale_factor + 1);
+            if (norm) {
+                tmpb[cid] = log(tmpb[cid]/REAL(cs)[cid]*scale_factor + 1);
+            }
             mnb += tmpb[cid];
         }
         mnb = mnb/N_cell;
@@ -506,7 +508,9 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             if (ISNAN(ax[j])) continue;            
             int cid = ai[j];
             //cid = INTEGER(cidx)[cid]-1;
-            tmpa[cid] = log(ax[j]/REAL(cs)[cid]*scale_factor + 1);
+            if (norm) {
+                tmpa[cid] = log(ax[j]/REAL(cs)[cid]*scale_factor + 1);
+            }
             mna += tmpa[cid];
         }
         mna = mna/N_cell;
