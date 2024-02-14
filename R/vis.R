@@ -61,10 +61,11 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, xlab = "Chromosome"
 }
 
 #'@export
-FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), types = NULL, point.label = NULL, arrange.type = FALSE, label.size=3,...)
+FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), types = NULL, point.label = NULL, arrange.type = FALSE, label.size=3, idents = NULL, ...)
 {
   assay <- assay %||% DefaultAssay(object)
-  tab0 <- object[[assay]]@meta.features
+  object0 <- object[[assay]]
+  tab0 <- object0[[]]
   cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
   
   if (is.null(val)) stop("No value name specified.")  
