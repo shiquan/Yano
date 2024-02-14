@@ -41,8 +41,6 @@ RunBlockCorr <- function(object = NULL,
   }
   
   tt <- Sys.time()
-  #cells <- cells %||% colnames(object)
-  #cells <- intersect(cells, colnames(object))
   
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
@@ -57,8 +55,9 @@ RunBlockCorr <- function(object = NULL,
   threads <- getCores(threads)
 
   W <- object[[weight.matrix.name]]
-  #W <- W[cells, cells]
-  tab <- object[[assay]]@meta.features
+
+  object0 <- object[[assay]]
+  tab <- object0[[]]
 
   if (bind.name %ni% colnames(tab)) {
     stop(paste0("No bind.name found in the feature table of assay ", assay, ". Run LoadEPTanno or LoadVARanno first."))
@@ -89,20 +88,20 @@ RunBlockCorr <- function(object = NULL,
   
   bind.assay <- bind.assay %||% "tmp.assay"
 
-  x <- GetAssayData(object, assay = assay, slot = "counts")
-  
-  # cell sizes
-  cs <- cell.size %||% colSums(x)  
-  
-  #cells <- colnames(W)
-  cells <- names(which(rowSums(W) > 0))
-  ncell <- length(cells)
-
-  x <- x[,cells]
-  cs <- cs[cells]
-  W <- W[cells,cells]
-  ## all.features <- rownames(tab)
   if (bind.assay %ni% names(object)) {
+    x <- GetAssayData(object, assay = assay, slot = "counts")
+  
+    # cell sizes
+    cs <- cell.size %||% colSums(x)
+    
+    #cells <- colnames(W)
+    cells <- names(which(rowSums(W) > 0))
+    ncell <- length(cells)
+    
+    x <- x[,cells]
+    cs <- cs[cells]
+    W <- W[cells,cells]
+    
     message("Aggregate counts..")
     x0 <- x[rownames(tab),cells]
     x0 <- as(x0, "TsparseMatrix")
@@ -115,31 +114,49 @@ RunBlockCorr <- function(object = NULL,
     rm(x0)
     rownames(y) <- blocks
     colnames(y) <- cells
+
+    norm <- TRUE
   } else {
+    layer <- Layers(object = object0, search = "data")
+    if (is.null(layer)) {
+      abort("No layer found. Please run NormalizeData or RunTFIDF and retry..")
+    }
+
+    x <- GetAssayData(object, assay = assay, slot = "data")
+
+    cells <- names(which(rowSums(W) > 0))
+    ncell <- length(cells)
+    x <- x[,cells]
+    W <- W[cells,cells]
+    
     message(paste0("Trying to retrieve data from assay ", bind.assay,".."))
     old.assay <- DefaultAssay(object)
     DefaultAssay(object) <- bind.assay
     blocks <- intersect(blocks, rownames(object))
     tab <- subset(tab, tab[[bind.name]] %in% blocks)
 
-    y <- GetAssayData(object, assay = bind.assay, slot = "counts")
+    layer <- Layers(object = object[[bind.assay]], search = "data")
+    if (is.null(layer)) {
+      abort(paste0("No layer found. Please run NormalizeData or RunTFIDF for assay ", assay, " and retry.."))
+    }
 
-    cs <- cell.size %||% colSums(y)
-    cs <- cs[cells]
-    
+    y <- GetAssayData(object, assay = bind.assay, slot = "data")
+
     DefaultAssay(object) <- old.assay
     y <- y[,cells]
+
+    cs <- NULL
+    norm <- FALSE
   }
 
   features <- intersect(features, rownames(tab))
   tab <- tab[features,]
   bidx <- match(tab[[bind.name]],rownames(y))
   idx <- match(features, rownames(x))
-  #cidx <- match(cells, colnames(x))
   
   message(paste0("Test dissimlarity of binding features with ", threads, " threads."))
   gc()
-  ta <- .Call("D_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode, scale);
+  ta <- .Call("D_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm);
   if (length(ta) == 1) stop(ta[[1]])
 
   Lx <- ta[[1]]
@@ -155,14 +172,13 @@ RunBlockCorr <- function(object = NULL,
   
   pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
   names(pval) <- features
-  #padj <- p.adjust(pval, "BH")
-  #names(padj) <- features
   tab <- object[[assay]]@meta.features
   tab[[paste0(prefix, ".D")]] <- e[rownames(object)]
   tab[[paste0(prefix, ".r")]] <- r[rownames(object)]
   tab[[paste0(prefix, ".pval")]] <- pval[rownames(object)]
-  #tab[[paste0(prefix, ".padj")]] <- padj[rownames(object)]
-  object[[assay]]@meta.features <- tab
+  object0[[colname(tab)]] <- tab
+
+  object[[assay]] <- object0
 
   rm(ta)
   gc()

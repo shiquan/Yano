@@ -203,25 +203,30 @@ getCores <- function(threads = 0)
   return(1)
 }
 
+ParseExonName.Assay <- function(object)
+{
+  nm <- rownames(object)
+
+  object[['chr']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\1",nm)
+  object[['start']] <- as.integer(gsub("(.*):(.*)-(.*)/(.)/(.*)","\\2",nm))
+  object[['end']] <- as.integer(gsub("(.*):(.*)-(.*)/(.)/(.*)","\\3",nm))
+  object[['strand']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\4",nm)
+  object[['gene_name']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\5",nm)
+  
+  return(object)
+}
 #' @export
-ParseExonName <- function(object = NULL, assay = NULL, stranded = TRUE)
+ParseExonName <- function(object = NULL, assay = NULL)
 {
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
   old.assay <- DefaultAssay(object)
   DefaultAssay(object) <- assay
-
-  nm <- rownames(object)
-
-  object[[assay]]@meta.features[['chr']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\1",nm)
-  object[[assay]]@meta.features[['start']] <- as.integer(gsub("(.*):(.*)-(.*)/(.)/(.*)","\\2",nm))
-  object[[assay]]@meta.features[['end']] <- as.integer(gsub("(.*):(.*)-(.*)/(.)/(.*)","\\3",nm))
-  object[[assay]]@meta.features[['strand']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\4",nm)
-  object[[assay]]@meta.features[['gene_name']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\5",nm)
-
+  object[[assay]] <- ParseExonName.Assay(object[[assay]])
   DefaultAssay(object) <- old.assay
   return(object)
 }
+
 #'
 #' @importFrom data.table fread
 #' @export
@@ -255,15 +260,9 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   message(paste0("Intersect ", length(features), " features."))
   
   bed <- bed[rownames(object),]
-  
-  object[[assay]]@meta.features[['chr']] <- bed[['chr']]
-  object[[assay]]@meta.features[['start']] <- bed[['start']]
-  object[[assay]]@meta.features[['end']] <- bed[['end']]
-  object[[assay]]@meta.features[['name']] <- bed[['name']]
-  object[[assay]]@meta.features[['strand']] <- bed[['strand']]
-  object[[assay]]@meta.features[['n_gene']] <- bed[['n_gene']]
-  object[[assay]]@meta.features[['gene_name']] <- bed[['gene_name']]
-  object[[assay]]@meta.features[['type']] <- bed[['type']]
+  object0 <- object[[assay]]
+  object0[[colnames(bed)]] <- bed
+  object[[assay]] <- object0
 
   DefaultAssay(object) <- old.assay
 
@@ -279,7 +278,7 @@ parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
 
   locs <- unlist(lapply(rn, function(x) {
     s <- grep("/[+-]$", x)
-    if (s) {
+    if (!is.null(s)) {
       if (isTRUE(ignore.strand)) {
         gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1", x)
       } else {
@@ -292,7 +291,7 @@ parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
 
   strands <- unlist(lapply(rn, function(x) {
     s <- grep("/[+-]$", x)
-    if (s) {
+    if (is.null(s)) {
       if (isTRUE(ignore.strand)) {
         "*"
       } else {
@@ -306,15 +305,18 @@ parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
   chrs <- gsub("(.*):([0-9]+).*","\\1", locs)
   starts <- as.integer(gsub("(.*):([0-9]+).*","\\2", locs))
 
-  object[[assay]]@meta.features[['chr']] <- chrs
-  object[[assay]]@meta.features[['start']] <- starts
-  object[[assay]]@meta.features[['strand']] <- strands
-  object[[assay]]@meta.features[['locus']] <- locs
+  object0 <- object[[assay]]
+  object0[['chr']] <- chrs
+  object0[['start']] <- starts
+  object0[['strand']] <- strands
+  object0[['locus']] <- locs
 
   idx <- which(str_detect(rn,"="))
-  object[[assay]]@meta.features[['type']] <- "alt"
-  object[[assay]]@meta.features[['type']][idx] <- "ref"
+  
+  object0[['type']] <- "alt"
+  object0[['type']][idx] <- "ref"
 
+  object[[assay]] <- object0
   DefaultAssay(object) <- old.assay
 
   object
@@ -337,10 +339,14 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, ignore.strand 
   
   bed <- fread(file)[,c(1:9)]
   colnames(bed) <- c("chr","start","end","name","score","strand","n_gene","gene_name","type")
-  if (isTRUE(stranded)) {
-    bed$name <- paste0(bed$chr,":",bed$start,"-",bed$end,"/",bed$strand)
-  } else {
+  if (isTRUE(ignore.strand)) {
     bed$name <-  paste0(bed$chr,":",bed$start,"-",bed$end)
+  } else {
+    if(unique(bed$strand) == "*") {
+      bed$name <-  paste0(bed$chr,":",bed$start,"-",bed$end)
+    } else {
+      bed$name <- paste0(bed$chr,":",bed$start,"-",bed$end,"/",bed$strand)
+    }
   }
   
   bed <- as.data.frame(bed)
@@ -349,11 +355,12 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, ignore.strand 
   old.assay <- DefaultAssay(object)
   DefaultAssay(object) <- assay
 
-  object[[assay]]@meta.features[['chr']] -> chrs
-  object[[assay]]@meta.features[['start']] -> starts
-  object[[assay]]@meta.features[['strand']] -> strands
-  object[[assay]]@meta.features[['locus']] -> locs
-
+  object0<- object[[assay]]
+  object0[['chr']] -> chrs
+  object0[['start']] -> starts
+  object0[['strand']] -> strands
+  object0[['locus']] -> locs
+  
   gv <- GRanges(chrs,IRanges(start=starts,width=1),strand=strands)
   gv$name <- rownames(object)
 
@@ -369,10 +376,11 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, ignore.strand 
   names(gnames) <- var.sel
   names(types) <- var.sel
   
-  object[[assay]]@meta.features[['ept']] <- ept.sel[rownames(object)]
-  object[[assay]]@meta.features[['gene_name']] <- gnames[rownames(object)]
-  object[[assay]]@meta.features[['ept_type']] <- types[rownames(object)]
+  object0[['ept']] <- ept.sel[rownames(object)]
+  object0[['gene_name']] <- gnames[rownames(object)]
+  object0[['ept_type']] <- types[rownames(object)]
 
+  object[[assay]] <- object0
   DefaultAssay(object) <- old.assay
 
   object
