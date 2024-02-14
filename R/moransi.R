@@ -1,7 +1,7 @@
 #' Calculate Moran's index for features in parallel.
 #' @param object
 #' @param assay
-#' @param slot
+#' @param layer
 #' @param spatial
 #' @param W
 #' @param scale.weight
@@ -86,7 +86,7 @@ RunAutoCorr <- function(object = NULL,
   W <- as(W, "Graph")
   object[[weight.matrix.name]] <- W
   
-  x0 <- GetAssayData(object, assay = assay, slot = slot)[,cells]
+  x0 <- GetAssayData(object, assay = assay, layer = layer)[,cells]
   features <- intersect(rownames(x0), features)
   x0 <- x0[features,]
   x0 <- as(x0, "CsparseMatrix")
