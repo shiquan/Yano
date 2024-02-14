@@ -176,7 +176,7 @@ RunBlockCorr <- function(object = NULL,
   tab[[paste0(prefix, ".D")]] <- e[rownames(object)]
   tab[[paste0(prefix, ".r")]] <- r[rownames(object)]
   tab[[paste0(prefix, ".pval")]] <- pval[rownames(object)]
-  object0[[colname(tab)]] <- tab
+  object0[[colnames(tab)]] <- tab
 
   object[[assay]] <- object0
 
