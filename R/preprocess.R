@@ -270,17 +270,71 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   object
 }
 
+#'@export
+parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
+{
+  old.assay <- DefaultAssay(object)
+  DefaultAssay(object) <- assay
+  rn <- rownames(object)
+
+  locs <- unlist(lapply(rn, function(x) {
+    s <- grep("/[+-]$", x)
+    if (s) {
+      if (isTRUE(ignore.strand)) {
+        gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1", x)
+      } else {
+        gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1/\\3", x)
+      }
+    } else {
+      gsub("(.*:[0-9]+)([ACGT=>]*).*", "\\1", x)
+    }
+  }))
+
+  strands <- unlist(lapply(rn, function(x) {
+    s <- grep("/[+-]$", x)
+    if (s) {
+      if (isTRUE(ignore.strand)) {
+        "*"
+      } else {
+        gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\3", x)
+      }
+    } else {
+      "*"
+    }
+  }))
+
+  chrs <- gsub("(.*):([0-9]+).*","\\1", locs)
+  starts <- as.integer(gsub("(.*):([0-9]+).*","\\2", locs))
+
+  object[[assay]]@meta.features[['chr']] <- chrs
+  object[[assay]]@meta.features[['start']] <- starts
+  object[[assay]]@meta.features[['strand']] <- strands
+  object[[assay]]@meta.features[['locus']] <- locs
+
+  idx <- which(str_detect(rn,"="))
+  object[[assay]]@meta.features[['type']] <- "alt"
+  object[[assay]]@meta.features[['type']][idx] <- "ref"
+
+  DefaultAssay(object) <- old.assay
+
+  object
+}
+
 #' @importFrom data.table fread 
 #' @importFrom GenomicRanges GRanges findOverlaps
 #' @importFrom IRanges IRanges
 #' @importFrom S4Vectors queryHits subjectHits
 #' @importFrom stringr str_detect
 #' @export
-LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRUE)
+LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, ignore.strand = FALSE)
 {
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
 
+  old.assay <- DefaultAssay(object)
+
+  object <- parseVAR(object = object, assay = assay, ignore.strand = ignore.strand)
+  
   bed <- fread(file)[,c(1:9)]
   colnames(bed) <- c("chr","start","end","name","score","strand","n_gene","gene_name","type")
   if (isTRUE(stranded)) {
@@ -295,17 +349,11 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   old.assay <- DefaultAssay(object)
   DefaultAssay(object) <- assay
 
+  object[[assay]]@meta.features[['chr']] -> chrs
+  object[[assay]]@meta.features[['start']] -> starts
+  object[[assay]]@meta.features[['strand']] -> strands
+  object[[assay]]@meta.features[['locus']] -> locs
 
-  if (isTRUE(stranded)) {
-    locs <- gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1/\\3",rownames(object))
-    strands <- gsub(".*/([-+])","\\1",rownames(object))
-  } else {
-    locs <- gsub("(.*:[0-9]+)([ACGT=>]*).*", "\\1",rownames(object))
-    strands <- "."
-  }
-  chrs <- gsub("(.*):.*","\\1",rownames(object))
-  starts <- as.numeric(gsub("(.*):([0-9]+).*","\\2",rownames(object)))
-    
   gv <- GRanges(chrs,IRanges(start=starts,width=1),strand=strands)
   gv$name <- rownames(object)
 
@@ -320,20 +368,11 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
   types <- bed[ept.sel,]$type
   names(gnames) <- var.sel
   names(types) <- var.sel
-
-  idx <- which(str_detect(rownames(object),"="))
   
-  object[[assay]]@meta.features[['chr']] <- chrs
-  object[[assay]]@meta.features[['start']] <- starts
-  object[[assay]]@meta.features[['strand']] <- strands
-  object[[assay]]@meta.features[['locus']] <- locs
   object[[assay]]@meta.features[['ept']] <- ept.sel[rownames(object)]
   object[[assay]]@meta.features[['gene_name']] <- gnames[rownames(object)]
   object[[assay]]@meta.features[['ept_type']] <- types[rownames(object)]
-  object[[assay]]@meta.features[['type']] <- "alt"
 
-  object[[assay]]@meta.features[['type']][idx] <- "ref"
-  
   DefaultAssay(object) <- old.assay
 
   object
