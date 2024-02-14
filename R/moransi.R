@@ -157,5 +157,5 @@ AutoCorrFeatures <- function(object = NULL, assay = NULL)
   if ('autocorr.variable' %ni% colnames(object0[[]])) {
     stop("No autocorrelation flag found, run SetAutoCorrFeatures() first.")
   }
-  rownames(object)[which(object0[['autocorr.variable']])]
+  rownames(object)[which(object0[['autocorr.variable']][[1]])]
 }
