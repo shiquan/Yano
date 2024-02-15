@@ -314,7 +314,9 @@ parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
   idx <- which(str_detect(rn,"="))
   
   object0[['type']] <- "alt"
-  object0[['type']][idx] <- "ref"
+  all <- object0[['type']][[1]]
+  all[idx] <- "ref"
+  object0[['type']] <- all
 
   object[[assay]] <- object0
   DefaultAssay(object) <- old.assay
