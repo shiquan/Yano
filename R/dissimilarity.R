@@ -8,7 +8,7 @@ RunBlockCorr <- function(object = NULL,
                          bind.features = NULL,
                          prefix = NULL,
                          feature.types = NULL,                         
-                         min.features.per.block = 2,
+                         min.features.per.block = 1,
                          scale.factor = 1e4,
                          weight.matrix.name = "WeightMatrix",
                          mode = 1,
@@ -89,6 +89,13 @@ RunBlockCorr <- function(object = NULL,
   bind.assay <- bind.assay %||% "tmp.assay"
 
   if (bind.assay %ni% names(object)) {
+
+    if (min.features.per.block == 1) {
+      message("No bind.assay specified, update min.features.per.block to 2.")
+      min.features.per.block <- 2
+      blocks <- names(which(table(tab[[bind.name]]) >= min.features.per.block))
+      tab <- subset(tab, tab[[bind.name]] %in% blocks)
+    }
     x <- GetAssayData(object, assay = assay, slot = "counts")
   
     # cell sizes
