@@ -358,10 +358,10 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, ignore.strand 
   DefaultAssay(object) <- assay
 
   object0<- object[[assay]]
-  object0[['chr']] -> chrs
-  object0[['start']] -> starts
-  object0[['strand']] -> strands
-  object0[['locus']] -> locs
+  object0[['chr']][[1]] -> chrs
+  object0[['start']][[1]] -> starts
+  object0[['strand']][[1]] -> strands
+  object0[['locus']][[1]] -> locs
   
   gv <- GRanges(chrs,IRanges(start=starts,width=1),strand=strands)
   gv$name <- rownames(object)
