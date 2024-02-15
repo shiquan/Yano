@@ -142,7 +142,7 @@ SetAutoCorrFeatures <- function(object = NULL,
   message(paste0(length(idx), " autocorrelated features."))
   object0[["autocorr.variable"]] <- FALSE
 
-  all <-   object0[["autocorr.variable"]]
+  all <- object0[["autocorr.variable"]][[1]]
   all[idx,] <- TRUE
   object0[["autocorr.variable"]] <- all
   object[[assay]] <- object0
