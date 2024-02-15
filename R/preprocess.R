@@ -307,7 +307,7 @@ parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
 
   object0 <- object[[assay]]
   object0[['chr']] <- chrs
-  object0[['start']] <- starts
+  object0[['start']] <- as.integer(starts)
   object0[['strand']] <- strands
   object0[['locus']] <- locs
 
@@ -344,7 +344,7 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, ignore.strand 
   if (isTRUE(ignore.strand)) {
     bed$name <-  paste0(bed$chr,":",bed$start,"-",bed$end)
   } else {
-    if(unique(bed$strand) == "*") {
+    if(unique(bed$strand)[1] == "*") {
       bed$name <-  paste0(bed$chr,":",bed$start,"-",bed$end)
     } else {
       bed$name <- paste0(bed$chr,":",bed$start,"-",bed$end,"/",bed$strand)
