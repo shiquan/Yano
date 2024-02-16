@@ -179,7 +179,7 @@ RunBlockCorr <- function(object = NULL,
   
   pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
   names(pval) <- features
-  tab <- object[[assay]]@meta.features
+  tab <- object[[assay]][[]]
   tab[[paste0(prefix, ".D")]] <- e[rownames(object)]
   tab[[paste0(prefix, ".r")]] <- r[rownames(object)]
   tab[[paste0(prefix, ".pval")]] <- pval[rownames(object)]
