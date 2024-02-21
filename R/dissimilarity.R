@@ -59,8 +59,7 @@ RunBlockCorr <- function(object = NULL,
   W <- object[[weight.matrix.name]]
 
   #cells <- cells %||% colnames(object)
-  cells1 <- names(which(rowSums(W) > 0))
-  cells <- intersect(cells, cells1)
+  cells <- names(which(rowSums(W) > 0))
   ncell <- length(cells)
   
   object0 <- object[[assay]]
