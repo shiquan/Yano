@@ -7,7 +7,7 @@ RunBlockCorr <- function(object = NULL,
                          min.cells = 10,
                          bind.assay = NULL,
                          bind.features = NULL,
-                         cells = NULL,
+                         #cells = NULL,
                          min.cells.bind = 10,
                          prefix = NULL,
                          feature.types = NULL,          
@@ -58,7 +58,7 @@ RunBlockCorr <- function(object = NULL,
 
   W <- object[[weight.matrix.name]]
 
-  cells <- cells %||% colnames(object)
+  #cells <- cells %||% colnames(object)
   cells1 <- names(which(rowSums(W) > 0))
   cells <- intersect(cells, cells1)
   ncell <- length(cells)
@@ -159,8 +159,6 @@ RunBlockCorr <- function(object = NULL,
     }
 
     y <- GetAssayData(object, assay = bind.assay, slot = "data")
-
-    DefaultAssay(object) <- old.assay
     y <- y[,cells]
 
     rs <- Matrix::rowSums(y>0)
@@ -172,6 +170,7 @@ RunBlockCorr <- function(object = NULL,
     
     cs <- NULL
     norm <- FALSE
+    DefaultAssay(object) <- old.assay
   }
 
   features <- intersect(features, rownames(tab))
