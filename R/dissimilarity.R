@@ -4,8 +4,10 @@ RunBlockCorr <- function(object = NULL,
                          bind.name = "gene_name",
                          features = NULL,
                          assay = NULL,
+                         min.cells = 10,
                          bind.assay = NULL,
                          bind.features = NULL,
+                         min.cells.bind = 10,
                          prefix = NULL,
                          feature.types = NULL,                         
                          min.features.per.block = 1,
@@ -49,13 +51,17 @@ RunBlockCorr <- function(object = NULL,
   
   features <- features %||% AutoCorrFeatures(object)
   features <- intersect(features, rownames(object))
-
+  
   message(paste0("Working on ", length(features), " features."))
-
   threads <- getCores(threads)
 
   W <- object[[weight.matrix.name]]
 
+  cells <- cells %||% colnames(object)
+  cells1 <- names(which(rowSums(W) > 0))
+  cells <- intersect(cells, cells1)
+  ncell <- length(cells)
+  
   object0 <- object[[assay]]
   tab <- object0[[]]
 
@@ -72,9 +78,8 @@ RunBlockCorr <- function(object = NULL,
 
   bind.features <- bind.features %||% blocks
   blocks <- intersect(bind.features, blocks)
-  
   features <- intersect(features, rownames(tab))
-    
+
   if (length(features) == 0) {
     stop("No features found.")
   }
@@ -96,16 +101,18 @@ RunBlockCorr <- function(object = NULL,
       blocks <- names(which(table(tab[[bind.name]]) >= min.features.per.block))
       tab <- subset(tab, tab[[bind.name]] %in% blocks)
     }
-    x <- GetAssayData(object, assay = assay, slot = "counts")
-  
-    # cell sizes
+
+    x <- GetAssayData(object, assay = assay, layer = "counts")
     cs <- cell.size %||% colSums(x)
     
-    #cells <- colnames(W)
-    cells <- names(which(rowSums(W) > 0))
-    ncell <- length(cells)
-    
     x <- x[,cells]
+
+    rs <- Matrix::rowSums(x>0)
+    idx <- which(rs >= min.cells)
+    features1 <- rownames(object)[idx]
+    features <- intersect(features, features1)
+    tab <- tab[features,]
+    
     cs <- cs[cells]
     W <- W[cells,cells]
     
@@ -129,18 +136,21 @@ RunBlockCorr <- function(object = NULL,
       abort("No layer found. Please run NormalizeData or RunTFIDF and retry..")
     }
 
-    x <- GetAssayData(object, assay = assay, slot = "data")
-
-    cells <- names(which(rowSums(W) > 0))
-    ncell <- length(cells)
+    x <- GetAssayData(object, assay = assay, layer = "data")
     x <- x[,cells]
     W <- W[cells,cells]
+
+    rs <- Matrix::rowSums(x>0)
+    idx <- which(rs >= min.cells)
+    features1 <- rownames(object)[idx]
+    features <- intersect(features, features1)
+    tab <- tab[features,]
+    blocks <- unique(tab[[bind.name]])
     
     message(paste0("Trying to retrieve data from assay ", bind.assay,".."))
     old.assay <- DefaultAssay(object)
     DefaultAssay(object) <- bind.assay
     blocks <- intersect(blocks, rownames(object))
-    tab <- subset(tab, tab[[bind.name]] %in% blocks)
 
     layer <- Layers(object = object[[bind.assay]], search = "data")
     if (is.null(layer)) {
@@ -152,6 +162,13 @@ RunBlockCorr <- function(object = NULL,
     DefaultAssay(object) <- old.assay
     y <- y[,cells]
 
+    rs <- Matrix::rowSums(y>0)
+    idx <- which(rs >= min.cells.bind)
+    blocks1 <- rownames(object)[idx]
+    blocks <- intersect(blocks, blocks1)
+
+    tab <- subset(tab, tab[[bind.name]] %in% blocks)
+    
     cs <- NULL
     norm <- FALSE
   }
