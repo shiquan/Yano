@@ -1,3 +1,11 @@
+
+#'@export
+DScore <- function(x = NULL, y = NULL, W = NULL)
+{
+  d <- .Call("D_score_lite", x, y, W)
+  d
+}
+
 #' @importFrom Matrix sparseMatrix
 #' @export
 RunBlockCorr <- function(object = NULL,

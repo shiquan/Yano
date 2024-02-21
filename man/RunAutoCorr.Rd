@@ -7,7 +7,7 @@
 RunAutoCorr(
   object = NULL,
   assay = NULL,
-  slot = "data",
+  layer = "data",
   spatial = FALSE,
   snn.name = NULL,
   order.cells = NULL,
