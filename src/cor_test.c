@@ -187,7 +187,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
 
     R_CheckStack();
     
-    int N_cell = A->nrow;
+    int n_cell = A->nrow;
     int N_feature = A->ncol;
 
     SEXP Ival = PROTECT(allocVector(REALSXP, N_feature));
@@ -213,7 +213,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
         if (perm > 1) {
             ris = R_Calloc(CACHE_PER_BATCH,int*);
             for (int pi = 0; pi < CACHE_PER_BATCH; ++pi) {
-                ris[pi] = random_idx(N_cell);
+                ris[pi] = random_idx(n_cell);
             }
         }
 
@@ -227,7 +227,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
                 continue;
             }
             
-            double *tmp = R_Calloc(N_cell, double);
+            double *tmp = R_Calloc(n_cell, double);
             int j;
             double mn = 0,
                 //sd = 0,
@@ -239,14 +239,14 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
                 mn += ax[j];
                 tmp[ai[j]] = ax[j];
             }
-            mn = mn/N_cell;
+            mn = mn/n_cell;
             
-            for (j = 0; j < N_cell; ++j) {
+            for (j = 0; j < n_cell; ++j) {
                 tmp[j] = tmp[j] - mn;
                 xix += pow(tmp[j], 2);
             }
             
-            for (int k = 0; k < N_cell; ++k) {
+            for (int k = 0; k < n_cell; ++k) {
                 for (j = wp[k]; j < wp[k+1]; ++j) {
                     if (ISNAN(wx[j])) continue;
                     int cid = wi[j];
@@ -262,8 +262,8 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
                 xij = 0;
                 
                 for (int pi = 0; pi < CACHE_PER_BATCH; ++pi) {
-                    shuffle(tmp, ris[pi], N_cell);
-                    for (int k = 0; k < N_cell; ++k) {
+                    shuffle(tmp, ris[pi], n_cell);
+                    for (int k = 0; k < n_cell; ++k) {
                         for (j = wp[k]; j < wp[k+1]; ++j) {
                             if (ISNAN(wx[j])) continue;
                             int cid = wi[j];
@@ -350,7 +350,7 @@ SEXP smooth_test(SEXP _A, SEXP _W,
     W = M_cholmod_transpose(W, (int)W->xtype, &c);
 
     R_CheckStack();
-    const int N_cell = A->nrow;
+    const int n_cell = A->nrow;
     const int N_feature = length(idx);
 
     const int * ap = (int*)A->p;
@@ -366,8 +366,8 @@ SEXP smooth_test(SEXP _A, SEXP _W,
             continue;
         }
         
-        double *tmpa = R_Calloc(N_cell, double);
-        memset(tmpa, 0, sizeof(double)*N_cell);
+        double *tmpa = R_Calloc(n_cell, double);
+        memset(tmpa, 0, sizeof(double)*n_cell);
         int j;
         for (j = ap[ii]; j < ap[ii+1]; ++j) {
             if (ISNAN(ax[j])) continue;
@@ -375,10 +375,10 @@ SEXP smooth_test(SEXP _A, SEXP _W,
             tmpa[cid] = log(ax[j]/REAL(cs)[cid]*scale_factor + 1);
         }
         
-        double *tmpa_s = R_Calloc(N_cell, double);
-        smooth_W(tmpa, tmpa_s, N_cell, W);
-        SEXP val = PROTECT(allocVector(REALSXP, N_cell));
-        for (j = 0; j < N_cell; ++j) {
+        double *tmpa_s = R_Calloc(n_cell, double);
+        smooth_W(tmpa, tmpa_s, n_cell, W);
+        SEXP val = PROTECT(allocVector(REALSXP, n_cell));
+        for (j = 0; j < n_cell; ++j) {
             REAL(val)[j] = tmpa_s[j];
         }
         SET_VECTOR_ELT(ta, i, val);
@@ -394,6 +394,80 @@ SEXP smooth_test(SEXP _A, SEXP _W,
     return ta;
 }
 
+SEXP D_score_lite(SEXP _A, SEXP _B, SEXP _W)
+{
+    int n_cell = length(_A);
+    assert(n_cell == length(_B));
+    CHM_SP W = AS_CHM_SP__(_W);
+    if (W->stype) return mkString("W cannot be symmetric");
+    if (W->nrow != W->ncol) return mkString("W is not a square matrix.");    
+    if (W->ncol != n_cell) return mkString("Inconsistant cell number.");
+
+    double *tmpa = R_Calloc(n_cell, double);
+    double *tmpb = R_Calloc(n_cell, double);
+    memset(tmpa, 0, sizeof(double)*n_cell);
+    memset(tmpb, 0, sizeof(double)*n_cell);
+    double mna = 0, mnb = 0;
+
+    for (int i = 0; i < n_cell; ++i) {
+        tmpa[i] = REAL(_A)[i];
+        tmpb[i] = REAL(_B)[i];
+        mna = mna + tmpa[i];
+        mnb = mnb + tmpb[i];
+    }
+    mna = mna/n_cell;
+    mnb = mnb/n_cell;
+
+    double *tmpa_s = R_Calloc(n_cell, double);
+    double *tmpb_s = R_Calloc(n_cell, double);
+    smooth_W(tmpa, tmpa_s, n_cell, W);
+    smooth_W(tmpb, tmpb_s, n_cell, W);
+    double mna_s = 0, mnb_s = 0;
+        
+    for (int j = 0; j < n_cell; ++j) {
+        mna_s += tmpa_s[j];
+        mnb_s += tmpb_s[j];
+    }
+    mna_s = mna_s/(double)n_cell;
+    mnb_s = mnb_s/(double)n_cell;
+        
+    double Lx1 = 0,
+        Lx2 = 0,
+        Ly1 = 0,
+        Ly2 = 0,
+        ra  = 0,
+        rb1 = 0,
+        rb2 = 0;
+    for (int j = 0; j < n_cell; ++j) {
+        Lx1 += pow(tmpa_s[j]-mna,2);
+        Lx2 += pow(tmpa[j]-mna,2);
+        Ly1 += pow(tmpb_s[j]-mnb,2);
+        Ly2 += pow(tmpb[j]-mnb,2);
+        
+        tmpa_s[j] = tmpa_s[j] - mna_s;
+        tmpb_s[j] = tmpb_s[j] - mnb_s;
+        ra  += tmpa_s[j] * tmpb_s[j];
+        rb1 += pow(tmpa_s[j],2);
+            rb2 += pow(tmpb_s[j],2);
+    }
+    
+    R_Free(tmpa);
+    R_Free(tmpb);
+    R_Free(tmpa_s);
+    R_Free(tmpb_s);
+
+    rb1 = sqrt(rb1);
+    rb2 = sqrt(rb2);
+    
+    double Lx = Lx1/Lx2;
+    double r = ra/(rb1*rb2);
+    
+    SEXP result = PROTECT(allocVector(REALSXP, 1));
+    REAL(result)[0] = sqrt(Lx) * (1-r);
+    UNPROTECT(1);
+    
+    return result; 
+}
 SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             SEXP _permut,
             SEXP _threads,
@@ -429,8 +503,8 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     //W = M_cholmod_transpose(W, (int)W->xtype, &c);
 
     R_CheckStack();
-    const int N_cell = A->nrow;
-    //const int N_cell = length(cidx);
+    const int n_cell = A->nrow;
+    //const int n_cell = length(cidx);
     const int N_feature = length(idx);
 
     assert (length(bidx) == N_feature);
@@ -454,7 +528,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     int **ris = NULL;
     ris = R_Calloc(perm,int*);
     for (int pi = 0; pi < perm; ++pi) {
-        ris[pi] = random_idx(N_cell);
+        ris[pi] = random_idx(n_cell);
     }
     
     int i;
@@ -474,10 +548,10 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             continue;
         }
         
-        double *tmpa = R_Calloc(N_cell, double);
-        double *tmpb = R_Calloc(N_cell, double);
-        memset(tmpa, 0, sizeof(double)*N_cell);
-        memset(tmpb, 0, sizeof(double)*N_cell);
+        double *tmpa = R_Calloc(n_cell, double);
+        double *tmpb = R_Calloc(n_cell, double);
+        memset(tmpa, 0, sizeof(double)*n_cell);
+        memset(tmpb, 0, sizeof(double)*n_cell);
         double mna = 0,
             mnb = 0;
         int j;
@@ -502,7 +576,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             }
             mnb += tmpb[cid];
         }
-        mnb = mnb/N_cell;
+        mnb = mnb/n_cell;
 
         for (j = ap[ii]; j < ap[ii+1]; ++j) {
             if (ISNAN(ax[j])) continue;            
@@ -513,19 +587,19 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             }
             mna += tmpa[cid];
         }
-        mna = mna/N_cell;
+        mna = mna/n_cell;
 
         if (scale) {
             double sd1 = 0;
             double sd2 = 0;
-            for (j = 0; j < N_cell; ++j) {
+            for (j = 0; j < n_cell; ++j) {
                 sd1 += pow(tmpa[j] - mna, 2);
                 sd2 += pow(tmpb[j] - mnb, 2);
             }
-            sd1 = sqrt(sd1/N_cell);
-            sd2 = sqrt(sd2/N_cell);
+            sd1 = sqrt(sd1/n_cell);
+            sd2 = sqrt(sd2/n_cell);
 
-            for (j = 0; j < N_cell; ++j) {
+            for (j = 0; j < n_cell; ++j) {
                 tmpa[j] = (tmpa[j] - mna)/sd1;
                 tmpb[j] = (tmpb[j] - mnb)/sd2;
             }
@@ -534,18 +608,18 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             mnb = 0;
         }
         
-        double *tmpa_s = R_Calloc(N_cell, double);
-        double *tmpb_s = R_Calloc(N_cell, double);
-        smooth_W(tmpa, tmpa_s, N_cell, W);
-        smooth_W(tmpb, tmpb_s, N_cell, W);
+        double *tmpa_s = R_Calloc(n_cell, double);
+        double *tmpb_s = R_Calloc(n_cell, double);
+        smooth_W(tmpa, tmpa_s, n_cell, W);
+        smooth_W(tmpb, tmpb_s, n_cell, W);
         double mna_s = 0,
             mnb_s = 0;
-        for (j = 0; j < N_cell; ++j) {
+        for (j = 0; j < n_cell; ++j) {
             mna_s += tmpa_s[j];
             mnb_s += tmpb_s[j];
         }
-        mna_s = mna_s/(double)N_cell;
-        mnb_s = mnb_s/(double)N_cell;
+        mna_s = mna_s/(double)n_cell;
+        mnb_s = mnb_s/(double)n_cell;
         
         double Lx1 = 0,
             Lx2 = 0,
@@ -554,7 +628,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             ra  = 0,
             rb1 = 0,
             rb2 = 0;
-        for (j = 0; j < N_cell; ++j) {
+        for (j = 0; j < n_cell; ++j) {
             Lx1 += pow(tmpa_s[j]-mna,2);
             Lx2 += pow(tmpa[j]-mna,2);
             Ly1 += pow(tmpb_s[j]-mnb,2);
@@ -589,17 +663,17 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         double *es = R_Calloc(perm, double);
         int k;
         for (k = 0; k < perm; ++k) {
-            shuffle(tmpa, ris[k], N_cell);
-            smooth_W(tmpa, tmpa_s, N_cell, W);
+            shuffle(tmpa, ris[k], n_cell);
+            smooth_W(tmpa, tmpa_s, n_cell, W);
             mna_s = 0;
-            for (j = 0; j < N_cell; ++j) {
+            for (j = 0; j < n_cell; ++j) {
                 mna_s += tmpa_s[j];
             }
-            mna_s = mna_s/(double)N_cell;
+            mna_s = mna_s/(double)n_cell;
             Lx1 = 0;
             ra = 0;
             rb1 = 0;
-            for (j = 0; j < N_cell; ++j) {
+            for (j = 0; j < n_cell; ++j) {
                 Lx1 += pow(tmpa_s[j]-mna,2);
                 tmpa_s[j] = tmpa_s[j] - mna_s;
                 ra += tmpa_s[j] * tmpb_s[j];
@@ -812,7 +886,7 @@ SEXP D_test_cell(SEXP _A, SEXP _B, SEXP _W,
     W = M_cholmod_transpose(W, (int)W->xtype, &c);
 
     R_CheckStack();
-    const int N_cell = A->nrow;
+    const int n_cell = A->nrow;
     const int N_feature = length(idx);
     
     SEXP LXval = PROTECT(allocVector(REALSXP, N_feature));
@@ -830,11 +904,11 @@ SEXP D_test_cell(SEXP _A, SEXP _B, SEXP _W,
     int **ris = NULL;
     ris = R_Calloc(perm,int*);
     for (int pi = 0; pi < perm; ++pi) {
-        ris[pi] = random_idx(N_cell);
+        ris[pi] = random_idx(n_cell);
     }
     
-    double *bx = malloc(N_cell*sizeof(double));
-    for (int ii = 0; ii < N_cell; ++ii) {
+    double *bx = malloc(n_cell*sizeof(double));
+    for (int ii = 0; ii < n_cell; ++ii) {
         bx[ii] = REAL(_B)[ii];
     }
     
@@ -852,10 +926,10 @@ SEXP D_test_cell(SEXP _A, SEXP _B, SEXP _W,
             continue;
         }
         
-        double *tmpa = R_Calloc(N_cell, double);
-        double *tmpb = R_Calloc(N_cell, double);
-        memset(tmpa, 0, sizeof(double)*N_cell);
-        memset(tmpb, 0, sizeof(double)*N_cell);
+        double *tmpa = R_Calloc(n_cell, double);
+        double *tmpb = R_Calloc(n_cell, double);
+        memset(tmpa, 0, sizeof(double)*n_cell);
+        memset(tmpb, 0, sizeof(double)*n_cell);
         double mna = 0,
             mnb = 0;
         int j;
@@ -865,9 +939,9 @@ SEXP D_test_cell(SEXP _A, SEXP _B, SEXP _W,
             tmpa[cid] = ax[j];
         }
         
-        for (j = 0; j < N_cell; ++j) tmpb[j] = bx[j];
+        for (j = 0; j < n_cell; ++j) tmpb[j] = bx[j];
 
-        for (j = 0; j < N_cell; ++j) {
+        for (j = 0; j < n_cell; ++j) {
             if (sens) {
                 tmpb[j] = tmpb[j] - tmpa[j];
                 if (tmpb[j] < 0) tmpb[j] = 0;
@@ -875,7 +949,7 @@ SEXP D_test_cell(SEXP _A, SEXP _B, SEXP _W,
             tmpb[j] = tmpb[j]/REAL(cs)[j];
             mnb += tmpb[j];
         }
-        mnb = mnb/N_cell;
+        mnb = mnb/n_cell;
 
         for (j = ap[ii]; j < ap[ii+1]; ++j) {
             if (ISNAN(ax[j])) continue;            
@@ -883,20 +957,20 @@ SEXP D_test_cell(SEXP _A, SEXP _B, SEXP _W,
             tmpa[cid] = ax[j]/REAL(cs)[cid]*scale_factor;
             mna += tmpa[cid];
         }
-        mna = mna/N_cell;
+        mna = mna/n_cell;
         
-        double *tmpa_s = R_Calloc(N_cell, double);
-        double *tmpb_s = R_Calloc(N_cell, double);
-        smooth_W(tmpa, tmpa_s, N_cell, W);
-        smooth_W(tmpb, tmpb_s, N_cell, W);
+        double *tmpa_s = R_Calloc(n_cell, double);
+        double *tmpb_s = R_Calloc(n_cell, double);
+        smooth_W(tmpa, tmpa_s, n_cell, W);
+        smooth_W(tmpb, tmpb_s, n_cell, W);
         double mna_s = 0,
             mnb_s = 0;
-        for (j = 0; j < N_cell; ++j) {
+        for (j = 0; j < n_cell; ++j) {
             mna_s += tmpa_s[j];
             mnb_s += tmpb_s[j];
         }
-        mna_s = mna_s/(double)N_cell;
-        mnb_s = mnb_s/(double)N_cell;
+        mna_s = mna_s/(double)n_cell;
+        mnb_s = mnb_s/(double)n_cell;
         
         double Lx1 = 0,
             Lx2 = 0,
@@ -905,7 +979,7 @@ SEXP D_test_cell(SEXP _A, SEXP _B, SEXP _W,
             ra  = 0,
             rb1 = 0,
             rb2 = 0;
-        for (j = 0; j < N_cell; ++j) {
+        for (j = 0; j < n_cell; ++j) {
             Lx1 += pow(tmpa_s[j]-mna,2);
             Lx2 += pow(tmpa[j]-mna,2);
             //Ly1 += pow(tmpb_s[j]-mnb,2);
@@ -940,17 +1014,17 @@ SEXP D_test_cell(SEXP _A, SEXP _B, SEXP _W,
         double *es = R_Calloc(perm, double);
         int k;
         for (k = 0; k < perm; ++k) {
-            shuffle(tmpa, ris[k], N_cell);
-            smooth_W(tmpa, tmpa_s, N_cell, W);
+            shuffle(tmpa, ris[k], n_cell);
+            smooth_W(tmpa, tmpa_s, n_cell, W);
             mna_s = 0;
-            for (j = 0; j < N_cell; ++j) {
+            for (j = 0; j < n_cell; ++j) {
                 mna_s += tmpa_s[j];
             }
-            mna_s = mna_s/(double)N_cell;
+            mna_s = mna_s/(double)n_cell;
             Lx1 = 0;
             ra = 0;
             rb1 = 0;
-            for (j = 0; j < N_cell; ++j) {
+            for (j = 0; j < n_cell; ++j) {
                 Lx1 += pow(tmpa_s[j]-mna,2);
                 tmpa_s[j] = tmpa_s[j] - mna_s;
                 ra += tmpa_s[j] * tmpb_s[j];
