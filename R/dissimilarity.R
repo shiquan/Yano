@@ -98,6 +98,7 @@ RunBlockCorr <- function(object = NULL,
   
   message(paste0("Processing ", length(blocks), " blocks.."))
   tab <- subset(tab, tab[[bind.name]] %in% blocks)
+  features <- intersect(features, rownames(tab))
   
   bind.assay <- bind.assay %||% "tmp.assay"
 
@@ -108,6 +109,7 @@ RunBlockCorr <- function(object = NULL,
       min.features.per.block <- 2
       blocks <- names(which(table(tab[[bind.name]]) >= min.features.per.block))
       tab <- subset(tab, tab[[bind.name]] %in% blocks)
+      features <- intersect(features, rownames(tab))
     }
 
     x <- GetAssayData(object, assay = assay, layer = "counts")
@@ -195,11 +197,15 @@ RunBlockCorr <- function(object = NULL,
   r <- ta[[3]]
   e <- ta[[4]]
   tval <- ta[[5]]
-
+  mval <- ta[[6]]
+  vval <- ta[[7]]
+  
   names(Lx) <- features
   names(Ly) <- features
   names(r) <- features
   names(e) <- features
+  names(mval) <- features
+  names(vval) <- features
   
   pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
   names(pval) <- features
@@ -207,6 +213,9 @@ RunBlockCorr <- function(object = NULL,
   tab[[paste0(prefix, ".D")]] <- e[rownames(object)]
   tab[[paste0(prefix, ".r")]] <- r[rownames(object)]
   tab[[paste0(prefix, ".pval")]] <- pval[rownames(object)]
+  tab[[paste0(prefix, ".mean")]] <- mval[rownames(object)]
+  tab[[paste0(prefix, ".var")]] <- vval[rownames(object)]
+  
   object0[[colnames(tab)]] <- tab
 
   object[[assay]] <- object0
