@@ -430,7 +430,7 @@ SEXP D_score_lite(SEXP _A, SEXP _B, SEXP _W)
     }
     mna_s = mna_s/(double)n_cell;
     mnb_s = mnb_s/(double)n_cell;
-        
+
     double Lx1 = 0,
         Lx2 = 0,
         Ly1 = 0,
@@ -620,7 +620,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         }
         mna_s = mna_s/(double)n_cell;
         mnb_s = mnb_s/(double)n_cell;
-        
+
         double Lx1 = 0,
             Lx2 = 0,
             Ly1 = 0,
