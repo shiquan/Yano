@@ -80,7 +80,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
 
   sl <- lapply(1:n, function(i) {
     assay0 <- assay[i]
-    object0 <- object[[assay]]
+    object0 <- object[[assay0]]
     tab0 <- object0[[]]
     
     if (chr %ni% colnames(tab0)) stop("No chr name found.")
@@ -107,7 +107,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
       tab[[col.by]] <- tab0[[col.by]]
     }
 
-    tab[['assay']] <- assay
+    tab[['assay']] <- assay0
 
     tab <- subset(tab, !is.na(pval))
     tab
