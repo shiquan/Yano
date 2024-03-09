@@ -270,9 +270,10 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
 }
 
 #'@export
-parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
+parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE, db = NULL)
 {
   old.assay <- DefaultAssay(object)
+  assay <- assay %||% old.assay
   DefaultAssay(object) <- assay
   rn <- rownames(object)
 
@@ -288,10 +289,10 @@ parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
       gsub("(.*:[0-9]+)([ACGT=>]*).*", "\\1", x)
     }
   }))
-
+  
   strands <- unlist(lapply(rn, function(x) {
     s <- grep("/[+-]$", x)
-    if (is.null(s)) {
+    if (!is.null(s)) {
       if (isTRUE(ignore.strand)) {
         "*"
       } else {
@@ -301,7 +302,7 @@ parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
       "*"
     }
   }))
-
+  
   chrs <- gsub("(.*):([0-9]+).*","\\1", locs)
   starts <- as.integer(gsub("(.*):([0-9]+).*","\\2", locs))
 
@@ -318,6 +319,29 @@ parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
   all[idx] <- "ref"
   object0[['type']] <- all
 
+  if (!is.null(db)) {
+    gr <- GRanges(seqnames=chrs, ranges = IRanges(start = as.integer(starts), width = 1), name = rn, strand = strands)
+    genes1 <- db$gene
+    exons1 <- db$exon
+    gr$gene <- "."
+    gr$type <- "intergenic"
+    ?findOverlaps
+    ov <- findOverlaps(gr, genes1, ignore.strand=TRUE)
+    gr[queryHits(ov)]$gene <- genes1[subjectHits(ov)]$gene_name
+    gr[queryHits(ov)]$type <- "antisense"
+
+    ov <- findOverlaps(gr, genes1, ignore.strand=FALSE)
+    gr[queryHits(ov)]$gene <- genes1[subjectHits(ov)]$gene_name
+    gr[queryHits(ov)]$type <- "intron"
+
+    ov <- findOverlaps(gr, exons1)
+    gr[queryHits(ov)]$type <- "exon"
+    gr
+    table(df$gene == gr$gene)
+    object0[['gene']] <- gr$gene
+    object0[['type']] <- gr$type
+  }
+  
   object[[assay]] <- object0
   DefaultAssay(object) <- old.assay
 
