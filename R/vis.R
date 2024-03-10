@@ -42,17 +42,17 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
 
   if (!is.null(col.by)) {
     if (is.null(shape.by)) {
-      p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]], size = size.by), shape=21,...)
+      p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]], size = .data[[size.by]]), shape=21,...)
       p <- p + scale_fill_manual(values = cols)
     } else {
-      p <- p + geom_point(aes(x=bp_cum, y=pval, col=.data[[col.by]], shape=.data[[shape.by]], size = size.by),...)
+      p <- p + geom_point(aes(x=bp_cum, y=pval, col=.data[[col.by]], shape=.data[[shape.by]], size = .data[[[size.by]]]),...)
       p <- p + scale_color_manual(values = cols)
     }
   } else {
     if (is.null(shape.by)) {
-      p <- p + geom_point(aes(x=bp_cum, y=pval, size = size.by),  ...)
+      p <- p + geom_point(aes(x=bp_cum, y=pval, size = .data[[size.by]]),  ...)
     } else {
-      p <- p + geom_point(aes(x=bp_cum, y=pval, shape = .data[[shape.by]], size = size.by),  ...)
+      p <- p + geom_point(aes(x=bp_cum, y=pval, shape = .data[[shape.by]], size = .data[[size.by]]),  ...)
     }
   }
   p <- p + scale_x_continuous(label = axis_set$chr, breaks = axis_set$center,
