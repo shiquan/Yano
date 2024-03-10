@@ -12,8 +12,8 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
   data <- tab %>% inner_join(data_cum, by = "chr") %>% mutate(bp_cum = start + bp_add)
   axis_set <- data %>% group_by(chr) %>% summarize(center = mean(bp_cum))
 
-  data$name <- rownames(tab)
-  rownames(data) <- rownames(tab)
+  data$name <- tab$name
+  #rownames(data) <- rownames(tab)
   
   if (isTRUE(arrange.type)) data <- data %>% arrange(type)
 
@@ -61,7 +61,7 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
   p <- p + xlab(xlab) + ylab(ylab)
 
   if (!is.null(point.label)) {
-    sel <- intersect(point.label, rownames(data))
+    sel <- intersect(point.label, data$name)
     if (length(sel) > 0) {
       p <- p + geom_label_repel(data=data[sel,],aes(x=bp_cum, y=pval,label=name),box.padding = 0.5, max.overlaps = Inf, size=label.size)
     }
@@ -101,12 +101,11 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
     tab <- data.frame(chr = factor(tab0[[chr]], levels = lv),
                       start = as.numeric(tab0[[start]]),
                       pval = -log10(as.numeric(tab0[[val]])),
-                      row.names = rownames(tab0))
+                      name = rownames(tab0))
     
     if (!is.null(col.by)) {
       tab[[col.by]] <- tab0[[col.by]]
     }
-
     
     tab[['assay']] <- assay0
 
