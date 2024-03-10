@@ -117,7 +117,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
   tab <- data.table::rbindlist(sl)
 
   if (n == 1) {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size, size.by = size.by, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size, ...)
   } else {
     p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = "assay", xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size,  ...)
   }
