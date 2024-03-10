@@ -360,7 +360,7 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, ignore.strand 
   message(paste0("Working on assay ", assay))
 
   old.assay <- DefaultAssay(object)
-
+  
   object <- parseVAR(object = object, assay = assay, ignore.strand = ignore.strand)
   
   bed <- fread(file)[,c(1:9)]

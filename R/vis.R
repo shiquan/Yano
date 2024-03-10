@@ -4,7 +4,7 @@
 #'@import ggrepel
 #' 
 #'@export
-FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), point.label = NULL, arrange.type = FALSE, label.size=3,...)
+FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), point.label = NULL, arrange.type = FALSE, label.size=3, size.by = NULL, ...)
 {
   data_cum <- tab %>% group_by(chr) %>% summarise(max_bp = max(start)) %>%
     mutate(bp_add = lag(cumsum(max_bp), default = 0)) %>% select(chr, bp_add)
@@ -39,19 +39,20 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
   xi <- xi[-1]
   p <- ggplot(data) + geom_vline(xintercept = xi, color="red", linetype="dotted")
 
+
   if (!is.null(col.by)) {
     if (is.null(shape.by)) {
-      p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]]), shape=21,...)
+      p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]], size = size.by), shape=21,...)
       p <- p + scale_fill_manual(values = cols)
     } else {
-      p <- p + geom_point(aes(x=bp_cum, y=pval, col=.data[[col.by]], shape=.data[[shape.by]]),...)
+      p <- p + geom_point(aes(x=bp_cum, y=pval, col=.data[[col.by]], shape=.data[[shape.by]], size = size.by),...)
       p <- p + scale_color_manual(values = cols)
     }
   } else {
     if (is.null(shape.by)) {
-      p <- p + geom_point(aes(x=bp_cum, y=pval),  ...)
+      p <- p + geom_point(aes(x=bp_cum, y=pval, size = size.by),  ...)
     } else {
-      p <- p + geom_point(aes(x=bp_cum, y=pval, shape = .data[[shape.by]]),  ...)
+      p <- p + geom_point(aes(x=bp_cum, y=pval, shape = .data[[shape.by]], size = size.by),  ...)
     }
   }
   p <- p + scale_x_continuous(label = axis_set$chr, breaks = axis_set$center,
@@ -70,7 +71,7 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
 }
 
 #'@export
-FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), types = NULL, point.label = NULL, arrange.type = FALSE, label.size=3, idents = NULL, ...)
+FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](P)), types = NULL, point.label = NULL, arrange.type = FALSE, label.size=3, idents = NULL, size.by = NULL, ...)
 {
   if (is.null(val)) stop("No value name specified.")  
   cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
@@ -107,6 +108,9 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
       tab[[col.by]] <- tab0[[col.by]]
     }
 
+    if (!is.null(size.by)) {
+      tab[[size.by]] <- tab0[[size.by]]
+    }
     tab[['assay']] <- assay0
 
     tab <- subset(tab, !is.na(pval))
@@ -116,9 +120,9 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
   tab <- data.table::rbindlist(sl)
 
   if (n == 1) {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size, size.by = size.by, ...)
   } else {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = "assay", xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = "assay", xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size, size.by = size.by, ...)
   }
   p
 }
