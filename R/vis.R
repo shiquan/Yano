@@ -63,7 +63,7 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
   if (!is.null(point.label)) {
     sel <- intersect(point.label, data$name)
     if (length(sel) > 0) {
-      p <- p + geom_label_repel(data=data[sel,],aes(x=bp_cum, y=pval,label=name),box.padding = 0.5, max.overlaps = Inf, size=label.size)
+      p <- p + geom_label_repel(data=subset(data, name %in% sel),aes(x=bp_cum, y=pval,label=name),box.padding = 0.5, max.overlaps = Inf, size=label.size)
     }
   }
   p
