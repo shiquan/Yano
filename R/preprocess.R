@@ -278,8 +278,8 @@ parseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE, db = NU
   rn <- rownames(object)
 
   locs <- unlist(lapply(rn, function(x) {
-    s <- grep("/[+-]$", x)
-    if (!is.null(s)) {
+    s <- length(grep("/[+-]$", x))
+    if (s > 0) {
       if (isTRUE(ignore.strand)) {
         gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1", x)
       } else {
@@ -411,7 +411,89 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, ignore.strand 
 
   object
 }
+#' @export
+renameVARs <- function(counts = NULL, strategy = 1) {
+  rn <- rownames(counts)
+  check <- grep("(.*:[0-9]+)([ACGT=>]*).*", rn, invert = TRUE)
+  
+  if (length(check) > 3) {
+    stop(paste0("Unrecongised names :", paste(rn[check[1:3]], sep=",")), " ...")
+  } else if (length(check) > 0) {
+    stop(paste0("Unrecongised names :", paste(rn[check[1:3]], sep=",")))
+  }
+  
+  if (strategy == 2) {
+    nm <- unlist(lapply(rn, function(x) {
+      s <- length(grep("/[+-]$", x))
+      str <- length(grep("=", x))
+      if (str == 0) {
+        if (s >0) {
+          gsub("(.*:[0-9]+[ACGT]*>).*/([-+])", "\\1B/\\2", x)
+        } else {
+          gsub("(.*:[0-9]+[ACGT]*>).*", "\\1B", x)
+        }
+      } else {
+        x
+      }
+    }))
 
+    nm0 <- unique(nm)
+
+    idx <- match(nm, nm0)
+    #counts <- as(counts, "dgCMatrix")
+    x <- Matrix::sparseMatrix(i = idx[counts@i+1], p = counts@p, x= counts@x)
+    rownames(x) <- nm0
+    colnames(x) <- colnames(counts)
+    return(x)
+  } else if (strategy == 3) {
+
+    locs <- unlist(lapply(rn, function(x) {
+      s <- length(grep("/[+-]$", x))
+      if (s > 0) {
+        gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1/\\3", x)
+      } else {
+        gsub("(.*:[0-9]+)([ACGT=>]*).*", "\\1", x)
+      }
+    }))
+    
+    idx <- names(which(table(locs) > 1))    
+    sel <- rn[which(locs %in% idx)]
+    
+    counts <- counts[sel,]
+
+    rm <- rowMeans(counts)
+    #names(locs) <- rn
+    nm <- unlist(lapply (idx, function(x) {
+      sel0 <- rn[which(locs %in% x)]
+      s <- length(grep("/[+-]$", x))
+      if (s > 0) {
+        alleleA <- gsub("(.*)(/.*)","\\1A\\2",x)
+        alleleB <- gsub("(.*)(/.*)","\\1B\\2",x)
+      } else {
+        alleleA <- paste0(x,"A")
+        alleleB <- paste0(x,"B")
+      }
+      new <- rep(alleleB, length(sel0))
+
+      mi <- which.max(rm[sel0])[1]
+      new[mi] <- alleleA
+      names(new) <- sel0
+      new
+    }))
+    
+    nm0 <- unique(nm)
+    idx <- match(nm, nm0)
+    counts <- counts[names(nm),]
+    x <- Matrix::sparseMatrix(i = idx[counts@i+1], p = counts@p, x= counts@x)
+    rownames(x) <- nm0
+    colnames(x) <- colnames(counts)
+    return(x)
+    
+  } else {
+    stop("Only support strategy 2 or 3.")
+  }
+  NULL
+}
 ## #' @importFrom Matrix sparseMatrix
 ## #' @export
 ## RunCellCorr <- function(object = NULL,
