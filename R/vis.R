@@ -109,7 +109,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
     }
 
     if (!is.null(size.by)) {
-      tab[[size.by]] <- tab0[[size.by]]
+      tab[[size.by]] <- as.numeric(tab0[[size.by]])
     }
     tab[['assay']] <- assay0
 
