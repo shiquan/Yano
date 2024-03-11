@@ -121,7 +121,6 @@ RunBlockCorr <- function(object = NULL,
     idx <- which(rs >= min.cells)
     features1 <- rownames(object)[idx]
     features <- intersect(features, features1)
-    tab <- tab[features,]
     
     cs <- cs[cells]
     W <- W[cells,cells]
@@ -154,7 +153,7 @@ RunBlockCorr <- function(object = NULL,
     idx <- which(rs >= min.cells)
     features1 <- rownames(object)[idx]
     features <- intersect(features, features1)
-    tab <- tab[features,]
+    #tab <- tab[features,]
     blocks <- unique(tab[[bind.name]])
     
     message(paste0("Trying to retrieve data from assay ", bind.assay,".."))
