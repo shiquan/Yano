@@ -210,7 +210,7 @@ ParseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE, db = NU
     exons1 <- db$exon
     gr$gene <- "."
     gr$type <- "intergenic"
-    ?findOverlaps
+
     ov <- findOverlaps(gr, genes1, ignore.strand=TRUE)
     gr[queryHits(ov)]$gene <- genes1[subjectHits(ov)]$gene_name
     gr[queryHits(ov)]$type <- "antisense"
@@ -221,8 +221,7 @@ ParseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE, db = NU
 
     ov <- findOverlaps(gr, exons1)
     gr[queryHits(ov)]$type <- "exon"
-    gr
-    table(df$gene == gr$gene)
+
     object0[['gene']] <- gr$gene
     object0[['type']] <- gr$type
   }
