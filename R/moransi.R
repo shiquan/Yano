@@ -28,7 +28,6 @@ RunAutoCorr <- function(object = NULL,
                         features = NULL,
                         weight.matrix.name = "WeightMatrix",
                         prefix="moransi",
-                        #perm = 100,
                         threads=0,
                         ...)
 {
@@ -41,7 +40,12 @@ RunAutoCorr <- function(object = NULL,
     stop("Only support to set one of spatial, snn.name, and order.cells.")
   }
   
-  if (check.par == 0) snn.name <- "RNA_snn"
+  if (check.par == 0) {
+    snns <- grep("_snn$", names(object), value=TRUE)
+    if (length(snns) == 0) stop("No SNN graph found at object, try to specify snn.name first or run Seurat::FindNeighbors.")
+    snn.name <- snns[1]
+    message("Using ", snn.name, " to construct cell weight matrix.")
+  }
 
   layer <- Layers(object = object, search = layer)
   if (is.null(layer)) {
@@ -55,7 +59,7 @@ RunAutoCorr <- function(object = NULL,
 
   cells <- order.cells %||% cells
   cells <- cells %||% colnames(object)
-  cells <- intersect(colnames(object), cells)
+  cells <- intersect(cells,colnames(object))
   
   features <- features %||% rownames(object)
   features <- intersect(rownames(object),features)
