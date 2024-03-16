@@ -39,12 +39,12 @@ anno_vcf <-  function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NU
 }
 
 #' @export
-EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL)
+EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, adjust.af = FALSE)
 {
   assay <- assay %||% DefaultAssay(object)
   old.assay <- DefaultAssay(obj)
   DefaultAssay(obj) <- assay
-  if (length(intersect(c("chr","start","ref","alt"), colnames(df))) == 4) {
+  if (length(intersect(c("chr","start","ref","alt"), colnames(df))) != 4) {
     message("Parse names ..")
     obj <- ParseVAR(obj)
   }
