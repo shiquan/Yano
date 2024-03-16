@@ -162,47 +162,48 @@ ParseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE, db = NU
   DefaultAssay(object) <- assay
   rn <- rownames(object)
 
-  locs <- unlist(lapply(rn, function(x) {
-    s <- length(grep("/[+-]$", x))
-    if (s > 0) {
-      if (isTRUE(ignore.strand)) {
-        gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1", x)
-      } else {
-        gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1/\\3", x)
-      }
-    } else {
-      gsub("(.*:[0-9]+)([ACGT=>]*).*", "\\1", x)
-    }
-  }))
+  sl <- .Call("parse_var_names", rn)
+
+  if (is.null(sl)) return(NULL);
   
-  strands <- unlist(lapply(rn, function(x) {
-    s <- grep("/[+-]$", x)
-    if (!is.null(s)) {
-      if (isTRUE(ignore.strand)) {
-        "*"
-      } else {
-        gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\3", x)
-      }
-    } else {
-      "*"
-    }
-  }))
+  ## locs <- unlist(lapply(rn, function(x) {
+  ##   s <- length(grep("/[+-]$", x))
+  ##   if (s > 0) {
+  ##     if (isTRUE(ignore.strand)) {
+  ##       gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1", x)
+  ##     } else {
+  ##       gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1/\\3", x)
+  ##     }
+  ##   } else {
+  ##     gsub("(.*:[0-9]+)([ACGT=>]*).*", "\\1", x)
+  ##   }
+  ## }))
   
-  chrs <- gsub("(.*):([0-9]+).*","\\1", locs)
-  starts <- as.integer(gsub("(.*):([0-9]+).*","\\2", locs))
+  ## strands <- unlist(lapply(rn, function(x) {
+  ##   s <- grep("/[+-]$", x)
+  ##   if (!is.null(s)) {
+  ##     if (isTRUE(ignore.strand)) {
+  ##       "*"
+  ##     } else {
+  ##       gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\3", x)
+  ##     }
+  ##   } else {
+  ##     "*"
+  ##   }
+  ## }))
+  
+  ## chrs <- gsub("(.*):([0-9]+).*","\\1", locs)
+  ## starts <- as.integer(gsub("(.*):([0-9]+).*","\\2", locs))
 
   object0 <- object[[assay]]
-  object0[['chr']] <- chrs
-  object0[['start']] <- as.integer(starts)
-  object0[['strand']] <- strands
-  object0[['locus']] <- locs
+  object0[['chr']] <- sl[[1]]
+  object0[['start']] <- sl[[2]]
+  object0[['ref']] <- sl[[3]]
+  object0[['alt']] <- sl[[4]]
+  object0[['strand']] <- sl[[5]]
 
-  idx <- which(str_detect(rn,"="))
-  
-  object0[['type']] <- "alt"
-  all <- object0[['type']][[1]]
-  all[idx] <- "ref"
-  object0[['type']] <- all
+  locs <- paste0(sl[[1]],":",sl[[2]],"/",sl[[5]])
+  object0[['locus']] <- locs
 
   if (!is.null(db)) {
     gr <- GRanges(seqnames=chrs, ranges = IRanges(start = as.integer(starts), width = 1), name = rn, strand = strands)
@@ -245,7 +246,7 @@ LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, ignore.strand 
 
   old.assay <- DefaultAssay(object)
   
-  object <- parseVAR(object = object, assay = assay, ignore.strand = ignore.strand)
+  object <- ParseVAR(object = object, assay = assay, ignore.strand = ignore.strand)
   
   bed <- fread(file)[,c(1:9)]
   colnames(bed) <- c("chr","start","end","name","score","strand","n_gene","gene_name","type")
