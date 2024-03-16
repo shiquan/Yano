@@ -38,14 +38,22 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
   xi <- data_cum$bp_add
   xi <- xi[-1]
   p <- ggplot(data) + geom_vline(xintercept = xi, color="red", linetype="dotted")
-
+  
   if (!is.null(col.by)) {
     if (is.null(shape.by)) {
       p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]]), shape=21, ...)
-      p <- p + scale_fill_manual(values = cols)
+      if (is.numeric(data[[col.by]])) {
+        p <- p + scale_fill_virdis()
+      } else {
+        p <- p + scale_fill_manual(values = cols)
+      }
     } else {
       p <- p + geom_point(aes(x=bp_cum, y=pval, col=.data[[col.by]], shape=.data[[shape.by]]), ...)
-      p <- p + scale_color_manual(values = cols)
+      if (is.numeric(data[[col.by]])) {
+        p <- p + scale_color_virdis()
+      } else {
+        p <- p + scale_color_manual(values = cols)
+      }
     }
   } else {
     if (is.null(shape.by)) {

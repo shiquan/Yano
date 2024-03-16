@@ -59,10 +59,10 @@ EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
 
     if (isTRUE(adjust.af) & length(tags) == 1) {
       rownames(df0) <- rownames(df)
-      subset(df0, is.na(tags) & ref == alt) %>% rownames -> sel
+      subset(df0, is.na(df0[[tags]]) & ref == alt) %>% rownames -> sel
       df0[sel, tags] <- 1
 
-      subset(df0, is.na(tags) & ref != alt) %>% rownames -> sel
+      subset(df0, is.na(df0[[tags]]) & ref != alt) %>% rownames -> sel
       df0[sel, tags] <- 0
       object[[assay]][[tags]] <- df0[[tags]]
     }
