@@ -771,7 +771,7 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
             bcf_unpack(v, BCF_UN_INFO);
             
             if (strcmp(v->d.allele[0], ref) != 0) {
-                Rprintf("Inconsistant reference, make sure you use the right genome reference. tid: %d. %s:%d,%s vs %s, %s\n", tid, chr, start, ref, v->d.allele[0], v->d.allele[1]);
+                Rprintf("Inconsistant reference, make sure you use the right genome reference. tid: %d. %s:%d,%s vs %s, %d\n", tid, chr, start, ref, v->d.allele[0], v->rid);
                 continue;
             }
             int allele;
