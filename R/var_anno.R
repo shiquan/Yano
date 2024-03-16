@@ -1,5 +1,5 @@
 #' @export
-varanno <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, gtf = NULL, vcf = NULL, tags = NULL) {
+varanno <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE) {
   if (is.null(chr)) stop("No chr specified.")
   if (is.null(start)) stop("No start specified.")
 
@@ -18,7 +18,7 @@ varanno <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL
   }
 
   if (!is.null(vcf) & !is.null(tags)) {
-    sl <- anno_vcf(chr, start, end, ref, alt, strand, vcf, tags)
+    sl <- anno_vcf(chr = chr, start = start, end = end, ref = ref, alt = alt, strand = strand, vcf = vcf, tags = tags, check.alt.only = check.alt.only)
     if (is.null(sl)) error("Failed to annotate VCF.")
     n <- length(tags)
     for (i in 1:n) {
@@ -33,13 +33,13 @@ anno_hgvs <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NU
   sl
 }
 
-anno_vcf <-  function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, vcf = NULL, tags = NULL, adjust.af = FALSE) {
-  sl <- .Call("anno_vcf", chr, start, end, ref, alt, strand, normalizePath(vcf), tags)
+anno_vcf <-  function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE) {
+  sl <- .Call("anno_vcf", chr, start, end, ref, alt, strand, normalizePath(vcf), tags, check.alt.only)
   sl
 }
 
 #' @export
-EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, adjust.af = FALSE)
+EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE, adjust.af = FALSE)
 {
   assay <- assay %||% DefaultAssay(object)
   old.assay <- DefaultAssay(obj)
@@ -52,7 +52,7 @@ EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
   df <- object[[assay]][[]]
 
   if (!is.null(tags) & !is.null(vcf)) {
-    df0 <- varanno(chr=df$chr, start=df$start, ref=df$ref, alt=df$alt, vcf = vcf, tags = tags)
+    df0 <- varanno(chr=df$chr, start=df$start, ref=df$ref, alt=df$alt, vcf = vcf, tags = tags, check.alt.only = check.alt.only)
     for (tag in tags) {
       object[[assay]][[tag]] <- df0[[tag]]
     }

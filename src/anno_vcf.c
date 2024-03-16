@@ -658,13 +658,15 @@ void process_fmt_array(int iallele, kstring_t *string, int n, int type, void *da
 
 }
 
-SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand, SEXP _vcf, SEXP _tags)
+SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand, SEXP _vcf, SEXP _tags, SEXP check_alt_only)
 {
     int l = Rf_length(_chr);
     if (Rf_length(_st) != l) {
         Rprintf("Inconsistance length of chr and start position.");
         return R_NilValue;
     }
+
+    Rboolean check_alt = asLogical(check_alt_only);
     
     const char *vcf_fname = translateChar(STRING_ELT(_vcf, 0));
 
@@ -776,8 +778,9 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
                 Rprintf("Inconsistant reference, make sure you use the right genome reference. tid: %d. %s:%d,%s vs %s, %d\n", tid, chr, start, ref, v->d.allele[0], v->rid);
                 continue;
             }
-            int allele;
-            for (allele = 0; allele < v->n_allele; allele++) {
+            int allele = 0;
+            if (check_alt) allele = 1;
+            for (; allele < v->n_allele; allele++) {
                 if (strcmp(v->d.allele[allele], alt) == 0) break;
             }
             
