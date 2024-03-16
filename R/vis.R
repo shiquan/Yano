@@ -43,14 +43,14 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
     if (is.null(shape.by)) {
       p <- p + geom_point(aes(x=bp_cum, y=pval, fill=.data[[col.by]]), shape=21, ...)
       if (is.numeric(data[[col.by]])) {
-        p <- p + scale_fill_virdis()
+        p <- p + scale_fill_viridis()
       } else {
         p <- p + scale_fill_manual(values = cols)
       }
     } else {
       p <- p + geom_point(aes(x=bp_cum, y=pval, col=.data[[col.by]], shape=.data[[shape.by]]), ...)
       if (is.numeric(data[[col.by]])) {
-        p <- p + scale_color_virdis()
+        p <- p + scale_color_viridis()
       } else {
         p <- p + scale_color_manual(values = cols)
       }
