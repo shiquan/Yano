@@ -33,17 +33,40 @@ anno_hgvs <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NU
   sl
 }
 
-anno_vcf <-  function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, vcf = NULL, tags = NULL) {
+anno_vcf <-  function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, vcf = NULL, tags = NULL, adjust.af = FALSE) {
   sl <- .Call("anno_vcf", chr, start, end, ref, alt, strand, normalizePath(vcf), tags)
   sl
 }
 
+#' @export
 EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL)
 {
   assay <- assay %||% DefaultAssay(object)
+  old.assay <- DefaultAssay(obj)
+  DefaultAssay(obj) <- assay
+  if (length(intersect(c("chr","start","ref","alt"), colnames(df))) == 4) {
+    message("Parse names ..")
+    obj <- ParseVAR(obj)
+  }
+
   df <- object[[assay]][[]]
 
-  nm <- rownames(df)
-  
-  
+  if (!is.null(tags) & !is.null(vcf)) {
+    df0 <- varanno(df$chr, df$start, df$ref, df$alt, vcf = vcf, tags = tags)
+    for (tag in tags) {
+      object[[assay]][[tag]] <- df0[[tag]]
+    }
+
+    if (isTRUE(adjust.af) & length(tags) == 1) {
+      rownames(df0) <- rownames(df)
+      subset(df0, is.na(tags) & ref == alt) %>% rownames -> sel
+      df0[sel, tags] <- 1
+
+      subset(df0, is.na(tags) & ref != alt) %>% rownames -> sel
+      df0[sel, tags] <- 0
+      object[[assay]][[tags]] <- df0[[tags]]
+    }
+  }
+  DefaultAssay(object) <- old.assay
+  object
 }
