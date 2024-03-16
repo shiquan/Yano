@@ -708,7 +708,7 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
             return R_NilValue;
         }
     } else {
-        tbx = tbx_index_load3(vcf_fname, NULL, 0);
+        tbx = tbx_index_load(vcf_fname);
         if (!tbx) {
             fprintf(stderr,"Failed to load index file of %s.\n", vcf_fname);
             return R_NilValue;
