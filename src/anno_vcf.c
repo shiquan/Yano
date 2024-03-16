@@ -744,12 +744,14 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
         }
         
         int rlen = strlen(ref);
-        int tid = bcf_hdr_name2id(h, chr);
+        int tid;
         
         hts_itr_t *itr;
         if (type0.format == bcf) {
+            tid = bcf_hdr_name2id(h, chr);
             itr = bcf_itr_queryi(idx, tid, start-1, start+rlen-1);
         } else {
+            tid = tbx_name2id(tbx, chr);
             itr = tbx_itr_queryi(tbx, tid, start-1, start+rlen-1);
         }
         if (!itr) continue;
