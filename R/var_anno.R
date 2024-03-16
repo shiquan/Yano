@@ -52,7 +52,7 @@ EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
   df <- object[[assay]][[]]
 
   if (!is.null(tags) & !is.null(vcf)) {
-    df0 <- varanno(df$chr, df$start, df$ref, df$alt, vcf = vcf, tags = tags)
+    df0 <- varanno(chr=df$chr, start=df$start, ref=df$ref, alt=df$alt, vcf = vcf, tags = tags)
     for (tag in tags) {
       object[[assay]][[tag]] <- df0[[tag]]
     }
