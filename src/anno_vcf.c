@@ -867,8 +867,10 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
                 tmpk.l = 0;
                 SEXP v = PROTECT(allocVector(STRSXP, l));
                 for (int j = 0; j < l; ++j) {
-                    SET_STRING_ELT(v, j, mkChar((const char*)val->v[j].c));
-                    free(val->v[j].c);
+                    if (val->v[j].c != NULL) {
+                        SET_STRING_ELT(v, j, mkChar((const char*)val->v[j].c));
+                        free(val->v[j].c);
+                    }
                 }
                 SET_VECTOR_ELT(sl, i, v);
             } else {
@@ -886,8 +888,10 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
             if (val->convert2str) {
                 SEXP v = PROTECT(allocVector(STRSXP, l));
                 for (int j = 0; j < l; ++j) {
-                    SET_STRING_ELT(v, j, mkChar((const char*)val->v[j].c));
-                    free(val->v[j].c);
+                    if (val->v[j].c != NULL) {
+                        SET_STRING_ELT(v, j, mkChar((const char*)val->v[j].c));
+                        free(val->v[j].c);
+                    }
                 }
                 SET_VECTOR_ELT(sl, i, v);
             } else {
@@ -910,10 +914,8 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
                         kputc((char)val->v[j].a.b, &tmpk);
                         kputs("", &tmpk);
                         SET_STRING_ELT(v, j, mkChar(tmpk.s));
-                    } else {
-                        SET_STRING_ELT(v, j, mkChar("."));
-                    }
-                } else {
+                    } 
+                } else {                    
                     SET_STRING_ELT(v, j, mkChar((const char*)val->v[j].c));
                     free(val->v[j].c);
                 }
