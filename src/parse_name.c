@@ -15,7 +15,8 @@ SEXP parse_var_names(SEXP name)
     
     kstring_t str = {0,0,0};
     kstring_t tmp = {0,0,0};
-    for (int i = 0; i < l; ++i) {        
+    for (int i = 0; i < l; ++i) {
+        int check_stranded = 0;
         const char *n = translateChar(STRING_ELT(name, i));
         str.l = 0;
         kputs(n, &str);
@@ -86,6 +87,7 @@ SEXP parse_var_names(SEXP name)
                 SET_STRING_ELT(ref, i, mkChar(tmp.s));
                 tmp.l = 0;
             } else if (str.s[j] == '/') {
+                check_stranded = 1;
                 SET_STRING_ELT(alt, i, mkChar(tmp.s));
                 j++;
                 if (str.s[j] == '-') {
@@ -108,8 +110,11 @@ SEXP parse_var_names(SEXP name)
             }
             j++;
         }
-    }
 
+        if (check_stranded == 0) {
+            SET_STRING_ELT(alt, i, mkChar(tmp.s));
+        }
+    }
 
     free(str.s);
     if (tmp.m) free(tmp.s);
