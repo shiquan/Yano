@@ -564,98 +564,46 @@ struct val {
     int convert2str;
     struct val0 *v;
 };
-
-void process_fmt_array(int iallele, kstring_t *string, int n, int type, void *data)
+// edit from vcf.c
+int process_fmt_array(kstring_t *s, int n, int type, void *data)
 {
-
-#define BRANCH(type_t, is_missing, is_vector_end, string)  do  {	\
-	type_t *p = (type_t*)data;					\
-	if (iallele < 0) {						\
-	    int i;							\
-	    for (i=0; i<n; ++i) {					\
-		if (p[i] == is_vector_end) break;			\
-		if (i) kputc(',', string);				\
-		if (p[i] == is_missing) kputc('.', string);		\
-		else kputw(p[i], string);			\
-	    }								\
-	} else {\
-	    if (p[iallele] == is_vector_end || p[iallele] == is_missing) kputc('.', string); \
-	    else kputw(p[iallele], string);				\
-	}								\
-} while(0)
-
-      switch(type) {
-	  case BCF_BT_CHAR:
-	      do {
-		  char *p = (char*)data;
-                  char *end = p + n;
-		  int i;
-		  if (iallele < 0) {
-                      for ( ; p < end; ++p) {
-			  if (*p == bcf_str_missing) kputc('.', string);
-			  else kputc(*p, string);
-		      }
-		  } else {
-
-                      for ( ;iallele > 0; ) {
-                          while (p < end && *p != ',')
-                              p++;
-                          p++;
-                          --iallele;
-                      }
-
-                      assert(p <= end);
-		      for ( i = 0; i<n && p < end && *p != ','; ++p,++i) {
-			  if (*p == bcf_str_missing) {
-                              kputc('.', string);
-                              break;
-                          } else {
-                              kputc(*p, string);
-                          }
-		      }
-		      /* if (*p) kputc(*p, string); */
-		      /* else kputc('.', string); */
-		  }
-	      } while(0);
-	      break;
-		
-	  case BCF_BT_INT8:
-	      BRANCH(int8_t, bcf_int8_missing, bcf_int8_vector_end, string);
-	      break;
-
-	  case BCF_BT_INT16:
-	      BRANCH(int16_t, bcf_int16_missing, bcf_int16_vector_end, string);
-	      break;
-
-	  case BCF_BT_INT32:
-	      BRANCH(int32_t, bcf_int32_missing, bcf_int32_vector_end, string);
-	      break;
-
-	  case BCF_BT_FLOAT:
-	      do {
-		  float *p = (float*)data;
-		  int i = 0;
-		  if (iallele == -1) {
-		      for (i=0; i<n; ++i) {
-			  if (p[i] == bcf_float_vector_end) break;
-			  if (i) kputc(',', string);
-			  if (p[i] == bcf_float_missing) kputc('.', string);
-			  else ksprintf(string, "%g", p[i]);
-		      }
-		  } else {
-		      //assert(iallele <= n);
-		      if (p[iallele] == bcf_float_vector_end || p[iallele] == bcf_float_missing) kputc('.', string);
-		      else ksprintf(string, "%g", p[i]);
-		  }
-	      } while(0);	      
-	      break;
-
-	  default:
-	      Rprintf("todo: type %d", type);
-              break;
-      }
-#undef BRANCH
-
+    int j = 0;
+    uint32_t e = 0;
+    if (n == 0) {
+        return kputc('.', s) >= 0 ? 0 : -1;
+    }
+    if (type == BCF_BT_CHAR)
+    {
+        char *p = (char*)data;
+        for (j = 0; j < n && *p; ++j, ++p)
+        {
+            if ( *p==bcf_str_missing ) e |= kputc('.', s) < 0;
+            else e |= kputc(*p, s) < 0;
+        }
+    }
+    else
+    {
+        #define BRANCH(type_t, convert, is_missing, is_vector_end, kprint) { \
+            uint8_t *p = (uint8_t *) data; \
+            for (j=0; j<n; j++, p += sizeof(type_t))    \
+            { \
+                type_t v = convert(p); \
+                if ( is_vector_end ) break; \
+                if ( j ) kputc(',', s); \
+                if ( is_missing ) kputc('.', s); \
+                else e |= kprint < 0; \
+            } \
+        }
+        switch (type) {
+            case BCF_BT_INT8:  BRANCH(int8_t,  le_to_i8, v==bcf_int8_missing,  v==bcf_int8_vector_end,  kputw(v, s)); break;
+            case BCF_BT_INT16: BRANCH(int16_t, le_to_i16, v==bcf_int16_missing, v==bcf_int16_vector_end, kputw(v, s)); break;
+            case BCF_BT_INT32: BRANCH(int32_t, le_to_i32, v==bcf_int32_missing, v==bcf_int32_vector_end, kputw(v, s)); break;
+            case BCF_BT_FLOAT: BRANCH(uint32_t, le_to_u32, v==bcf_float_missing, v==bcf_float_vector_end, kputd(le_to_float(p), s)); break;
+            default: hts_log_error("Unexpected type %d", type); exit(1); break;
+        }
+        #undef BRANCH
+    }
+    return e == 0 ? 0 : -1;
 }
 
 SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand, SEXP _vcf, SEXP _tags, SEXP check_alt_only)
@@ -824,15 +772,74 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
                         Rprintf("todo: type %d\n", inf->type);
                         break;
                     }
-                } else {                    
-                    int dst = -1;
-                    if (val->number == BCF_VL_R) dst = allele;
-                    else if (val->number == BCF_VL_A) dst = allele == -1 ? -1 : allele-1;
+                } else {
 
-                    tmpk.l = 0;
-                    process_fmt_array(dst, &tmpk, inf->len, inf->type, inf->vptr);
-                    val->v[i].c = strdup(tmpk.s);
-                    val->convert2str = 1;
+                    if (val->number == BCF_VL_R || val->number == BCF_VL_A) {
+                        int dst = -1;
+                        if (val->number == BCF_VL_R) dst = allele;
+                        else if (val->number == BCF_VL_A) dst = allele == -1 ? -1 : allele-1;
+
+                        if (dst == -1) {
+                            tmpk.l = 0;
+                            process_fmt_array(&tmpk, inf->len, inf->type, inf->vptr);
+                            val->v[i].c = strdup(tmpk.s);
+                            val->convert2str = 1;
+                        } else {
+                            int j;
+                            uint8_t *data = inf->vptr;
+                            
+                            if (inf->type == BCF_BT_CHAR) {
+                                char *p = (char*)data;
+                                for (j = 0; j < allele && *p; ++j, ++p);
+                                if (j == allele) {
+                                    tmpk.l = 0;
+                                    kputc(*p, &tmpk);
+                                    kputs("", &tmpk);
+                                    val->v[i].c = strdup(tmpk.s);
+                                }
+                            } else {
+                                
+#define BRANCH(type_t, convert, is_vector_end, replace) {       \
+                                    uint8_t *p = (uint8_t*)data;        \
+                                    for (j = 0; j < allele; j++, p += sizeof(type_t)) { \
+                                        type_t v0 = convert(p);         \
+                                        if (is_vector_end) break;       \
+                                    }                                   \
+                                    if (j == allele) {                  \
+                                        type_t v0 = convert(p);         \
+                                        replace = v0;                   \
+                                    }                                   \
+                                }
+                                
+                                switch (inf->type) {
+                                case BCF_BT_INT8:
+                                    BRANCH(int8_t, le_to_i8, v0==bcf_int8_vector_end, val->v[i].a.b);
+                                    break;
+                                    
+                                case BCF_BT_INT16:
+                                    BRANCH(int16_t, le_to_i16, v0==bcf_int16_vector_end, val->v[i].a.b);
+                                    break;
+                                    
+                                case BCF_BT_INT32:
+                                    BRANCH(int32_t, le_to_i32, v0==bcf_int32_vector_end, val->v[i].a.b);
+                                    break;
+                                    
+                                case BCF_BT_FLOAT:
+                                    BRANCH(float, le_to_float, v0==bcf_float_vector_end, val->v[i].a.f);
+                                    break;
+                                default:
+                                    Rprintf("Unexpected type %d.", inf->type);
+                                    break;
+                                }
+#undef BRANCH
+                            }
+                        }
+                    } else {
+                        tmpk.l = 0;
+                        process_fmt_array(&tmpk, inf->len, inf->type, inf->vptr);
+                        val->v[i].c = strdup(tmpk.s);
+                        val->convert2str = 1;
+                    }
                 }
             }
             break;
