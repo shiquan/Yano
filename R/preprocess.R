@@ -206,7 +206,7 @@ ParseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE, db = NU
   object0[['locus']] <- locs
 
   if (!is.null(db)) {
-    gr <- GRanges(seqnames=chrs, ranges = IRanges(start = as.integer(starts), width = 1), name = rn, strand = strands)
+    gr <- GRanges(seqnames=sl[[1]], ranges = IRanges(start = as.integer(sl[[2]]), width = 1), name = rn, strand = sl[[5]])
     genes1 <- db$gene
     exons1 <- db$exon
     gr$gene <- "."
