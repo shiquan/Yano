@@ -92,11 +92,22 @@ ParseExonName.Assay <- function(object)
 {
   nm <- rownames(object)
 
-  object[['chr']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\1",nm)
-  object[['start']] <- as.integer(gsub("(.*):(.*)-(.*)/(.)/(.*)","\\2",nm))
-  object[['end']] <- as.integer(gsub("(.*):(.*)-(.*)/(.)/(.*)","\\3",nm))
-  object[['strand']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\4",nm)
-  object[['gene_name']] <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\5",nm)
+  chr <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\1",nm)
+  start <- as.integer(gsub("(.*):(.*)-(.*)/(.)/(.*)","\\2",nm))
+  end <- as.integer(gsub("(.*):(.*)-(.*)/(.)/(.*)","\\3",nm))
+  strand <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\4",nm)
+  gene_name <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\5",nm)
+  rownames(chr) <- nm
+  rownames(start) <- nm
+  rownames(end) <- nm
+  rownames(strand) <- nm
+  rownames(gene_name) <- nm
+  
+  object[['chr']] <- chr
+  object[['start']] <- start
+  object[['end']] <- end
+  object[['strand']] <- strand 
+  object[['gene_name']] <- gene_name
   
   return(object)
 }
@@ -165,44 +176,23 @@ ParseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE, db = NU
   sl <- .Call("parse_var_names", rn)
 
   if (is.null(sl)) return(NULL);
-  
-  ## locs <- unlist(lapply(rn, function(x) {
-  ##   s <- length(grep("/[+-]$", x))
-  ##   if (s > 0) {
-  ##     if (isTRUE(ignore.strand)) {
-  ##       gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1", x)
-  ##     } else {
-  ##       gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\1/\\3", x)
-  ##     }
-  ##   } else {
-  ##     gsub("(.*:[0-9]+)([ACGT=>]*).*", "\\1", x)
-  ##   }
-  ## }))
-  
-  ## strands <- unlist(lapply(rn, function(x) {
-  ##   s <- grep("/[+-]$", x)
-  ##   if (!is.null(s)) {
-  ##     if (isTRUE(ignore.strand)) {
-  ##       "*"
-  ##     } else {
-  ##       gsub("(.*:[0-9]+)([ACGT=>]*).*/([-+])", "\\3", x)
-  ##     }
-  ##   } else {
-  ##     "*"
-  ##   }
-  ## }))
-  
-  ## chrs <- gsub("(.*):([0-9]+).*","\\1", locs)
-  ## starts <- as.integer(gsub("(.*):([0-9]+).*","\\2", locs))
+  chr <- sl[[1]]
+  start <- sl[[2]]
+  ref <- sl[[3]]
+  alt <- sl[[4]]
+  strand <- sl[[5]]
+  names(chr) <- names(start) <- names(ref) <- names(alt) <- names(strand) <- rn 
 
   object0 <- object[[assay]]
-  object0[['chr']] <- sl[[1]]
-  object0[['start']] <- sl[[2]]
-  object0[['ref']] <- sl[[3]]
-  object0[['alt']] <- sl[[4]]
-  object0[['strand']] <- sl[[5]]
+  object0[['chr']] <- chr
+  object0[['start']] <- start
+  object0[['ref']] <- ref
+  object0[['alt']] <- alt
+  object0[['strand']] <- strand
 
   locs <- paste0(sl[[1]],":",sl[[2]],"/",sl[[5]])
+  names(locs) <- rn
+  
   object0[['locus']] <- locs
 
   if (!is.null(db)) {
