@@ -1,6 +1,7 @@
 #'@importFrom dplyr %>%
 #'@importFrom gtools mixedsort
 #'@importFrom ggrepel geom_label_repel
+#'@importFrom viridis scale_color_viridis scale_fill_viridis
 #'@import ggrepel
 #' 
 #'@export
