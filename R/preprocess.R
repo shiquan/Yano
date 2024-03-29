@@ -97,11 +97,11 @@ ParseExonName.Assay <- function(object)
   end <- as.integer(gsub("(.*):(.*)-(.*)/(.)/(.*)","\\3",nm))
   strand <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\4",nm)
   gene_name <- gsub("(.*):(.*)-(.*)/(.)/(.*)","\\5",nm)
-  rownames(chr) <- nm
-  rownames(start) <- nm
-  rownames(end) <- nm
-  rownames(strand) <- nm
-  rownames(gene_name) <- nm
+  names(chr) <- nm
+  names(start) <- nm
+  names(end) <- nm
+  names(strand) <- nm
+  names(gene_name) <- nm
   
   object[['chr']] <- chr
   object[['start']] <- start
