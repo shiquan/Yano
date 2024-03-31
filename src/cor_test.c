@@ -472,9 +472,8 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             SEXP _permut,
             SEXP _threads,
             SEXP idx, SEXP bidx,
-            //SEXP cidx,
             SEXP cs, SEXP _factor,
-            SEXP _mode, SEXP _scale, SEXP _norm)
+            SEXP _mode, SEXP _scale, SEXP _norm, SEXP _seed)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
@@ -485,15 +484,16 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     const int scale_factor = asInteger(_factor);
     Rboolean scale = asLogical(_scale);
     Rboolean norm = asLogical(_norm);
+
+    const int seed = asInteger(_seed);
+
+    srand(seed);
     
     int mode = asInteger(_mode);
     if (A->stype) return mkString("A cannot be symmetric");
     if (B->stype) return mkString("B cannot be symmetric");
     if (W->stype) return mkString("W cannot be symmetric");
     
-    // double one[] = {1, 0};
-
-    // if (A->ncol != B->ncol || A->nrow != B->nrow) return mkString("A and B do not match");
     if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
     if (A->ncol < 2) return mkString("Too few cells."); // to do
@@ -504,7 +504,6 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
 
     R_CheckStack();
     const int n_cell = A->nrow;
-    //const int n_cell = length(cidx);
     const int N_feature = length(idx);
 
     assert (length(bidx) == N_feature);
@@ -538,7 +537,6 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         // todo: bidx
         int ii = INTEGER(idx)[i]  -1;
         int ij = INTEGER(bidx)[i] -1;
-        //Rprintf("%d\t%d\n", ii, ij);
         if (ap[ii] == ap[ii+1] || bp[ij] == bp[ij+1]) {
             REAL(LXval)[i] = 0;
             REAL(LYval)[i] = 0;
