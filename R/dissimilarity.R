@@ -26,6 +26,7 @@ RunBlockCorr <- function(object = NULL,
                          cell.size = NULL,
                          scale = FALSE,
                          perm=100,
+                         seed=999,
                          threads = 0,
                          block.name = NULL,
                          block.assay = NULL,
@@ -188,7 +189,7 @@ RunBlockCorr <- function(object = NULL,
   
   message(paste0("Test dissimlarity of binding features with ", threads, " threads."))
   gc()
-  ta <- .Call("D_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm);
+  ta <- .Call("D_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm, seed);
   if (length(ta) == 1) stop(ta[[1]])
 
   Lx <- ta[[1]]
@@ -207,6 +208,7 @@ RunBlockCorr <- function(object = NULL,
   names(vval) <- features
   
   pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
+  #pval <- pnorm(tval, lower.tail = FALSE)
   names(pval) <- features
   tab <- object[[assay]][[]]
   tab[[paste0(prefix, ".D")]] <- e[rownames(object)]
