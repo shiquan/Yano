@@ -13,20 +13,22 @@ KSTREAM_INIT(gzFile, gzread, 8193)
 
 static const char *bed_anno_type[] = {
     "unknown",
-    "multigenes",
-    "whole_gene",
+    "promoter",
     "utr3",
     "utr5",
     "exon",
     "multiexons",
     "exonintron",
+    "whole_gene",
+    "multigenes",
     "intron",
     "antisense_utr3",
     "antisense_utr5",
     "antisense_exon",
     "antisense_intron",
     "antisense_complex",
-    "intergenic"
+    "intergenic",
+    "unknown_chromosome"
 };
 
 const char *bed_typename(int type)
@@ -128,8 +130,14 @@ void bed_spec_shrink(struct bed_spec *B, int up, int down)
     int i;
     for (i = 0; i < B->n; ++i) {
         struct bed *bed = &B->bed[i];
-        bed->start = bed->start + up;
-        bed->end = bed->end - down;
+        if (strand_is_minus(bed->strand)) {
+            bed->start = bed->start +down;
+            bed->end = bed->end - up;
+        } else {
+            bed->start = bed->start + up;
+            bed->end = bed->end - down;
+        }
+        if (bed->start < 0) bed->start = 0;
         if (bed->end <= bed->start) {
             bed->start = 0;
             bed->end = 0;
@@ -314,6 +322,31 @@ static int parse_str(struct bed_spec *B, kstring_t *str)
     return 0;
 }
 
+int bed_spec_push0(struct bed_spec *B, const char *seqname, int start, int end, int strand, const char *name, void *ext)
+{
+    if (seqname == NULL) error("No seqname.");
+    if (start < 0 || end < 0) error("Unset start or end position.");
+    if (strand != 1 && strand != 0 && strand != -1) error("Unknown strand.");
+    
+    if (B->n == B->m) {
+        B->m = B->m == 0 ? 32 : B->m<<1;
+        B->bed = realloc(B->bed, sizeof(struct bed)*B->m);
+    }
+    
+    int seqname_id = dict_push(B->seqname, seqname);
+    int name_id = -1;
+    if (name) name_id = dict_push(B->seqname, name);
+    
+    struct bed *b = &B->bed[B->n];
+    b->seqname = seqname_id;
+    b->start = start;
+    b->end = end;
+    b->strand = strand;
+    b->name = name_id;
+    b->data = ext;
+    return B->n++;
+}
+
 int bed_spec_push(struct bed_spec *B, struct bed *bed)
 {
     if (B->n == B->m) {
@@ -366,18 +399,6 @@ struct bed_spec *bed_read(const char *fname)
     return B;
 }
 
-static struct var *var_init()
-{
-    struct var *v = malloc(sizeof(*v));
-    v->ref = malloc(sizeof(kstring_t));
-    v->ref->l = v->ref->m = 0;
-    v->ref->s = NULL;
-    v->alt = malloc(sizeof(kstring_t));
-    v->alt->l = v->alt->m = 0;
-    v->alt->s = NULL;
-    return v;
-}
-
 struct bed_spec *bed_read_vcf(const char *fn)
 {
     htsFile *fp = hts_open(fn, "r");
@@ -391,11 +412,18 @@ struct bed_spec *bed_read_vcf(const char *fn)
     if (hdr == NULL) error("Failed parse header of input.");
 
     struct bed_spec *B = bed_spec_init();
+    B->ext = hdr;
     
     bcf1_t *v = bcf_init();
     
-    while(bcf_read(fp, hdr, v) == 0) {
+    while (bcf_read(fp, hdr, v) == 0) {
         if (v->rid == -1) continue;
+        bcf_unpack(v, BCF_UN_STR);
+        if (v->n_allele == 1) continue;
+        if (v->n_allele == 2) {
+            if (v->d.allele[1][0] == '<') continue; // skip <NON_REF>, <X>, <*>
+        }
+        
         bcf_unpack(v, BCF_UN_INFO);
         const char *name = bcf_hdr_int2id(hdr, BCF_DT_CTG, v->rid);
         int seqname = dict_push(B->seqname, name);
@@ -409,34 +437,32 @@ struct bed_spec *bed_read_vcf(const char *fn)
         bed->end = v->pos+v->rlen;
         bed->name = -1;
         bed->strand = -1;
-        struct var *var = var_init();
-        kputs(v->d.allele[0], var->ref);
-        if (v->n_allele > 1) kputs(v->d.allele[1], var->alt);
-
-        bed->data = var;
+        bcf1_t *var = bcf_init();
+        bed->data = bcf_copy(var, v);
+        bcf_unpack(var, BCF_UN_STR);
+        bcf_unpack(var, BCF_UN_INFO);
         B->n++;
     }
     bcf_destroy(v);
     hts_close(fp);
-    bcf_hdr_destroy(hdr);
 
     bed_build_index(B);
-    
     return B;
 }
 
 void bed_spec_var_destroy(struct bed_spec *B)
 {
+    bcf_hdr_t *hdr = (bcf_hdr_t*)B->ext;
+    if (hdr == NULL) error("No vcf hdr.");
+    bcf_hdr_destroy(hdr);
+
     int i;
     for (i = 0; i < B->n; ++i) {
         struct bed *bed = &B->bed[i];
-        struct var *var = (struct var*)bed->data;
-        if (var->ref->m) free(var->ref->s);
-        free(var->ref);
-        if (var->alt->m) free(var->alt->s);
-        free(var->alt);
-        free(var);
+        bcf1_t *v = (bcf1_t*)bed->data;
+        bcf_destroy(v);
     }
+
     bed_spec_destroy(B);
 }
 
@@ -492,52 +518,72 @@ int bed_check_overlap(const struct bed_spec *B, char *name, int start, int end, 
 }
 // chrom, start, end, name, score[reserved], strand,
 // ext: n_gene, gene(s), functional type, nearby gene for integenic, nearby distance
-void bed_spec_write0(struct bed_spec *B, FILE *out, int ext)
+void bed_spec_write0(struct bed_spec *B, FILE *out, int ext, int gene_as_name)
 {
     int i;
     for (i = 0; i < B->n; ++i) {
         struct bed *bed = &B->bed[i];
-        fprintf(out, "%s\t%d\t%d\t%s\t.\t%c", dict_name(B->seqname, bed->seqname),
-                bed->start, bed->end, bed->name == -1 ? "." : dict_name(B->name, bed->name),
-                ".+-"[bed->strand+1]
-            );
 
+        if (bed->seqname == -1) continue;
+        
         if (ext) {
             struct bed_ext *e = (struct bed_ext*)bed->data;
-            fputc('\t', out);
-            
-            if (e == NULL) fputs("0\t.\tintergenic\t.\t0", out);
-            else {
-                if (e->distance == 0) {
-                    fprintf(out, "%d\t", e->n);
-                    
-                    if (e->n == 1) {
-                        fputs(e->genes[0], out);                    
+            if (e) {
+                kstring_t name = {0,0,0};
+                if (e->n == 1) {
+                    kputs(e->genes[0], &name);  
+                } else {
+                    if (e->n > 3) {
+                        ksprintf(&name, "%s,...,%s", e->genes[0], e->genes[e->n-1]);
                     } else {
-                        if (e->n > 3) {
-                            fprintf(out, "%s,...,%s", e->genes[0], e->genes[e->n-1]);
-                        } else {
-                            int k;
-                            for (k = 0; k < e->n; ++k) {
-                                if (k) fputc(',', out);
-                                fputs(e->genes[k], out);
-                            }
+                        int k;
+                        for (k = 0; k < e->n; ++k) {
+                            if (k) kputc(',', &name);
+                            kputs(e->genes[k], &name);
                         }
                     }
-                    fprintf(out, "\t%s\t.\t0", bed_typename(e->type));
-                    
-                } else {
-                    if (e->n == 0) fputs("0\t.\tintergenic\t.\t0", out);
-                    else fprintf(out, "0\t.\tintergenic\t%s\t%d", e->genes[0], e->distance);
                 }
+                
+                if (gene_as_name && name.m > 0) {
+                    fprintf(out, "%s\t%d\t%d\t%s\t.\t%c", dict_name(B->seqname, bed->seqname),
+                            bed->start, bed->end, name.s, //bed->name == -1 ? "." : dict_name(B->name, bed->name),
+                            ".+-"[bed->strand+1]
+                        );
+                } else {
+                    fprintf(out, "%s\t%d\t%d\t%s\t.\t%c", dict_name(B->seqname, bed->seqname),
+                            bed->start, bed->end, bed->name == -1 ? "." : dict_name(B->name, bed->name),
+                            ".+-"[bed->strand+1]
+                        );                
+                }
+                
+                fprintf(out, "\t%d\t", e->n);
+
+                if (name.l)fputs(name.s, out);
+                else fputc('.', out);
+                
+                fprintf(out, "\t%s", bed_typename(e->type));
+                
+                if (name.m) free(name.s);
+            } else {
+                fprintf(out, "%s\t%d\t%d\t%s\t.\t%c\t0\t.\tintergenic", dict_name(B->seqname, bed->seqname),
+                        bed->start, bed->end, bed->name == -1 ? "." : dict_name(B->name, bed->name),
+                        ".+-"[bed->strand+1]
+                    );
             }
+            
+            
+        } else {
+            fprintf(out, "%s\t%d\t%d\t%s\t.\t%c", dict_name(B->seqname, bed->seqname),
+                    bed->start, bed->end, bed->name == -1 ? "." : dict_name(B->name, bed->name),
+                    ".+-"[bed->strand+1]
+                );
         }
         
         fputc('\n', out);
     }
 }
 
-void bed_spec_write(struct bed_spec *B, const char *fn, int ext)
+void bed_spec_write(struct bed_spec *B, const char *fn, int ext, int gene_as_name)
 {
     FILE *fp;
     if (fn == NULL) fp = stdout;
@@ -546,7 +592,7 @@ void bed_spec_write(struct bed_spec *B, const char *fn, int ext)
         if (fp == NULL) error("%s : %s", fn, strerror(errno));
     }
 
-    bed_spec_write0(B, fp, ext);
+    bed_spec_write0(B, fp, ext, gene_as_name);
 
     fclose(fp);
 }
@@ -556,4 +602,240 @@ void bed_spec_seqname_from_bam(struct bed_spec *B, bam_hdr_t *hdr)
     int i;
     for (i = 0; i < hdr->n_targets; ++i)
         dict_push(B->seqname, hdr->target_name[i]);
+}
+// sort by type and distance
+static int cmpfunc2(const void *_a, const void *_b)
+{
+    const struct anno0 *a = (const struct anno0*) _a;
+    const struct anno0 *b = (const struct anno0*) _b;
+    if (a->type != b->type) return (a->type > b->type) - (a->type < b->type);
+    return 0;
+    // return (a->dist < b->dist) - (a->dist > b->dist);
+}
+
+// exon
+static int query_exon(int start, int end, struct gtf const *G, struct anno0 *a, int coding)
+{
+    int utr = 0;
+    if (coding) utr = 1; // if CDS record exists, turn utr to 0 if region overlapped with CDS region
+    int pass_cds = 0;
+
+    int n = 0;
+    struct gtf **gtf_pool = malloc(G->n_gtf *sizeof(struct gtf*));
+    int i;
+    for (i = 0; i < G->n_gtf; ++i) { // exon level
+        struct gtf *g0 = G->gtf[i];
+        // filter type
+        if (g0->type != feature_CDS && g0->type != feature_exon) continue;
+        // check overlapped
+        
+        // non-overlap
+        if (end <= g0->start) {
+            if (n == 0) { // put this record, as intron
+                gtf_pool[n++] = G->gtf[i];
+            }
+            break;   
+        }
+
+        if (g0->type == feature_CDS) {
+            if (start > g0->end) pass_cds = 1;
+        }
+            
+        if (start > g0->end) continue; // check next
+        
+        // CDS record is only used to distiguish UTR and EXON
+        if (g0->type == feature_CDS) {
+            utr = 0; // it's a coding region
+            continue;
+        }
+        
+        // push to pool
+        gtf_pool[n++] = g0;
+
+        // out of range, no need to check next one
+        if (end <= g0->end) break;
+    }
+    
+    if (n == 0) {
+        /* if (i > 0 && i != G->n_gtf) { // checked, but no overalpped exons */
+        /*     a->type = BAT_INTRON; */
+        /* } else { // checked, but out range of transcript */
+        a->type = BAT_INTERGENIC;            
+        /* } */
+
+        a->g = NULL;
+    }
+    else if (n == 1) {
+        struct gtf *g0 = gtf_pool[0];
+        if (g0->start <= start && g0->end >= end) {
+            a->type = BAT_EXON;
+        }
+        else if (end <= g0->start) {
+            a->type = BAT_INTRON;
+        }
+        else {
+            a->type = BAT_EXONINTRON;
+        }
+        a->g = g0;
+    }
+    else {
+        struct gtf *g0 = gtf_pool[0];
+        a->type = BAT_MULTIEXONS;
+        a->g = g0;
+        // struct gtf *g1 = gtf_pool[1];
+        // debug_print("%d\t%d\t%d\t%d", g0->start, g0->end, g1->start, g1->end);
+    }
+
+    //if ((a->type == BAT_EXON || a->type == BAT_EXONINTRON) && utr == 1) {
+    if (a->type == BAT_EXON && utr == 1) {
+        // forward
+        if (G->strand == 0) a->type = pass_cds ? BAT_UTR3 : BAT_UTR5;
+        // backward
+        else a->type = pass_cds ? BAT_UTR5 : BAT_UTR3;
+    }
+
+    free(gtf_pool);
+    // debug_print("%s", bed_typename(a->type));
+    
+    return a->type == BAT_INTERGENIC;
+}
+
+static int query_trans(int start, int end, struct gtf const *G, struct anno0 *a)
+{
+    // nonoverlap with this gene
+    if (start >= G->end) return 1;
+    if (end <= G->start) return 1;
+    
+    // debug_print("gene: %s, %d\t%d", GTF_genename(args.G,G->gene_name), G->start, G->end);
+    struct anno0 *a0 = malloc(sizeof(struct anno0)* G->n_gtf);
+    int i;
+    int j = 0;
+    for (i = 0; i < G->n_gtf; ++i) { // 
+        struct gtf *g0 = G->gtf[i];
+        if (g0->type != feature_transcript) continue;
+        // debug_print("trans: %s, %d\t%d", GTF_transid(args.G,G->gtf[i]->transcript_id), g0->start, g0->end);
+
+        //  nonoverlap with this trans
+        if (start >= g0->end) continue;
+        if (end <= g0->start) continue;
+        
+        int ret = query_exon(start, end, g0, &a0[j], g0->coding);
+        if (ret == 0) j++;
+        // debug_print("%s", bed_typename(a0[j-1].type));
+    }
+    
+    if (j ==0) { free(a0); return 1; }
+    // debug_print("j : %d",j);
+    
+    if (j > 1) qsort(a0, j, sizeof(struct anno0), cmpfunc2);
+
+    // if hit more than one exon/cds record, assign by the first record
+    a->type = a0[0].type;
+    a->g = a0[0].g;
+    // debug_print("%s\t%s", bed_typename(a->type), GTF_transid(args.G, a->g->transcript_id));
+    free(a0);
+    //debug_print("type: %d", a->type);
+    return 0;
+}
+
+static int query_promoter(int start, int end, struct gtf *G, struct anno0 *a, int down, int up)
+{
+    // nonoverlap with this promoter
+
+    int start0 = G->start;
+    int end0 = G->start;
+    if (G->strand == 1) {
+        start0 = G->end;
+        end0 = G->end;
+        start0 = start0 - down;
+        end0 = start0 + up;
+    } else {
+        start0 = start0 - up;
+        end0 = start0 + down;
+    }
+
+    if (start0 < 0) start0 = 1;
+    if (end0 < 0) end0 = start0;
+    
+    if (start >= end0) return 1;
+    if (end <= start0) return 1;
+
+    a->type = BAT_PROMOTER;
+    a->g = G;
+    return 0;
+}
+
+struct anno0 *anno_bed_core(const char *name, int start, int end, int strand, struct gtf_spec *G, int *n, int promoter, int down, int up)
+{
+    if (end == -1) end = start+1;
+    if (end < start ) {
+        warnings("end < start");
+        return NULL;
+    }
+
+    *n = 0;
+    struct region_itr *itr = gtf_query(G, name, start, end);
+    if (itr == NULL) {
+        int id = dict_query(G->name, name);
+        if (id == -1) {
+            warnings("Chromosome %s not found in GTF, use wrong database? ", name);
+        }
+        return NULL;
+    }
+    
+    // annotate all possibility
+    struct anno0 *a = malloc(sizeof(struct anno0)*itr->n);
+    int k = 0;
+    for (int j = 0; j < itr->n; ++j) {
+        struct gtf *g0 = (struct gtf*)itr->rets[j];
+        if (start <= g0->start && end >= g0->end) {
+            a[k].type = BAT_WHOLEGENE;
+            a[k].g = g0;
+        } else {
+            int ret;
+            if (promoter) {
+                ret = query_promoter(start, end, g0, &a[k], down, up);
+                if (ret) {
+                    ret = query_trans(start, end, g0, &a[k]);
+                }
+            } else {
+                ret = query_trans(start, end, g0, &a[k]);
+            }
+            if (ret != 0) continue; // nonoverlapped
+        }
+
+        // for stranded, reannotate antisense 
+        if (strand != -1 && g0->strand != strand) {
+            if (a[k].type == BAT_MULTIEXONS) a[k].type = BAT_ANTISENSECOMPLEX;
+            else if (a[k].type == BAT_WHOLEGENE) a[k].type = BAT_ANTISENSECOMPLEX;
+            else if (a[k].type == BAT_EXONINTRON) a[k].type = BAT_ANTISENSECOMPLEX;
+            else if (a[k].type == BAT_UTR3) a[k].type = BAT_ANTISENSEUTR3;
+            else if (a[k].type == BAT_UTR5) a[k].type = BAT_ANTISENSEUTR5;
+            else if (a[k].type == BAT_EXON) a[k].type = BAT_ANTISENSEEXON;
+            else if (a[k].type == BAT_INTRON) a[k].type = BAT_ANTISENSEINTRON;
+        }
+
+        //debug_print("%d", a[k].type);
+        k++;
+    }
+
+    region_itr_destroy(itr);
+
+    if (k > 1) {
+        qsort(a, k, sizeof(struct anno0), cmpfunc2);
+        for (int j = 1; j < k; ++j) { //incase multiple antisense situations
+            if (a[j].type > BAT_WHOLEGENE) {
+                k = j;
+                break;
+            }
+        }
+    }
+
+    if (k == 0) {
+        free(a);
+        return NULL;
+    }
+    
+    *n = k;
+    return a;
 }

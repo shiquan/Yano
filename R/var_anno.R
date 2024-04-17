@@ -28,18 +28,13 @@ varanno <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL
   df
 }
 
-anno_hgvs <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, gtf = NULL) {
-  sl <- .Call("anno_hgvs", chr, start, end, ref, alt, strand, normalizePath(gtf))
-  sl
-}
-
-anno_vcf <-  function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE) {
-  sl <- .Call("anno_vcf", chr, start, end, ref, alt, strand, normalizePath(vcf), tags, check.alt.only)
+anno_gene <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, db = NULL) {
+  sl <- .Call("anno_gene", chr, start, end, ref, alt, strand, db)
   sl
 }
 
 #' @export
-EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE, adjust.af = FALSE)
+EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE, db = NULL)#, adjust.af = FALSE)
 {
   assay <- assay %||% DefaultAssay(object)
   old.assay <- DefaultAssay(obj)
@@ -57,15 +52,21 @@ EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
       object[[assay]][[tag]] <- df0[[tag]]
     }
 
-    if (isTRUE(adjust.af) & length(tags) == 1) {
-      rownames(df0) <- rownames(df)
-      subset(df0, is.na(df0[[tags]]) & ref == alt) %>% rownames -> sel
-      df0[sel, tags] <- 1
+    ## if (isTRUE(adjust.af) & length(tags) == 1) {
+    ##   rownames(df0) <- rownames(df)
+    ##   subset(df0, is.na(df0[[tags]]) & ref == alt) %>% rownames -> sel
+    ##   df0[sel, tags] <- 1
 
-      subset(df0, is.na(df0[[tags]]) & ref != alt) %>% rownames -> sel
-      df0[sel, tags] <- 0
-      object[[assay]][[tags]] <- df0[[tags]]
-    }
+    ##   subset(df0, is.na(df0[[tags]]) & ref != alt) %>% rownames -> sel
+    ##   df0[sel, tags] <- 0
+    ##   object[[assay]][[tags]] <- df0[[tags]]
+    ## }
+  }
+
+  if (!is.null(db)) {
+    df0 <- anno_gene(chr = df$chr, start = as.integer(df$start), ref = df$ref, alt = df$alt, db = db)
+    object[[assay]][["gene"]] <- df0[[1]]
+    object[[assay]][["type"]] <- df0[[2]]
   }
   DefaultAssay(object) <- old.assay
   object

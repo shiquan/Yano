@@ -153,27 +153,15 @@ theme_cov <- function(...) {
 #' @export
 plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, highlights=NULL, ...)
 {
-  if (is.null(db)) stop(paste0("No database found, ", genome))
+  if (is.null(db)) stop("No database specified.")
+  if (!isGTF(db)) stop("Not like a GTF database, use gtf2db to read GTF first.")
   
-  genes1 <- db$gene
-  exons1 <- db$exon
-  trans1 <- db$transcript
+  start0 <- start(region)
+  end0 <- end(region)
 
-  genes1 <- sort(sortSeqlevels(genes1), ignore.strand = TRUE)
-  exons1 <- sort(sortSeqlevels(exons1), ignore.strand = TRUE)
-  trans1 <- sort(sortSeqlevels(trans1), ignore.strand = TRUE)
-
-  genes0 <- data.frame(subsetByOverlaps(genes1, region, ignore.strand = TRUE))
-  genes <- genes %||% unique(genes0$gene_name)
-  genes <- intersect(genes, genes0$gene_name)
-  exons0 <- data.frame(subsetByOverlaps(exons1, region, ignore.strand = TRUE))
-  exons0 <- exons0[which(exons0$gene_name %in% genes),]
+  tracks <- .Call("gene_tracks", as.character(seqnames(region)), start0, end0, db, genes)
   
-  trans0 <- data.frame(subsetByOverlaps(trans1, region, ignore.strand = TRUE))
-  trans0 <- trans0[which(trans0$gene_name %in% genes),]
-
-  txcnt <- table(trans0$gene_name)
-  if (nrow(trans0) == 0) {
+  if (is.null(tracks)) {
     p <- ggplot()
     p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start(region), end(region)), expand=FALSE)
     p <- p + ylim(0,1) + theme_void()
@@ -187,37 +175,40 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, highl
     return(p)
   }
 
-  trans0$idx <- .Call("trans_sort",trans0$start, trans0$end)
-  tx = trans0$idx
-  names(tx) = trans0$transcript_id
-  exons0$idx = tx[exons0$transcript_id]
+  idx <- which(tracks$start < start0)
+  tracks[idx,"start"] <- start0
+  idx <- which(tracks$end >end0)
+  tracks[idx,"end"] <- end0
+  tracks <- subset(tracks, start < end)
 
-  start0 <- start(region)
-  end0 <- end(region)
-  trans0$start[which(trans0$start<start0)] <- start0
-  trans0$end[which(trans0$end>end0)] <- end0
-  gname <- trans0 %>% group_by(gene_name) %>% summarise(start = min(start), end = max(end), idx = max(idx)+1)
+  mi <- as.integer(max(tracks$idx)/3 *4)
+  tracks %>%
+    filter(type == 1) %>%
+    group_by(gene) %>%
+    summarise(start = min(start), end = max(end), idx = max(idx), nudge_y = mi - max(idx)) -> gname
+  
   gname <- as.data.frame(gname)
   gname$med <- (gname$start + gname$end)/2
-  p <- ggplot() + geom_segment(data = trans0,aes(x = start, xend = end, y = idx, yend = idx, color=strand), size=1)
-  p <- p + geom_segment(data = exons0, aes(x = start, xend = end, y = idx, yend = idx),color="black", size = 5)
+  
+  p <- ggplot() + geom_segment(data = subset(tracks, type == 1),aes(x = start, xend = end, y = idx, yend = idx, color=strand), size=1)
+  p <- p + geom_segment(data = subset(tracks, type == 2), aes(x = start, xend = end, y = idx, yend = idx),color="black", size = 3)
 
   if (!is.null(highlights)) {
     df <- as.data.frame(highlights)
     df$ymin <- 0
-    df$ymax <- max(gname$idx)
+    df$ymax <- mi
     p <- p + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
   }
 
-  p <- p + geom_text(data=gname,aes(x=med,y=idx,label=gene_name), size=5, check_overlap = TRUE,na.rm=TRUE)
+  p <- p + geom_text_repel(data=gname,aes(x=med,y=idx, label=gene), nudge_y = gname$nudge_y, size=5, max.overlaps=Inf, segment.color = "grey50")
   p <- p + theme_minimal()
   p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(),
                  axis.title =element_blank(), 
                  axis.ticks =element_blank())
   p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start(region), end(region)), expand=FALSE)
-  p <- p + ylim(0,max(trans0$idx)+1)
+  p <- p + ylim(0,mi)
   p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
-  p 
+  p
 }
 #'@importFrom IRanges subsetByOverlaps
 plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.size=rel(2), highlights=NULL)
@@ -397,13 +388,13 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
                         
 {
   if (!is.null(gene)) {
-    if (is.null(db)) stop(paste0("No database found, ", genome))
-    genes1 <- db$gene
+    if (is.null(db)) stop("db is not specified.")
+    if (!isGTF(db)) stop("Not like a GTF database, use gtf2db to read GTF first.")
+    sl <- .Call("G_query_gene", db, gene)
 
-    start <- start %||% min(GenomicRanges::start(genes1[which(genes1$gene_name %in% gene)]))
-    end <- end %||% max(GenomicRanges::end(genes1[which(genes1$gene_name %in% gene)]))
-    chr <- unique(seqnames(genes1[which(genes1$gene_name %in% gene)]))
-    if (length(chr) != 1) stop(paste("More than 1 chromosome found, ", chr))
+    chr <- sl[[1]]
+    start <- sl[[2]]
+    end <- sl[[3]]
   }
 
   if (is.null(start) || is.null(end)) stop("No start or/and end position specified.")
