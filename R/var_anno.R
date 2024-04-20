@@ -21,7 +21,7 @@ anno_gene <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NU
 }
 
 #' @export
-annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE, gtf = NULL)#, adjust.af = FALSE)
+annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE)#, adjust.af = FALSE)
 {
   assay <- assay %||% DefaultAssay(object)
   old.assay <- DefaultAssay(object)
