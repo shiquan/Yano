@@ -10,14 +10,15 @@ annoBED <- function(object = NULL, assay = NULL, gtf = NULL)
   if (notGTF(gtf)) stop("GTF is not specific, use gtf2db load GTF file first.")
   
   assay <- assay %||% DefaultAssay(object)
-  old.assay <- DefaultAssay(obj)
-  DefaultAssay(obj) <- assay
+  old.assay <- DefaultAssay(object)
+  DefaultAssay(object) <- assay
 
   df <- object[[assay]][[]]
   
   if (length(intersect(c("chr","start","end","strand"), colnames(df))) != 4) {
     message("Parse names ..")
-    obj <- ParseBED(obj)
+    object <- ParseBED(object)
+    df <- object[[assay]][[]]
   }
 
   df0 <- bedanno(chr=df$chr, start=as.integer(df$start), end=df$end, strand = df$strand, gtf=gtf)
