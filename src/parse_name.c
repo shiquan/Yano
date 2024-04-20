@@ -59,6 +59,7 @@ SEXP parse_var_names(SEXP name)
             return R_NilValue;            
         }
 
+        kputs("", &tmp);
         int st = str2int(tmp.s);
         INTEGER(start)[i] = st;
 
@@ -160,7 +161,7 @@ SEXP parse_bed_names(SEXP name)
         }
 
         if (j == str.l) {
-            Rprintf("Not a BED name, %s", str.s);
+            Rprintf("Not a BED name, %s, %s", str.s, tmp.s);
             free(str.s);
             if (tmp.m) free(tmp.s);
 
@@ -177,7 +178,7 @@ SEXP parse_bed_names(SEXP name)
         }
 
         if (tmp.l == 0 || str.s[j] != '-') {
-            Rprintf("Not a BED name, %s", str.s);
+            Rprintf("Not a BED name, %s, %s", str.s, tmp.s);
             free(str.s);
             if (tmp.m) free(tmp.s);
 
@@ -219,7 +220,7 @@ SEXP parse_bed_names(SEXP name)
             } else if (str.s[j] == '.') {
                 SET_STRING_ELT(strand, i, mkChar("."));
             } else {
-                Rprintf("Not a BED name, %s", str.s);
+                Rprintf("Not a BED name, %s, %s", str.s, tmp.s);
                 free(str.s);
                 if (tmp.m) free(tmp.s);
                 
