@@ -7,7 +7,6 @@
 #include "bed.h"
 #include "htslib/kstring.h"
 
-
 SEXP anno_bed(SEXP _chr, SEXP _st, SEXP _ed, SEXP _strand, SEXP _db, SEXP _prom, SEXP _up, SEXP _down, SEXP _at_up, SEXP _at_down)
 {
     Rboolean promoter = asLogical(_prom);
@@ -52,11 +51,14 @@ SEXP anno_bed(SEXP _chr, SEXP _st, SEXP _ed, SEXP _strand, SEXP _db, SEXP _prom,
 
         if (k == 0) {
             SET_STRING_ELT(type, i, mkChar("intergenic"));
+            SET_STRING_ELT(gene, i, mkChar("."));
         } else if (k == 1) {
             int type0 = a[0].type;
             SET_STRING_ELT(type, i, mkChar(bed_typename(type0)));
             if (a[0].g) {
                 SET_STRING_ELT(gene, i, mkChar(GTF_genename(G, a[0].g->gene_name)));
+            } else {
+                SET_STRING_ELT(gene, i, mkChar("."));
             }
         } else if (k > 1) {
             struct gtf *g0 = a[0].g;
@@ -72,6 +74,8 @@ SEXP anno_bed(SEXP _chr, SEXP _st, SEXP _ed, SEXP _strand, SEXP _db, SEXP _prom,
                 SET_STRING_ELT(type, i, mkChar(bed_typename(type0)));
                 if (a[0].g) {
                     SET_STRING_ELT(gene, i, mkChar(GTF_genename(G, a[0].g->gene_name)));
+                } else {
+                    SET_STRING_ELT(gene, i, mkChar("."));
                 }
             } else {
                 if (a[0].type > 9) {
@@ -86,7 +90,11 @@ SEXP anno_bed(SEXP _chr, SEXP _st, SEXP _ed, SEXP _strand, SEXP _db, SEXP _prom,
                         kputs(GTF_genename(G, g->gene_name), &str);
                     }
                 }
+                SET_STRING_ELT(type, i, mkChar(bed_typename(type0)));
                 if (str.l) SET_STRING_ELT(gene, i, mkChar(str.s));
+                else {
+                    SET_STRING_ELT(gene, i, mkChar("."));
+                }
             }
         }
     }
