@@ -153,7 +153,6 @@ SEXP parse_bed_names(SEXP name)
             if (str.s[j] == ':') {
                 kputs("", &tmp);
                 SET_STRING_ELT(chr, i, mkChar(tmp.s));
-                j++;
                 break;
             }
             kputc(str.s[j], &tmp);
@@ -161,7 +160,7 @@ SEXP parse_bed_names(SEXP name)
         }
 
         if (j == str.l) {
-            Rprintf("Not a BED name, %s, %s", str.s, tmp.s);
+            Rprintf("Not a BED name, %s, %s\n", str.s, tmp.s);
             free(str.s);
             if (tmp.m) free(tmp.s);
 
