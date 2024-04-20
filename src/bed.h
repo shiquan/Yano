@@ -7,6 +7,7 @@
 #include "htslib/kstring.h"
 #include "htslib/sam.h"
 #include "gtf.h"
+
 #define BED_STRAND_FWD 0
 #define BED_STRAND_REV 1
 #define BED_STRAND_UNK -1
@@ -24,10 +25,12 @@ struct bed {
     void *data;
 };
 
-#define BAT_COUNT    17
+#define BAT_COUNT    21
 
 // definition of BED annotation types
 #define BAT_UNKNOWN          0
+// promoter come before UTR considering region behind TSS may also play as promoter,
+// but maybe this is not a perfect design, may change in the future. SQ 19/04/2024
 #define BAT_PROMOTER         1
 #define BAT_UTR3             2 
 #define BAT_UTR5             3 
@@ -42,8 +45,13 @@ struct bed {
 #define BAT_ANTISENSEEXON    12
 #define BAT_ANTISENSEINTRON  13
 #define BAT_ANTISENSECOMPLEX 14
-#define BAT_INTERGENIC       15
-#define BAT_UNKNOWNCHRS      16
+#define BAT_FLANK            15
+#define BAT_UPSTREAM         16
+#define BAT_DOWNSTREAM       17
+#define BAT_ANTISENSEUP      18
+#define BAT_ANTISENSEDOWN    19
+#define BAT_INTERGENIC       20
+#define BAT_UNKNOWNCHRS      21
 
 extern const char *bed_typename(int type);
 
@@ -108,6 +116,8 @@ struct anno0 {
     int type;
 };
 
-struct anno0 *anno_bed_core(const char *name, int start, int end, int strand, struct gtf_spec *G, int *n, int promoter, int down, int up);
+struct anno0 *anno_bed_core(const char *name, int start, int end, int strand, struct gtf_spec *G, int *n, int promoter, int down, int up, int at_down, int at_up);
+
+void anno_bed_cleanup();
 
 #endif
