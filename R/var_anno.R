@@ -34,17 +34,18 @@ anno_gene <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NU
 }
 
 #' @export
-EATanno <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE, db = NULL)#, adjust.af = FALSE)
+annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE, db = NULL)#, adjust.af = FALSE)
 {
   assay <- assay %||% DefaultAssay(object)
   old.assay <- DefaultAssay(obj)
   DefaultAssay(obj) <- assay
+
+  df <- object[[assay]][[]]
+  
   if (length(intersect(c("chr","start","ref","alt"), colnames(df))) != 4) {
     message("Parse names ..")
     obj <- ParseVAR(obj)
   }
-
-  df <- object[[assay]][[]]
 
   if (!is.null(tags) & !is.null(vcf)) {
     df0 <- varanno(chr=df$chr, start=as.integer(df$start), ref=df$ref, alt=df$alt, vcf = vcf, tags = tags, check.alt.only = check.alt.only)

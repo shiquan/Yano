@@ -10,3 +10,8 @@ gtf2db <- function(filename = NULL) {
 isGTF <- function(db = NULL) {
   return("GTF" %in% class(db))
 }
+
+#'@export
+notGTF <- function(db = NULL) {
+  return("GTF" %ni% class(db))
+}

@@ -433,11 +433,11 @@ SEXP anno_gene(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand
         if (!Rf_isNull(_strand)) {
             const char *s = translateChar(STRING_ELT(_strand, i));
             if (s[0] == '+') strand = 0;
-            else if (s[0] == '+') strand = 1;
+            else if (s[0] == '-') strand = 1;
         }
 
         int k;
-        struct anno0 *a = anno_bed_core(chr, start-1, start, strand, G, &k, 1, 1000, 0);
+        struct anno0 *a = anno_bed_core(chr, start-1, start, strand, G, &k, 1, 1000, 0, 1000, 1000);
         if (k == 0) {
             SET_STRING_ELT(gene, i, mkChar("."));
             SET_STRING_ELT(type, i, mkChar("intergenic"));

@@ -27,8 +27,13 @@ static const char *bed_anno_type[] = {
     "antisense_exon",
     "antisense_intron",
     "antisense_complex",
+    "flank",  // flank region
+    "upstream",
+    "downstream",
+    "antisense_upstream",
+    "antisense_downstream",
     "intergenic",
-    "unknown_chromosome"
+    "unknown_chromosome",
 };
 
 const char *bed_typename(int type)
@@ -662,7 +667,7 @@ static int query_exon(int start, int end, struct gtf const *G, struct anno0 *a, 
         /* } else { // checked, but out range of transcript */
         a->type = BAT_INTERGENIC;            
         /* } */
-
+        // should not come here
         a->g = NULL;
     }
     else if (n == 1) {
@@ -682,11 +687,8 @@ static int query_exon(int start, int end, struct gtf const *G, struct anno0 *a, 
         struct gtf *g0 = gtf_pool[0];
         a->type = BAT_MULTIEXONS;
         a->g = g0;
-        // struct gtf *g1 = gtf_pool[1];
-        // debug_print("%d\t%d\t%d\t%d", g0->start, g0->end, g1->start, g1->end);
     }
 
-    //if ((a->type == BAT_EXON || a->type == BAT_EXONINTRON) && utr == 1) {
     if (a->type == BAT_EXON && utr == 1) {
         // forward
         if (G->strand == 0) a->type = pass_cds ? BAT_UTR3 : BAT_UTR5;
@@ -695,7 +697,6 @@ static int query_exon(int start, int end, struct gtf const *G, struct anno0 *a, 
     }
 
     free(gtf_pool);
-    // debug_print("%s", bed_typename(a->type));
     
     return a->type == BAT_INTERGENIC;
 }
@@ -703,8 +704,12 @@ static int query_exon(int start, int end, struct gtf const *G, struct anno0 *a, 
 static int query_trans(int start, int end, struct gtf const *G, struct anno0 *a)
 {
     // nonoverlap with this gene
-    if (start >= G->end) return 1;
-    if (end <= G->start) return 1;
+    if (start >= G->end) return BAT_FLANK;
+    if (end <= G->start) return BAT_FLANK;
+
+    // partial overlap
+    if (start < G->start) return BAT_FLANK;
+    if (end > G->end) return BAT_FLANK;
     
     // debug_print("gene: %s, %d\t%d", GTF_genename(args.G,G->gene_name), G->start, G->end);
     struct anno0 *a0 = malloc(sizeof(struct anno0)* G->n_gtf);
@@ -713,18 +718,16 @@ static int query_trans(int start, int end, struct gtf const *G, struct anno0 *a)
     for (i = 0; i < G->n_gtf; ++i) { // 
         struct gtf *g0 = G->gtf[i];
         if (g0->type != feature_transcript) continue;
-        // debug_print("trans: %s, %d\t%d", GTF_transid(args.G,G->gtf[i]->transcript_id), g0->start, g0->end);
-
+        
         //  nonoverlap with this trans
         if (start >= g0->end) continue;
         if (end <= g0->start) continue;
         
         int ret = query_exon(start, end, g0, &a0[j], g0->coding);
         if (ret == 0) j++;
-        // debug_print("%s", bed_typename(a0[j-1].type));
     }
     
-    if (j ==0) { free(a0); return 1; }
+    if (j ==0) { free(a0); return -1; }
     // debug_print("j : %d",j);
     
     if (j > 1) qsort(a0, j, sizeof(struct anno0), cmpfunc2);
@@ -735,13 +738,12 @@ static int query_trans(int start, int end, struct gtf const *G, struct anno0 *a)
     // debug_print("%s\t%s", bed_typename(a->type), GTF_transid(args.G, a->g->transcript_id));
     free(a0);
     //debug_print("type: %d", a->type);
-    return 0;
+    return a->type;
 }
 
 static int query_promoter(int start, int end, struct gtf *G, struct anno0 *a, int down, int up)
 {
     // nonoverlap with this promoter
-
     int start0 = G->start;
     int end0 = G->start;
     if (G->strand == 1) {
@@ -757,15 +759,32 @@ static int query_promoter(int start, int end, struct gtf *G, struct anno0 *a, in
     if (start0 < 0) start0 = 1;
     if (end0 < 0) end0 = start0;
     
-    if (start >= end0) return 1;
-    if (end <= start0) return 1;
+    if (start >= end0) return -1;
+    if (end <= start0) return -1;
 
     a->type = BAT_PROMOTER;
     a->g = G;
-    return 0;
+    return BAT_PROMOTER;
 }
 
-struct anno0 *anno_bed_core(const char *name, int start, int end, int strand, struct gtf_spec *G, int *n, int promoter, int down, int up)
+#define max(x, y) x > y ? x : y
+#define min(x, y) x > y ? y : x
+
+int region_overlap(int start, int end, int start0, int end0)
+{
+    int start1 = min(start, start0);
+    int end1 = max(end, end0);
+
+    return end - start + end0 - start0 - (end1 -start1);
+}
+
+static struct dict *wnames = NULL;
+
+void anno_bed_cleanup()
+{
+    if (wnames !=NULL) dict_destroy(wnames);    
+}
+struct anno0 *anno_bed_core(const char *name, int start, int end, int strand, struct gtf_spec *G, int *n, int promoter, int down, int up, int at_down, int at_up)
 {
     if (end == -1) end = start+1;
     if (end < start ) {
@@ -773,12 +792,23 @@ struct anno0 *anno_bed_core(const char *name, int start, int end, int strand, st
         return NULL;
     }
 
+    int flank;
+
+    flank = max(down, up);
+    flank = max(flank, at_down);
+    flank = max(flank, at_up);
+    
     *n = 0;
-    struct region_itr *itr = gtf_query(G, name, start, end);
+    struct region_itr *itr = gtf_query(G, name, start - flank, end + flank);
     if (itr == NULL) {
         int id = dict_query(G->name, name);
         if (id == -1) {
-            warnings("Chromosome %s not found in GTF, use wrong database? ", name);
+            if (wnames == NULL) wnames = dict_init();
+            int idx = dict_query(wnames, name);
+            if (idx == -1) {
+                warnings("Chromosome %s not found in GTF, use wrong database? ", name);
+                dict_push(wnames, name);
+            }
         }
         return NULL;
     }
@@ -795,13 +825,64 @@ struct anno0 *anno_bed_core(const char *name, int start, int end, int strand, st
             int ret;
             if (promoter) {
                 ret = query_promoter(start, end, g0, &a[k], down, up);
-                if (ret) {
+                if (ret == -1) {
                     ret = query_trans(start, end, g0, &a[k]);
                 }
             } else {
                 ret = query_trans(start, end, g0, &a[k]);
             }
-            if (ret != 0) continue; // nonoverlapped
+
+            if (ret == BAT_FLANK) {
+                if (strand == -1) {
+                    a[k].type = BAT_INTERGENIC;
+                    continue;
+                } 
+
+                if (g0->strand == strand) {
+                    a[k].type = BAT_INTERGENIC;
+                    continue;
+                }
+
+                if (strand_is_minus(g0->strand)) {
+                    if (start >= g0->end + at_up) {
+                        a[k].type = BAT_INTERGENIC;
+                        continue;
+                    }
+
+                    if (end <= g0->start - at_down) {
+                        a[k].type = BAT_INTERGENIC;
+                        continue;
+                    }
+
+                    
+                    if (region_overlap(start, end, g0->end, g0->end + at_up) > 0) {
+                        a[k].type = BAT_ANTISENSEUP;
+                        a[k].g = g0;
+                    } else if (region_overlap(start, end, g0->start - at_down, g0->start) > 0) {
+                        a[k].type = BAT_ANTISENSEDOWN;
+                        a[k].g = g0;
+                    }
+                } else {
+                    if (start >= g0->end + at_down) {
+                        a[k].type = BAT_INTERGENIC;
+                        continue;
+                    }
+                    if (end <= g0->start - at_up) {
+                        a[k].type = BAT_INTERGENIC;
+                        continue;
+                    }
+
+                    if (region_overlap(start, end, g0->start - at_up, g0->start) > 0) {
+                        a[k].type= BAT_ANTISENSEUP;
+                        a[k].g = g0;
+                    } else if (region_overlap(start, end, g0->end, g0->end + at_down) >0) {
+                        a[k].type = BAT_ANTISENSEDOWN;
+                        a[k].g = g0;
+                    }
+                }
+            }
+            
+            if (ret == -1) continue; // nonoverlapped
         }
 
         // for stranded, reannotate antisense 
@@ -813,9 +894,10 @@ struct anno0 *anno_bed_core(const char *name, int start, int end, int strand, st
             else if (a[k].type == BAT_UTR5) a[k].type = BAT_ANTISENSEUTR5;
             else if (a[k].type == BAT_EXON) a[k].type = BAT_ANTISENSEEXON;
             else if (a[k].type == BAT_INTRON) a[k].type = BAT_ANTISENSEINTRON;
+            else if (a[k].type == BAT_UPSTREAM) a[k].type = BAT_ANTISENSEUP;
+            else if (a[k].type == BAT_DOWNSTREAM) a[k].type = BAT_ANTISENSEDOWN;
         }
 
-        //debug_print("%d", a[k].type);
         k++;
     }
 
