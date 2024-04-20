@@ -151,6 +151,7 @@ SEXP parse_bed_names(SEXP name)
         // chr
         for (j = 0; j < str.l; ) {
             if (str.s[j] == ':') {
+                kputs("", &tmp);
                 SET_STRING_ELT(chr, i, mkChar(tmp.s));
                 j++;
                 break;
@@ -169,13 +170,14 @@ SEXP parse_bed_names(SEXP name)
         }
         
         tmp.l = 0;
+        j++; // skip :
         for (; j < str.l;) {
             if (isdigit(str.s[j])) kputc(str.s[j], &tmp);
             else break;
             j++;
         }
 
-        if (tmp.l == 0) {
+        if (tmp.l == 0 || str.s[j] != '-') {
             Rprintf("Not a BED name, %s", str.s);
             free(str.s);
             if (tmp.m) free(tmp.s);
@@ -190,6 +192,7 @@ SEXP parse_bed_names(SEXP name)
         INTEGER(start)[i] = st;
 
         tmp.l = 0;
+        j++; // skip -
         for (; j < str.l;) {
             if (isdigit(str.s[j])) kputc(str.s[j], &tmp);
             else break;
@@ -209,7 +212,7 @@ SEXP parse_bed_names(SEXP name)
         int ed = str2int(tmp.s);
 
         INTEGER(end)[i] = ed;
-
+        
         if (str.s[j] == '/') {
             j++;
             if (str.s[j] == '-') {
