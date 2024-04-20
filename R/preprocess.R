@@ -166,7 +166,7 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
 }
 
 #'@export
-ParseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE, db = NULL)
+ParseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
 {
   old.assay <- DefaultAssay(object)
   assay <- assay %||% old.assay
@@ -194,30 +194,6 @@ ParseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE, db = NU
   names(locs) <- rn
   
   object0[['locus']] <- locs
-
-  if (!is.null(db)) {
-    gr <- GRanges(seqnames=sl[[1]], ranges = IRanges(start = as.integer(sl[[2]]), width = 1), name = rn, strand = sl[[5]])
-    genes1 <- db$gene
-    exons1 <- db$exon
-    gr$gene <- "."
-    gr$type <- "intergenic"
-
-    ov <- findOverlaps(gr, genes1, ignore.strand=TRUE)
-    gr[queryHits(ov)]$gene <- genes1[subjectHits(ov)]$gene_name
-    gr[queryHits(ov)]$type <- "antisense"
-
-    ov <- findOverlaps(gr, genes1, ignore.strand=FALSE)
-    gr[queryHits(ov)]$gene <- genes1[subjectHits(ov)]$gene_name
-    gr[queryHits(ov)]$type <- "intron"
-
-    ov <- findOverlaps(gr, exons1)
-    gr[queryHits(ov)]$type <- "exon"
-    genes <- gr$gene
-    types <- gr$type
-    names(genes) <- names(types) <- rn
-    object0[['gene']] <- genes
-    object0[['type']] <- types
-  }
   
   object[[assay]] <- object0
   DefaultAssay(object) <- old.assay
@@ -225,69 +201,36 @@ ParseVAR <- function(object = NULL, assay = NULL, ignore.strand = FALSE, db = NU
   object
 }
 
-#' @importFrom data.table fread 
-#' @importFrom GenomicRanges GRanges findOverlaps
-#' @importFrom IRanges IRanges
-#' @importFrom S4Vectors queryHits subjectHits
-#' @importFrom stringr str_detect
-#' @export
-LoadVARanno <- function(file = NULL, object = NULL, assay = NULL, ignore.strand = FALSE)
+#'@export
+ParseBED <- function(object = NULL, assay = NULL, ignore.strand = FALSE)
 {
-  assay <- assay %||% DefaultAssay(object)
-  message(paste0("Working on assay ", assay))
-
   old.assay <- DefaultAssay(object)
-  
-  object <- ParseVAR(object = object, assay = assay, ignore.strand = ignore.strand)
-  
-  bed <- fread(file)[,c(1:9)]
-  colnames(bed) <- c("chr","start","end","name","score","strand","n_gene","gene_name","type")
-  if (isTRUE(ignore.strand)) {
-    bed$name <-  paste0(bed$chr,":",bed$start,"-",bed$end)
-  } else {
-    if(unique(bed$strand)[1] == "*") {
-      bed$name <-  paste0(bed$chr,":",bed$start,"-",bed$end)
-    } else {
-      bed$name <- paste0(bed$chr,":",bed$start,"-",bed$end,"/",bed$strand)
-    }
-  }
-  
-  bed <- as.data.frame(bed)
-  rownames(bed) <- bed$name
-
-  old.assay <- DefaultAssay(object)
+  assay <- assay %||% old.assay
   DefaultAssay(object) <- assay
+  rn <- rownames(object)
 
-  object0<- object[[assay]]
-  object0[['chr']][[1]] -> chrs
-  object0[['start']][[1]] -> starts
-  object0[['strand']][[1]] -> strands
-  object0[['locus']][[1]] -> locs
+  sl <- .Call("parse_bed_names", rn)
+
+  if (is.null(sl)) return(NULL);
+  chr <- sl[[1]]
+  start <- sl[[2]]
+  end <- sl[[3]]
+  strand <- sl[[4]]
+
+  names(chr) <- names(start) <- names(end) <- names(strand) <- rn 
+
+  object0 <- object[[assay]]
+  object0[['chr']] <- chr
+  object0[['start']] <- start
+  object0[['end']] <- end
+  object0[['strand']] <- strand
   
-  gv <- GRanges(chrs,IRanges(start=starts,width=1),strand=strands)
-  gv$name <- rownames(object)
-
-  gr <- GRanges(bed$chr,IRanges(start=bed$start,end=bed$end),strand=bed$strand)
-  gr$name <- bed$name
-
-  ov <- findOverlaps(gv, gr)
-  var.sel <- gv[queryHits(ov)]$name
-  ept.sel <- gr[subjectHits(ov)]$name
-  names(ept.sel) <- var.sel
-  gnames <- bed[ept.sel,]$gene_name
-  types <- bed[ept.sel,]$type
-  names(gnames) <- var.sel
-  names(types) <- var.sel
-  
-  object0[['ept']] <- ept.sel[rownames(object)]
-  object0[['gene_name']] <- gnames[rownames(object)]
-  object0[['ept_type']] <- types[rownames(object)]
-
   object[[assay]] <- object0
   DefaultAssay(object) <- old.assay
 
   object
 }
+
 #' @export
 RenameVARs <- function(counts = NULL, strategy = 1) {
   rn <- rownames(counts)
