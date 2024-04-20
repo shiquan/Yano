@@ -37,14 +37,15 @@ anno_gene <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NU
 annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE, db = NULL)#, adjust.af = FALSE)
 {
   assay <- assay %||% DefaultAssay(object)
-  old.assay <- DefaultAssay(obj)
-  DefaultAssay(obj) <- assay
+  old.assay <- DefaultAssay(object)
+  DefaultAssay(object) <- assay
 
   df <- object[[assay]][[]]
   
   if (length(intersect(c("chr","start","ref","alt"), colnames(df))) != 4) {
     message("Parse names ..")
-    obj <- ParseVAR(obj)
+    object <- ParseVAR(object)
+    df <- object[[assay]][[]]
   }
 
   if (!is.null(tags) & !is.null(vcf)) {
