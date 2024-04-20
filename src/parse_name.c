@@ -60,7 +60,6 @@ SEXP parse_var_names(SEXP name)
         }
 
         int st = str2int(tmp.s);
-
         INTEGER(start)[i] = st;
 
         tmp.l = 0;
@@ -136,7 +135,7 @@ SEXP parse_bed_names(SEXP name)
     SEXP sl = PROTECT(allocVector(VECSXP, 5));
     SEXP chr = PROTECT(allocVector(STRSXP, l));
     SEXP start = PROTECT(allocVector(INTSXP, l));
-    SEXP end = PROTECT(allocVector(STRSXP, l));
+    SEXP end =   PROTECT(allocVector(INTSXP, l));
     SEXP strand = PROTECT(allocVector(STRSXP, l));
     
     kstring_t str = {0,0,0};
@@ -188,7 +187,6 @@ SEXP parse_bed_names(SEXP name)
 
         kputs("", &tmp);
         int st = str2int(tmp.s);
-
         INTEGER(start)[i] = st;
 
         tmp.l = 0;
@@ -210,7 +208,6 @@ SEXP parse_bed_names(SEXP name)
 
         kputs("", &tmp);
         int ed = str2int(tmp.s);
-
         INTEGER(end)[i] = ed;
         
         if (str.s[j] == '/') {
