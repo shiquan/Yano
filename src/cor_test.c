@@ -663,21 +663,24 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         for (k = 0; k < perm; ++k) {
             shuffle(tmpa, ris[k], n_cell);
             smooth_W(tmpa, tmpa_s, n_cell, W);
+
             mna_s = 0;
             for (j = 0; j < n_cell; ++j) {
                 mna_s += tmpa_s[j];
             }
             mna_s = mna_s/(double)n_cell;
+
             Lx1 = 0;
             ra = 0;
             rb1 = 0;
             for (j = 0; j < n_cell; ++j) {
-                Lx1 += pow(tmpa_s[j]-mna,2);
+                //Lx1 += pow(tmpa_s[j]-mna,2);
+                Lx1 += pow(tmpa_s[j]-mna_s,2);
                 tmpa_s[j] = tmpa_s[j] - mna_s;
                 ra += tmpa_s[j] * tmpb_s[j];
                 rb1 += pow(tmpa_s[j],2);
             }
-            rb1 = sqrt(rb1);
+            rb1 = sqrt(rb1);        
             Lx = Lx1/Lx2;
             r = ra/(rb1*rb2);
             es[k] = sqrt(Lx) *(1-r);

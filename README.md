@@ -11,9 +11,9 @@ Yano is seamlessly integrated with Seurat, building upon the Seurat object's fra
 
 ```
 # install all dependencies in R; Or skip these steps if you have already installed them
-install.packages(c("BiocManager", "Seurat", "SeuratObject", "devtools"), repos = "https://cloud.r-project.org")
+install.packages(c("BiocManager", "Seurat", "ggplot2", "devtools"), repos = "https://cloud.r-project.org")
 
-BiocManager::install(c("SingleCellExperiment","Rhtslib", "Biostrings"))
+BiocManager::install(c("Rhtslib"))
 ```
 
 ```
@@ -24,10 +24,6 @@ devtools::install_github("shiquan/Yano")
 # Quick start
 
 # Real cases
-* Case 1, EXON/EPT/EAT analysis for Human Brain 3k cells
-* Case 2, EXON/EPT analysis for 10X Visium mouse brain
-* Case 3, EXON/EPT/EAT analysis for multiple samples
-* Case 4, EXON analysis for human brain (Smartseq2)
 
 # Issues report
 
