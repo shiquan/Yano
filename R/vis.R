@@ -1,4 +1,3 @@
-#'@importFrom dplyr %>%
 #'@importFrom gtools mixedsort
 #'@importFrom ggrepel geom_label_repel
 #'@importFrom viridis scale_color_viridis scale_fill_viridis
@@ -148,22 +147,17 @@ theme_cov <- function(...) {
   )
 }
 
-#' @importFrom IRanges subsetByOverlaps
-#' @importFrom GenomeInfoDb sortSeqlevels
 #' @export
-plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, highlights=NULL, ...)
+plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes = NULL, label=TRUE, highlights=NULL, ...)
 {
-  if (is.null(db)) stop("No database specified.")
-  if (!isGTF(db)) stop("Not like a GTF database, use gtf2db to read GTF first.")
+  if (is.null(gtf)) stop("No database specified.")
+  if (!isGTF(gtf)) stop("Not like a GTF database, use gtf2db to read GTF first.")
   
-  start0 <- start(region)
-  end0 <- end(region)
-
-  tracks <- .Call("gene_tracks", as.character(seqnames(region)), start0, end0, db, genes)
+  tracks <- .Call("gene_tracks", chr, start, end, gtf, genes)
   
   if (is.null(tracks)) {
     p <- ggplot()
-    p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start(region), end(region)), expand=FALSE)
+    p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start, end, expand=FALSE))
     p <- p + ylim(0,1) + theme_void()
     
     if (!is.null(highlights)) {
@@ -175,10 +169,10 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, highl
     return(p)
   }
 
-  idx <- which(tracks$start < start0)
-  tracks[idx,"start"] <- start0
-  idx <- which(tracks$end >end0)
-  tracks[idx,"end"] <- end0
+  idx <- which(tracks$start < start)
+  tracks[idx,"start"] <- start
+  idx <- which(tracks$end >end)
+  tracks[idx,"end"] <- end
   tracks <- subset(tracks, start < end)
 
   mi <- as.integer(max(tracks$idx)/3 *4)
@@ -205,16 +199,15 @@ plot.genes <- function(region = NULL, db = NULL, genes = NULL, label=TRUE, highl
   p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(),
                  axis.title =element_blank(), 
                  axis.ticks =element_blank())
-  p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start(region), end(region)), expand=FALSE)
+  p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start, end), expand=FALSE)
   p <- p + ylim(0,mi)
   p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
   p
 }
-#'@importFrom IRanges subsetByOverlaps
-plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.size=rel(2), highlights=NULL)
+#' @export
+plot.bed <- function(start = NULL, end = NULL, peaks = NULL, type.col = NULL, group.title.size=rel(2), highlights=NULL)
 {
-  r <- subsetByOverlaps(peaks, region, ignore.strand = TRUE)
-  tab <- data.frame(r)
+  tab <- subset(peaks, start >= start, end <= end)
   p <- ggplot()
   if ("type" %in% colnames(tab) & !is.null(type.col)) {
     p <- p + geom_rect(data = tab,inherit.aes = F,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=type), size = 1)
@@ -233,8 +226,7 @@ plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.s
   }
 
   p <- p + facet_wrap(facets = ~strand, strip.position = 'right', ncol = 1)
-  p <- p + xlab("") + coord_cartesian(xlim=c(start(region), end(region)),expand=FALSE)
-  #scale_x_continuous(limits=c(start(region), end(region)), expand = c(0,0))
+  p <- p + xlab("") + coord_cartesian(xlim=c(start, end),expand=FALSE)
   p <- p + ylab("") + scale_y_continuous(expand = c(0,0))
   p <- p + theme_void() + theme(legend.position = "none",
                                 panel.background = element_rect(fill = "grey"),
@@ -246,14 +238,13 @@ plot.bed <- function(region = NULL, peaks = NULL, type.col = NULL, group.title.s
 }
 
 #' @import patchwork
-#' @importFrom GenomicRanges seqnames
 #' @importFrom scales pretty_breaks
 #' @export
 plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
                      strand = c("both", "forward", "reverse", "ignore"),
                      max.depth = 0,
                      split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
-                     cell.group=NULL, log.scaled = log.scaled, start0 = -1, end0 = -1,
+                     cell.group=NULL, log.scaled = log.scaled, #start0 = -1, end0 = -1,
                      highlights=NULL,
                      junc=FALSE, junc.min.depth = 10)
 {
@@ -336,12 +327,11 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
 
 #' @import patchwork
 #' @import dplyr
-#' @importFrom GenomicRanges seqnames
 #' @export
 plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
                       max.depth = 0,
                       split.bc = FALSE, bin = 1000,
-                      cell.group=NULL, log.scaled = FALSE, start0 = -1, end0 = -1)
+                      cell.group=NULL, log.scaled = FALSE) #, start0 = -1, end0 = -1)
 {
   if (is.null(chr) || start == -1 || end == -1) stop("Require a genomic region.")
   bc <- fragcov(fragfile=fragfile, chr=as.character(chr), start=start, end=end,
@@ -371,12 +361,11 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
 }
 
 #' @import patchwork
-#' @importFrom GenomicRanges seqnames GRanges start end
 #' @export
 plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
                         strand = "both",
                         split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
-                        db = NULL, max.depth = 0, group.title.size = rel(2),
+                        gtf = NULL, max.depth = 0, group.title.size = rel(2),
                         cell.group=NULL, display.genes = NULL, toUCSC=FALSE, meta.features =NULL,
                         log.scaled = FALSE, upstream = 1000, downstream = 1000,
                         fragfile = NULL,
@@ -388,9 +377,9 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
                         
 {
   if (!is.null(gene)) {
-    if (is.null(db)) stop("db is not specified.")
-    if (!isGTF(db)) stop("Not like a GTF database, use gtf2db to read GTF first.")
-    sl <- .Call("G_query_gene", db, gene)
+    if (is.null(gtf)) stop("gtf is not specified.")
+    if (!isGTF(gtf)) stop("Not like a GTF database, use gtf2db to read GTF first.")
+    sl <- .Call("G_query_gene", gtf, gene)
 
     chr <- sl[[1]]
     start <- sl[[2]]
@@ -427,15 +416,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
       stop("No chr/start/end/strand/type column found in meta.features")
 
     tab <- subset(meta.features, start > 0 & end > 0)
-    peaks <- GRanges(seqnames=tab[['chr']],
-                 ranges = IRanges(start = tab[['start']],
-                                  end = tab[['end']]),
-                 strand = tab[['strand']],
-                 type = tab[['type']])
-
-    gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
-    p0 <- plot.bed(region = gr, peaks = peaks, type.col=type.col, highlights = df)
-
+    p0 <- plot.bed(start = start, end = end, peaks = tab, type.col=type.col, highlights = df)
   } 
 
   p3 <- NULL
@@ -447,9 +428,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
     p3 <- p3 + theme(strip.text = element_text(size = group.title.size))
   }
   
-  if (toUCSC) chr <- paste0("chr",chr)
-  gr <- GRanges(seqnames=chr, ranges = IRanges(start = start, width = end-start))
-  p2 <- plot.genes(gr, db=db, genes=display.genes, collapse=collapse, highlights=df, ...)
+  p2 <- plot.genes(chr = chr, start = start, end = end, gtf=gtf, genes=display.genes, collapse=collapse, highlights=df, ...)
   
   if (!is.null(p0)) {
     if (!is.null(p3)) {
@@ -464,25 +443,3 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
   return(p1 / p2 + plot_layout(heights=layout_heights[c(2,3)]))
 }
 
-## #' @import RColorBrewer
-## #' @importFrom pheatmap pheatmap
-## #' @export
-## plotModHeatmap <- function(lc = NULL,
-##                            cluster_rows = FALSE,
-##                            cluster_cols =FALSE,
-##                            show_rownames = FALSE,
-##                            show_colnames = FALSE,
-##                            ...
-##                            )
-## {
-##   ann <- lc$module
-##   k <- length(unique(ann[['module']]))  
-##   fig <- pheatmap(lc$LC,
-##                   annotation_row = ann,
-##                   cluster_rows = cluster_rows,
-##                   cluster_cols = cluster_cols,
-##                   show_rownames = show_rownames,
-##                   show_colnames = show_colnames,
-##                   ...)
-##   fig
-## }

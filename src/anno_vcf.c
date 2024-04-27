@@ -432,8 +432,8 @@ SEXP anno_gene(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand
         int strand = -1;
         if (!Rf_isNull(_strand)) {
             const char *s = translateChar(STRING_ELT(_strand, i));
-            if (s[0] == '+') strand = 0;
-            else if (s[0] == '-') strand = 1;
+            if (s[0] == '+') strand = BED_STRAND_FWD;
+            else if (s[0] == '-') strand = BED_STRAND_REV;
         }
 
         int k;
@@ -457,7 +457,7 @@ SEXP anno_gene(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand
             if (a[0].type > 9) {
                 SET_STRING_ELT(type, i, mkChar(bed_typename(a[0].type)));
             } else {
-                SET_STRING_ELT(type, i, mkChar("multigenes"));
+                SET_STRING_ELT(type, i, mkChar(bed_typename(BAT_MULTIGENES)));
             }
             free(a);
         }

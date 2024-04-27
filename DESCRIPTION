@@ -9,20 +9,15 @@ License: What license is it under?
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.1
-LinkingTo: Rhtslib (>= 1.13.1), S4Vectors, Biostrings, XVector, IRanges, Matrix
+LinkingTo: Rhtslib (>= 1.13.1), S4Vectors, XVector, Matrix
 Depends:
-    R (>= 4.0.0),
-    ggplot2,
-    Matrix
-Suggests:
-    testthat,
-    gridExtra
+    R (>= 4.0.0)
 Imports:
-    utils,
-    graphics,
-    grDevices,
-    data.table,
-    grid,
-    Seurat
+    Seurat(>= 5.0.0),
+    ggplot2,
+    Matrix,
+    data.table
+Suggests:
+    testthat
 NeedsCompilation: yes
 SystemRequirements: GNU make
