@@ -53,9 +53,17 @@ RunBlockCorr <- function(object = NULL,
   }
   
   tt <- Sys.time()
-  
+
   assay <- assay %||% DefaultAssay(object)
   message(paste0("Working on assay ", assay))
+
+  if (!is.null(bind.assay)) {
+    if (bind.assay %ni% names(object)) {
+      stop("No bind.assay is found. Make sure you specify the correct assay name.")
+    } else {
+      message(paste0("Working on binding assay ", bind.assay))
+    }
+  }
 
   prefix <- prefix %||% bind.name
   
@@ -100,7 +108,7 @@ RunBlockCorr <- function(object = NULL,
   message(paste0("Processing ", length(blocks), " blocks.."))
   tab <- subset(tab, tab[[bind.name]] %in% blocks)
   features <- intersect(features, rownames(tab))
-  
+
   bind.assay <- bind.assay %||% "tmp.assay"
 
   if (bind.assay %ni% names(object)) {
@@ -193,7 +201,7 @@ RunBlockCorr <- function(object = NULL,
   if (length(ta) == 1) stop(ta[[1]])
 
   Lx <- ta[[1]]
-  Ly <- ta[[2]]
+  #Ly <- ta[[2]]
   r <- ta[[3]]
   e <- ta[[4]]
   tval <- ta[[5]]
@@ -201,7 +209,7 @@ RunBlockCorr <- function(object = NULL,
   vval <- ta[[7]]
   
   names(Lx) <- features
-  names(Ly) <- features
+  #names(Ly) <- features
   names(r) <- features
   names(e) <- features
   names(mval) <- features
