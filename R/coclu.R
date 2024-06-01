@@ -29,6 +29,6 @@ AggAndCoClust <- function(object = NULL, assay = "EPT", features = NULL,
   dat <- dat[hc$order,]
   dat1 <- dat1[hc$order,]
 
-  return(SimpleList(dat, dat1, hc))
+  return(list(dat, dat1, hc))
 }
 

@@ -610,8 +610,8 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         double *tmpb_s = R_Calloc(n_cell, double);
         smooth_W(tmpa, tmpa_s, n_cell, W);
         smooth_W(tmpb, tmpb_s, n_cell, W);
-        double mna_s = 0,
-            mnb_s = 0;
+        double mna_s = 0;
+        double mnb_s = 0;
         for (j = 0; j < n_cell; ++j) {
             mna_s += tmpa_s[j];
             mnb_s += tmpb_s[j];
@@ -621,7 +621,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
 
         double Lx1 = 0,
             Lx2 = 0,
-            Ly1 = 0,
+            //Ly1 = 0,
             Ly2 = 0,
             ra  = 0,
             rb1 = 0,
@@ -629,27 +629,29 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         for (j = 0; j < n_cell; ++j) {
             Lx1 += pow(tmpa_s[j]-mna,2);
             Lx2 += pow(tmpa[j]-mna,2);
-            Ly1 += pow(tmpb_s[j]-mnb,2);
+            //Ly1 += pow(tmpb_s[j]-mnb,2);
             Ly2 += pow(tmpb[j]-mnb,2);
 
             tmpa_s[j] = tmpa_s[j] - mna_s;
             tmpb_s[j] = tmpb_s[j] - mnb_s;
             ra  += tmpa_s[j] * tmpb_s[j];
+            //ra  += tmpa_s[j] * tmpb[j];
             rb1 += pow(tmpa_s[j],2);
             rb2 += pow(tmpb_s[j],2);
+            //rb2 += pow(tmpb[j],2);
         }
         
         rb1 = sqrt(rb1);
         rb2 = sqrt(rb2);
         
         double Lx = Lx1/Lx2;
-        double Ly = Ly1/Ly2;
+        //double Ly = Ly1/Ly2;
         double r = ra/(rb1*rb2);
         double e = sqrt(Lx) * (1-r);
 #pragma omp critical
         {
             REAL(LXval)[i] = Lx;
-            REAL(LYval)[i] = Ly;
+            //REAL(LYval)[i] = Ly;
             REAL(Rval)[i]  = r;
             REAL(Dval)[i]  = e;
         }
@@ -678,9 +680,10 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
                 Lx1 += pow(tmpa_s[j]-mna_s,2);
                 tmpa_s[j] = tmpa_s[j] - mna_s;
                 ra += tmpa_s[j] * tmpb_s[j];
+                //ra += tmpa_s[j] * tmpb[j];
                 rb1 += pow(tmpa_s[j],2);
             }
-            rb1 = sqrt(rb1);        
+            rb1 = sqrt(rb1);
             Lx = Lx1/Lx2;
             r = ra/(rb1*rb2);
             es[k] = sqrt(Lx) *(1-r);
@@ -718,7 +721,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
 
     SEXP ta = PROTECT(allocVector(VECSXP, 7));
     SET_VECTOR_ELT(ta, 0, LXval);
-    SET_VECTOR_ELT(ta, 1, LYval);
+    //SET_VECTOR_ELT(ta, 1, LYval);
     SET_VECTOR_ELT(ta, 2, Rval);
     SET_VECTOR_ELT(ta, 3, Dval);
     SET_VECTOR_ELT(ta, 4, Tval);
