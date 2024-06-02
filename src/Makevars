@@ -1,6 +1,16 @@
 RHTSLIB_LIBS=$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript" -e 'Rhtslib::pkgconfig("PKG_LIBS")')
 RHTSLIB_CFLAGS=$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript" -e 'Rhtslib::pkgconfig("PKG_CPPFLAGS")')
 
+#HTSLIB_DIR=htslib-1.20
+
+#.PHONY: htslib
+
+#htslib:
+#	$(warning "now building libhts.so")
+#	cd $(HTSLIB_DIR) && $(MAKE) -f "${R_HOME}/etc/Makeconf" -f Makefile
+
 PKG_CFLAGS = $(RHTSLIB_CFLAGS) $(SHLIB_OPENMP_CFLAGS)
 PKG_LIBS = $(RHTSLIB_LIBS) $(SHLIB_OPENMP_CFLAGS)
 
+#PKG_CFLAGS = -I ${HTSLIB_DIR}/htslib $(SHLIB_OPENMP_CFLAGS)
+#PKG_LIBS = ${HTSLIB_DIR}/libhts.a $(SHLIB_OPENMP_CFLAGS)

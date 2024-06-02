@@ -624,7 +624,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         double Lx1 = 0,
             Lx2 = 0,
             //Ly1 = 0,
-            Ly2 = 0,
+            // Ly2 = 0,
             ra  = 0,
             rb1 = 0,
             rb2 = 0;
@@ -632,7 +632,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             Lx1 += pow(tmpa_s[j]-mna,2);
             Lx2 += pow(tmpa[j]-mna,2);
             //Ly1 += pow(tmpb_s[j]-mnb,2);
-            Ly2 += pow(tmpb[j]-mnb,2);
+            //Ly2 += pow(tmpb[j]-mnb,2);
 
             tmpa_s[j] = tmpa_s[j] - mna_s;
             tmpb_s[j] = tmpb_s[j] - mnb_s;

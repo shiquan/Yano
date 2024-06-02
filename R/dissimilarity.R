@@ -224,7 +224,8 @@ RunBlockCorr <- function(object = NULL,
   tab[[paste0(prefix, ".pval")]] <- pval[rownames(object)]
   tab[[paste0(prefix, ".mean")]] <- mval[rownames(object)]
   tab[[paste0(prefix, ".var")]] <- vval[rownames(object)]
-  
+
+  tab[[paste0(prefix, ".padj")]] <- p.adjust(pval[rownames(object)], method = "BH")
   object0[[colnames(tab)]] <- tab
 
   object[[assay]] <- object0

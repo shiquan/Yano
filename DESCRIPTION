@@ -3,13 +3,13 @@ Title: Yet ANother package for single cell Omics data analysis
 Version: 0.0.0.9999
 Author: Quan Shi
 Maintainer: Quan Shi <shiquan.biomed@icloud.com>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Description: Spatial dissimilarity analysis for single cell transcriptomics
+License: MIT
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.1
-LinkingTo: Rhtslib (>= 1.13.1), Matrix
+LinkingTo: Rhtslib, Matrix
+biocViews: Rhtslib
 Depends:
     R (>= 4.0.0)
 Imports:
@@ -20,6 +20,6 @@ Imports:
     viridis,
     data.table
 Suggests:
-    testthat
+    dplyr
 NeedsCompilation: yes
 SystemRequirements: GNU make
