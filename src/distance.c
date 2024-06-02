@@ -1,4 +1,7 @@
+#ifdef _OPENMP
 #include<omp.h>
+#endif
+
 #include<R.h>
 #include<Rdefines.h>
 #include<Rinternals.h>
