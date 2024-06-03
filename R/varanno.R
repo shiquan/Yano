@@ -1,6 +1,6 @@
-anno_vcf <- function(chr, start, end, ref, alt, strand, vcf, tags, check_alt_only)
+anno_vcf <- function(chr, start, end, ref, alt, strand, vcf, tags, check.alt.only)
 {
-  sl <- .Call("anno_vcf", chr, start, end, ref, alt, strand, vcf, tags, check_alt_only)
+  sl <- .Call("anno_vcf", chr, start, end, ref, alt, strand, vcf, tags, check.alt.only)
 
   sl
 }
