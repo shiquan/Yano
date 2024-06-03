@@ -1,3 +1,9 @@
+anno_vcf <- function(chr, start, end, ref, alt, strand, vcf, tags, check_alt_only)
+{
+  sl <- .Call("anno_vcf", chr, start, end, ref, alt, strand, vcf, tags, check_alt_only)
+
+  sl
+}
 #' @export
 varanno <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE) {
   if (is.null(chr)) stop("No chr specified.")
