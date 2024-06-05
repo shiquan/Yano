@@ -121,7 +121,7 @@ RunBlockCorr <- function(object = NULL,
       features <- intersect(features, rownames(tab))
     }
 
-    x <- GetAssayData(object, assay = assay, layer = "counts")
+    x <- GetAssayData1(object, assay = assay, layer = "counts")
     cs <- cell.size %||% colSums(x)
     
     x <- x[,cells]
@@ -149,12 +149,14 @@ RunBlockCorr <- function(object = NULL,
 
     norm <- TRUE
   } else {
-    layer <- Layers(object = object0, search = "data")
-    if (is.null(layer)) {
-      abort("No layer found. Please run NormalizeData or RunTFIDF and retry..")
+    if (packageVersion("Seurat") >= 5) {
+      layer <- Layers(object = object0, search = "data")
+      if (is.null(layer)) {
+        abort("No layer found. Please run NormalizeData or RunTFIDF and retry..")
+      }
     }
 
-    x <- GetAssayData(object, assay = assay, layer = "data")
+    x <- GetAssayData1(object, assay = assay, layer = "data")
     x <- x[,cells]
     W <- W[cells,cells]
 
@@ -169,13 +171,14 @@ RunBlockCorr <- function(object = NULL,
     old.assay <- DefaultAssay(object)
     DefaultAssay(object) <- bind.assay
     blocks <- intersect(blocks, rownames(object))
-
-    layer <- Layers(object = object[[bind.assay]], search = "data")
-    if (is.null(layer)) {
-      abort(paste0("No layer found. Please run NormalizeData or RunTFIDF for assay ", assay, " and retry.."))
+    if (packageVersion("Seurat") >= 5) {
+      layer <- Layers(object = object[[bind.assay]], search = "data")
+      if (is.null(layer)) {
+        abort(paste0("No layer found. Please run NormalizeData or RunTFIDF for assay ", assay, " and retry.."))
+      }
     }
 
-    y <- GetAssayData(object, assay = bind.assay, slot = "data")
+    y <- GetAssayData1(object, assay = bind.assay, slot = "data")
     y <- y[,cells]
 
     rs <- Matrix::rowSums(y>0)
@@ -216,7 +219,6 @@ RunBlockCorr <- function(object = NULL,
   names(vval) <- features
   
   pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
-  #pval <- pnorm(tval, lower.tail = FALSE)
   names(pval) <- features
   tab <- object[[assay]][[]]
   tab[[paste0(prefix, ".D")]] <- e[rownames(object)]
