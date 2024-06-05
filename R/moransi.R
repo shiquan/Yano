@@ -47,9 +47,11 @@ RunAutoCorr <- function(object = NULL,
     message("Using ", snn.name, " to construct cell weight matrix.")
   }
 
-  layer <- Layers(object = object, search = layer)
-  if (is.null(layer)) {
-    abort("No layer found. Please run NormalizeData or RunTFIDF and retry..")
+  if (packageVersion("Seurat") >= 5) {
+    layer <- Layers(object = object, search = layer)
+    if (is.null(layer)) {
+      abort("No layer found. Please run NormalizeData or RunTFIDF and retry..")
+    }
   }
   
   tt <- Sys.time()
@@ -90,7 +92,7 @@ RunAutoCorr <- function(object = NULL,
   W <- as(W, "Graph")
   object[[weight.matrix.name]] <- W
   
-  x0 <- GetAssayData(object, assay = assay, layer = layer)[,cells]
+  x0 <- GetAssayData1(object, assay = assay, layer = layer)[,cells]
   features <- intersect(rownames(x0), features)
   x0 <- x0[features,]
   x0 <- as(x0, "CsparseMatrix")

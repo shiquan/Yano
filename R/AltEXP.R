@@ -6,7 +6,7 @@ CheckBindName <- function(object,
   assay <- assay %||% old.assay
   DefaultAssay(object) <- assay
   
-  meta <- object[[assay]]@meta.features
+  meta <- object[[assay]][[]]
 
   if (bind.name %ni% colnames(meta)) {
     stop("No bind.name found at meta table.")
@@ -49,6 +49,15 @@ ValidateCellGroups <- function(
       paste(bad.cells, collapse = ", ")
     )
   }
+}
+
+FindPSIMarkers <- function(object,
+                           cells.1 = NULL,
+                           cells.2 = NULL,
+                           IR.assay = "IR",
+                           ER.assay = "ER")
+{
+  
 }
 #'
 #' @importFrom SeuratObject PackageCheck
@@ -102,7 +111,7 @@ FindAEMarkers <- function(object,
   features <- features %||% rownames(object)
 
   # filter features
-  dat <- GetAssayData(object, layer=layer)
+  dat <- GetAssayData1(object, layer=layer)
   d1 <- dat[features, cells.1]
   d2 <- dat[features, cells.2]
   pct1 <- rowSums(d1>0)/length(cells.1)
@@ -164,7 +173,7 @@ FindAEMarkers <- function(object,
     y <- y[bind.features,]
     rst$bind.feature <- bind.features
   } else {
-    y <- GetAssayData(object,assay = bind.assay, layer = layer)
+    y <- GetAssayData1(object,assay = bind.assay, layer = layer)
     bind.features0 <- intersect(unique(bind.features), rownames(y))
     b1 <- y[bind.features0, cells.1]
     b2 <- y[bind.features0, cells.2]

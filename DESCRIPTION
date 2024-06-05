@@ -13,7 +13,7 @@ biocViews: Rhtslib
 Depends:
     R (>= 4.0.0)
 Imports:
-    Seurat(>= 5.0.0),
+    Seurat(>= 4.0.0),
     ggplot2,
     Matrix,
     R.utils,
