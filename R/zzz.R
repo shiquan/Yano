@@ -42,10 +42,10 @@ package_attach_message <- function(to_load) {
     cli::ansi_align(versions, max(cli::ansi_nchar(versions)))
   )
 
-  if (length(packages) %% 4 == 1) {
+  if (length(packages) %% 2 == 1) {
     packages <- append(packages, "")
   }
-  col1 <- seq_len(length(packages) / 4)
+  col1 <- seq_len(length(packages) / 2)
   info <- paste0(packages[col1], "     ", packages[-col1])
 
   paste0(header, "\n", paste(info, collapse = "\n"))

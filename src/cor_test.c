@@ -7,7 +7,7 @@
 //#include<Rinternals.h>
 
 #ifndef Matrix_stubs
-#define Matrix_stubs 1
+#define Matrix_stubs
 #include "Matrix_stubs.c"
 #endif
 
@@ -43,7 +43,7 @@ int *random_idx(const int n)
     }
     return idx;
 }
-static void shuffle(double tmp[], int const idx[], const int n)
+void shuffle(double tmp[], int const idx[], const int n)
 {
     double aux[n];
     int i;
