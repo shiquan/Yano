@@ -25,7 +25,7 @@ ValidateCellGroups <- function(
   object,
   cells.1,
   cells.2,
-  min.cells.group
+  min.cells.group = 0
 ) {
   if (length(x = cells.1) == 0) {
     stop("Cell group 1 is empty - no cells with identity class ", cells.1)
@@ -50,14 +50,114 @@ ValidateCellGroups <- function(
     )
   }
 }
-
-FindPSIMarkers <- function(object,
-                           cells.1 = NULL,
-                           cells.2 = NULL,
-                           IR.assay = "IR",
-                           ER.assay = "ER")
+#
+#'@export
+PermTest <- function(object, cells.1 = NULL, cells.2 = NULL, bind.name = NULL, bind.assay = NULL,
+                     assay = NULL, layer = "counts", features = NULL, mode = 1, threads =1, min.pct=0,
+                     min.pct.bind.feature = 0.01, perm = 100, seed = 999)
 {
+  bind.features <- CheckBindName(object, bind.name, assay = assay)
   
+  if (is.null(cells.1)) stop("No cells.1 specified.")
+  
+  if (is.null(cells.2)) {
+    cells.2 <- setdiff(colnames(object), cells.1)
+  }
+
+  ValidateCellGroups(object, cells.1, cells.2)
+
+  features <- features %||% rownames(object)
+
+  # filter features
+  dat <- GetAssayData1(object, assay = assay, layer=layer)
+  d1 <- dat[features, cells.1]
+  d2 <- dat[features, cells.2]
+  pct1 <- rowSums(d1>0)/length(cells.1)
+  pct2 <- rowSums(d2>0)/length(cells.2)
+
+  rm(d1)
+  rm(d2)
+  
+  rst <- data.frame(feature=features, pct.1 = pct1, pct.2 = pct2)
+  rownames(rst) <- features
+
+  n1 <- length(cells.1)
+  n2 <- length(cells.2)
+
+  cnt <- dat[, c(cells.1, cells.2)]
+  rst <- subset(rst, pct.1 >= min.pct)
+  features <- rownames(rst)
+  
+  if (length(x = features) == 0) {
+    warning("No feature pass min.pct threshold; returning NULL.")
+    return(NULL)
+  }
+
+  bind.features <- bind.features[features]
+
+  if (is.null(bind.assay)) {
+    x0 <- dat[features,]
+    x0 <- as(x0, "TsparseMatrix")
+
+    blocks <- unique(bind.features)
+    
+    # Aggregate features in the same block
+    y <- sparseMatrix(i = match(bind.features[x0@i+1], blocks),
+                      j = x0@j+1,
+                      x = x0@x, dims=c(length(blocks), ncol(dat)))
+    
+    rm(x0)
+    colnames(y) <- colnames(dat)
+
+    y <- y[, c(cells.1, cells.2)]
+
+    y <- y[bind.features,]
+    rst$bind.feature <- bind.features
+  } else {
+    y <- GetAssayData1(object,assay = bind.assay, layer = layer)
+    bind.features0 <- intersect(unique(bind.features), rownames(y))
+    b1 <- y[bind.features0, cells.1]
+    b2 <- y[bind.features0, cells.2]
+
+    bind.pct1 <- rowSums(b1>0)/length(cells.1)
+    bind.pct2 <- rowSums(b2>0)/length(cells.2)
+
+    names(bind.pct1) <- bind.features0
+    names(bind.pct2) <- bind.features0
+    
+    bind.features0 <- bind.features0[which(bind.pct1 >= min.pct.bind.feature & bind.pct2 >= min.pct.bind.feature)]
+
+    bind.features <- bind.features[which(bind.features %in% bind.features0)]
+    rm(b1)
+    rm(b2)
+
+    y <- y[bind.features0, c(cells.1, cells.2)]
+
+    features <- names(bind.features)
+    rst <- rst[features,]
+    rst$bind.feature <- bind.features
+    rst$bind.feature.pct.1 <- bind.pct1[bind.features]
+    rst$bind.feature.pct.2 <- bind.pct2[bind.features]
+
+    y <- y[bind.features,]    
+  }
+  cnt <- cnt[features,]
+  cnt <- as(cnt, "dgCMatrix")
+  y <- as(y, "dgCMatrix")
+  cells <- colnames(cnt)
+  idx.1 <- match(cells.1, cells)
+  idx.2 <- match(cells.2, cells)
+
+  df <- .Call("alt_exp", cnt, y, idx.1, idx.2, mode, perm, threads, seed)
+
+  rst$delta <- df[[1]]
+  rst$tval <- df[[2]]
+  rst$mean <- df[[3]]
+  rst$var <- df[[4]]
+
+  rst$pval <- pt(rst$tval, df = perm - 1, lower.tail = FALSE)
+  rst$padj <- p.adjust(rst$pval, method = "BH")
+  rst
 }
 #'
 #' @importFrom SeuratObject PackageCheck

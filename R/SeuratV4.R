@@ -1,5 +1,6 @@
-GetAssayData1 <- function(object, assay = "RNA", layer = "counts", ...)
+GetAssayData1 <- function(object, assay = NULL, layer = "counts", ...)
 {
+  assay <- assay %||% DefaultAssay(object)
   if (packageVersion("Seurat") < 5) {
     Seurat::GetAssayData(object, assay = assay, slot = layer, ...)
   } else {
