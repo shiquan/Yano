@@ -25,6 +25,7 @@ RunAutoCorr <- function(object = NULL,
                         prune.distance = 20,
                         prune.snn = 1/10,
                         cells = NULL,
+                        min.cells = 10,
                         features = NULL,
                         weight.matrix.name = "WeightMatrix",
                         prefix="moransi",
@@ -93,7 +94,9 @@ RunAutoCorr <- function(object = NULL,
   object[[weight.matrix.name]] <- W
   
   x0 <- GetAssayData1(object, assay = assay, layer = layer)[,cells]
-  features <- intersect(rownames(x0), features)
+  rs <- rowSums(x0>0)
+  features0 <- rownames(x0)[which(rs >= min.cells)]
+  features <- intersect(features0, features)
   x0 <- x0[features,]
   x0 <- as(x0, "CsparseMatrix")
 
