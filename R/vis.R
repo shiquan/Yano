@@ -64,7 +64,7 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
   }
   p <- p + scale_x_continuous(label = axis_set$chr, breaks = axis_set$center,
                               limits = c(min(data$bp_cum), max(data$bp_cum)),
-                              expand=c(0.01,0.01))
+                              expand=c(0.01,0.01)) # , guide = guide_axis(n.dodge=2))
   p <- p + fbt_theme() + theme(axis.title.y = element_text(size = rel(1.5), angle = 90))
   p <- p + xlab(xlab) + ylab(ylab)
 
@@ -78,7 +78,7 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
 }
 
 #'@export
-FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](p[adj])), types = NULL, point.label = NULL, arrange.type = FALSE, label.size=3, idents = NULL, ...)
+FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](p[adj])), types = NULL, point.label = NULL, arrange.type = FALSE, label.size=3, idents = NULL, shape.by= NULL, ...)
 {
   if (is.null(val)) stop("No value name specified.")  
   cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
@@ -124,9 +124,12 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
   tab <- data.table::rbindlist(sl)
 
   if (n == 1) {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, shape.by=shape.by, label.size=label.size, ...)
   } else {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = "assay", xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size,  ...)
+    if (is.null(shape.by)) {
+      shape.by <- "assay"
+    }
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size,  ...)
   }
   p
 }

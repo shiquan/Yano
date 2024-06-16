@@ -49,7 +49,7 @@ annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
   }
 
   if (!is.null(gtf)) {
-    df0 <- anno_gene(chr = df$chr, start = as.integer(df$start), ref = df$ref, alt = df$alt, gtf = gtf)
+    df0 <- anno_gene(chr = df$chr, start = as.integer(df$start), ref = df$ref, alt = df$alt, strand = df$strand, gtf = gtf)
     object[[assay]][["gene"]] <- df0[[1]]
     object[[assay]][["type"]] <- df0[[2]]
   }
