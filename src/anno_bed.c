@@ -7,13 +7,10 @@
 #include "bed.h"
 #include "htslib/kstring.h"
 
-SEXP anno_bed(SEXP _chr, SEXP _st, SEXP _ed, SEXP _strand, SEXP _db, SEXP _prom, SEXP _up, SEXP _down, SEXP _at_up, SEXP _at_down)
+SEXP anno_bed(SEXP _chr, SEXP _st, SEXP _ed, SEXP _strand, SEXP _db, SEXP _up, SEXP _down)
 {
-    Rboolean promoter = asLogical(_prom);
     int upstream = asInteger(_up);
     int downstream = asInteger(_down);
-    int at_up = asInteger(_at_up);
-    int at_down = asInteger(_at_down);
     
     int l = Rf_length(_chr);
     if (Rf_length(_st) != l) {
@@ -47,7 +44,7 @@ SEXP anno_bed(SEXP _chr, SEXP _st, SEXP _ed, SEXP _strand, SEXP _db, SEXP _prom,
         }
 
         int k;
-        struct anno0 *a = anno_bed_core(chr, start, end, strand, G, &k, promoter, downstream, upstream, at_down, at_up);
+        struct anno0 *a = anno_bed_core(chr, start, end, strand, G, &k, downstream, upstream);
 
         if (k == 0) {
             SET_STRING_ELT(type, i, mkChar("intergenic"));

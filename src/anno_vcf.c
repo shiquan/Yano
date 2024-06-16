@@ -437,7 +437,7 @@ SEXP anno_gene(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand
         }
 
         int k;
-        struct anno0 *a = anno_bed_core(chr, start-1, start, strand, G, &k, 1, 1000, 0, 1000, 1000);
+        struct anno0 *a = anno_bed_core(chr, start-1, start, strand, G, &k, 1000, 1000);
         if (k == 0) {
             SET_STRING_ELT(gene, i, mkChar("."));
             SET_STRING_ELT(type, i, mkChar("intergenic"));

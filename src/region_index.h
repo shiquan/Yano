@@ -1,7 +1,6 @@
 #ifndef REGION_IDX_H
 #define REGION_IDX_H
 
-#include "utils.h"
 
 struct region_index;
 
