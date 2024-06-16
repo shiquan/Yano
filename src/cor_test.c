@@ -57,14 +57,39 @@ SEXP cor_test(SEXP _A, SEXP _B, SEXP _trans)
     
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
-    R_CheckStack();
 
+    CHM_SP A2 = NULL;
+    CHM_SP B2 = NULL;
+
+    int freeA = 0;
+    int freeB = 0;
+    
     if (A->ncol != B->ncol || A->nrow != B->nrow) return mkString("Unequal matrix size.");
     if (A->ncol < 2) return mkString("Too few cells.");
 
+    if (A->stype) {
+        A2 = M_cholmod_copy(A, 0, TRUE, &c);
+        if (c.status < CHOLMOD_OK) return mkString("Out of memory!");
+        A = A2;
+        freeA = 1;
+    }
+
+    if (B->stype) {
+        B2 = M_cholmod_copy(B, 0, TRUE, &c);
+        if (c.status < CHOLMOD_OK) return mkString("Out of memory!");        
+        B = B2;
+        freeB = 1;
+    }
     if (tr) {
-        A = M_cholmod_transpose(A, (int)A->xtype, &c);
-        B = M_cholmod_transpose(B, (int)B->xtype, &c);
+        A2 = M_cholmod_transpose(A, (int)A->xtype, &c);
+        B2 = M_cholmod_transpose(B, (int)B->xtype, &c);
+        if (freeA) M_cholmod_free_sparse(&A, &c);
+        if (freeB) M_cholmod_free_sparse(&B, &c);
+
+        A = A2;
+        B = B2;
+        freeA = 1;
+        freeB = 1;
     }
     
     int N = A->nrow;
@@ -137,10 +162,8 @@ SEXP cor_test(SEXP _A, SEXP _B, SEXP _trans)
     R_Free(tmpa);
     R_Free(tmpb);
 
-    if (tr) {
-        M_cholmod_free_sparse(&A, &c);
-        M_cholmod_free_sparse(&B, &c);
-    }
+    if (freeA) M_cholmod_free_sparse(&A, &c);
+    if (freeB) M_cholmod_free_sparse(&B, &c);
 
     UNPROTECT(1);
     return rval;
@@ -481,6 +504,12 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     CHM_SP B = AS_CHM_SP__(_B);
     CHM_SP W = AS_CHM_SP__(_W);
 
+    CHM_SP A2;
+    CHM_SP B2;
+
+    int freeA = 0;
+    int freeB = 0;
+    
     const int perm = asInteger(_permut);
     const int n_thread = asInteger(_threads);
     const int scale_factor = asInteger(_factor);
@@ -492,18 +521,36 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     srand(seed);
     
     int mode = asInteger(_mode);
-    if (A->stype) return mkString("A cannot be symmetric");
-    if (B->stype) return mkString("B cannot be symmetric");
+    //if (A->stype) return mkString("A cannot be symmetric");
+    //if (B->stype) return mkString("B cannot be symmetric");
     if (W->stype) return mkString("W cannot be symmetric");
-    
+
+    if (A->stype) {
+        A2 = M_cholmod_copy(A, 0, TRUE, &c);
+        if (c.status < CHOLMOD_OK) return mkString("Out of memory!");
+        A = A2;
+        freeA = 1;
+    }
+
+    if (B->stype) {
+        B2 = M_cholmod_copy(B, 0, TRUE, &c);
+        if (c.status < CHOLMOD_OK) return mkString("Out of memory!");        
+        B = B2;
+        freeB = 1;
+    }
+
     if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
     if (A->ncol < 2) return mkString("Too few cells."); // to do
 
-    A = M_cholmod_transpose(A, (int)A->xtype, &c);
-    B = M_cholmod_transpose(B, (int)B->xtype, &c);
-    //W = M_cholmod_transpose(W, (int)W->xtype, &c);
+    A2 = M_cholmod_transpose(A, (int)A->xtype, &c);
+    B2 = M_cholmod_transpose(B, (int)B->xtype, &c);
 
+    if (freeA) M_cholmod_free_sparse(&A, &c);
+    if (freeB) M_cholmod_free_sparse(&B, &c);
+    A = A2;
+    B = B2;
+    
     R_CheckStack();
     const int n_cell = A->nrow;
     const int N_feature = length(idx);
@@ -532,8 +579,10 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         ris[pi] = random_idx(n_cell);
     }
     
+    R_CheckUserInterrupt();
+
     int i;
-    
+        
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < N_feature; ++i) {
         // todo: bidx

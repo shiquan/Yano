@@ -14,6 +14,7 @@ RunAutoCorr(
   prune.distance = 20,
   prune.snn = 1/10,
   cells = NULL,
+  min.cells = 10,
   features = NULL,
   weight.matrix.name = "WeightMatrix",
   prefix = "moransi",
