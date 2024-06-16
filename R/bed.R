@@ -23,7 +23,7 @@ annoBED <- function(object = NULL, assay = NULL, gtf = NULL)
 
   df0 <- bedanno(chr=df$chr, start=as.integer(df$start), end=df$end, strand = df$strand, gtf=gtf)
 
-  object[[assay]][["gene"]] <- df0[[1]]
+  object[[assay]][["gene_name"]] <- df0[[1]]
   object[[assay]][["type"]] <- df0[[2]]
 
   DefaultAssay(object) <- old.assay
