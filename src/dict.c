@@ -1,4 +1,3 @@
-#include "utils.h"
 #include "dict.h"
 #include "htslib/khash.h"
 #include "htslib/kseq.h"
@@ -110,7 +109,6 @@ void dict_destroy(struct dict *D)
 
 int dict_query(const struct dict *D, char const *key)
 {
-    if (D == NULL)  error("Dict is empty.");
     if (key == NULL) error("Trying to query an empty key.");
     khint_t k;
     k = kh_get(name, D->dict, key);
@@ -120,7 +118,6 @@ int dict_query(const struct dict *D, char const *key)
 
 struct dict_val *dict_query0(const struct dict *D, char const *key)
 {
-    if (D == NULL)  error("Dict is empty.");
     if (key == NULL) error("Trying to query an empty key.");
     khint_t k;
     k = kh_get(name, D->dict, key);
@@ -130,7 +127,6 @@ struct dict_val *dict_query0(const struct dict *D, char const *key)
 
 int dict_query2(const struct dict *D, char const *key)
 {
-    if (D == NULL)  error("Dict is empty.");
     if (key == NULL) error("Trying to query an empty key.");
     khint_t k;
     k = kh_get(name, D->dict, key);
@@ -140,7 +136,6 @@ int dict_query2(const struct dict *D, char const *key)
 
 static int dict_push0(struct dict *D, char const *key, int idx)
 {
-    if (D == NULL)  error("Dict is empty.");
     if (key == NULL) error("Trying to push an empty key.");
     int ret;
     ret = dict_query(D, key);
@@ -178,7 +173,6 @@ static int dict_push0(struct dict *D, char const *key, int idx)
 
 int dict_push(struct dict *D, char const *key)
 {
-    if (D == NULL)  error("Dict is empty.");
     if (key == NULL) {
         warnings("Try to push empty key! Skip ..");
         return -1;
@@ -214,7 +208,7 @@ int dict_read(struct dict *D, const char *fname, int allow_space)
 {
     gzFile fp;
     fp = gzopen(fname, "r");
-    if(fp == NULL) error("%s : %s.", fname, strerror(errno));
+    if (fp == NULL) error("%s : %s.", fname, strerror(errno));
     kstream_t *ks = ks_init(fp);
     kstring_t str = {0,0,0};
     int ret;
@@ -240,6 +234,46 @@ int dict_read(struct dict *D, const char *fname, int allow_space)
     if (dict_size(D) == 0) return 1;
     return 0;
 }
+// read tab with value, col 1 is key, col 2 is val
+int dict_read2(struct dict *D, const char *fname, int *val)
+{
+    *val = 0;
+    gzFile fp;
+    fp = gzopen(fname, "r");
+    if (fp == NULL) error("%s : %s.", fname, strerror(errno));
+    kstream_t *ks = ks_init(fp);
+    kstring_t str = {0,0,0};
+    int ret;
+    while (ks_getuntil(ks, 2, &str, &ret)>=0){
+        if (str.l == 0) continue;
+        if (str.s[0] == '#') continue;
+        if (strcmp(str.s, "Barcode") == 0) {
+            warnings("\"Barcode\" in %s looks like a title, skip it. ", fname);
+            continue; // emit header
+        }
+
+        int n;
+        int *s = ksplit(&str, '\t', &n);
+        int idx = dict_push1(D, str.s + s[0]); // init whitelist but not increase count
+
+        if (n > 1) {
+            if (*val == 0) {
+                dict_set_value(D);
+                *val = 1;
+            }
+
+            char *v = strdup(str.s + s[1]);
+            dict_assign_value(D, idx, v);
+        }
+        free(s);
+    }
+    if (str.m) free(str.s);
+    ks_destroy(ks);
+    gzclose(fp);
+
+    if (dict_size(D) == 0) return 1;
+    return 0;
+}
 
 char **dict_names(struct dict *D)
 {
@@ -249,8 +283,7 @@ char **dict_names(struct dict *D)
 static int check_similar(char *a, char *b, int mis)
 {
     int l0 = strlen(a);
-    int l1 = strlen(b);
-    if (l0 != l1) error("Unequal length.");
+    assert(strlen(b) == l0);
     int i;
     int m = 0;
     for (i = 0; i < l0; ++i) {
@@ -299,4 +332,15 @@ int dict_exist(struct dict *D, const char *key)
     struct dict_val *v = dict_query0(D, key);
     if (v == NULL) return -1; // not exist
     return v->ref; // deleted or ref to
+}
+
+struct dict *dict_dup(struct dict *D)
+{
+    struct dict *new = dict_init();    
+    int i;
+    for (i = 0; i < D->n; ++i) {
+        dict_push(new, D->name[i]);
+    }
+
+    return new;
 }

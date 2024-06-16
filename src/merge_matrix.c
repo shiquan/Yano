@@ -5,8 +5,6 @@
 #include "dict.h"
 #include "Matrix/Matrix.h"
 
-// static cholmod_common c;
-
 SEXP merge_matrix(SEXP x)
 {
     int N = length(x);
@@ -14,7 +12,6 @@ SEXP merge_matrix(SEXP x)
     struct dict *cns = dict_init();
     int nzmax = 0;
     static const char *valid[] = {"dgCMatrix", ""};
-    //int xtype = CHOLMOD_REAL;
     for (int i = 0; i < N; ++i) {
         SEXP a = VECTOR_ELT(x, i);
         int ivalid = R_check_class_etc(a, valid);
@@ -42,8 +39,6 @@ SEXP merge_matrix(SEXP x)
             const char *r = CHAR(STRING_ELT(CN,j));
             dict_push(cns, r);
         }
-
-        //UNPROTECT(2);
     }
 
     int nrow = dict_size(rns);
@@ -106,7 +101,6 @@ SEXP merge_matrix(SEXP x)
                 nz++;
             }
         }
-        //UNPROTECT(1);
     }
 
     memcpy(REAL(Ox), pOx, nzmax*sizeof(double));
