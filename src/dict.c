@@ -1,6 +1,7 @@
 #include "dict.h"
 #include "htslib/khash.h"
 #include "htslib/kseq.h"
+#include "htslib/kstring.h"
 #include <zlib.h>
 
 typedef struct dict_val {
