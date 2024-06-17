@@ -114,7 +114,11 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
     if (!is.null(col.by)) {
       tab[[col.by]] <- tab0[[col.by]]
     }
-    
+
+    if (!is.null(shape.by)) {
+      tab[[shape.by]] <- tab0[[shape.by]]
+    }
+
     tab[['assay']] <- assay0
 
     tab <- subset(tab, !is.na(qval))
