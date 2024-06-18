@@ -30,21 +30,28 @@ RunBlockCorr <- function(object = NULL,
                          threads = 0,
                          block.name = NULL,
                          block.assay = NULL,
-                         block.features = NULL
+                         block.features = NULL,
+                         verbose = TRUE
                          )
 {
   if (!is.null(block.name)) {
-    warning(paste0("'block.name' is deprecated. Set bind.name = '", block.name, "'"))
+    if (isTRUE(verbose)) {
+      warning(paste0("'block.name' is deprecated. Set bind.name = '", block.name, "'"))
+    }
     bind.name <- block.name
   }
 
   if (!is.null(block.assay)) {
-    warning(paste0("'block.assay' is deprecated. Set bind.assay = '", block.assay, "'"))
+    if (isTRUE(verbose)) {
+      warning(paste0("'block.assay' is deprecated. Set bind.assay = '", block.assay, "'"))
+    }
     bind.assay <- block.assay
   }
 
   if (!is.null(block.features)) {
-    warning(paste0("'block.features' is deprecated. Set bind.features = '", block.features, "'"))
+    if (isTRUE(verbose)) {
+      warning(paste0("'block.features' is deprecated. Set bind.features = '", block.features, "'"))
+    }
     bind.features <- block.features
   }
 
@@ -55,13 +62,17 @@ RunBlockCorr <- function(object = NULL,
   tt <- Sys.time()
 
   assay <- assay %||% DefaultAssay(object)
-  message(paste0("Working on assay ", assay))
+  if (isTRUE(verbose)) {
+    message(paste0("Working on assay ", assay))
+  }
 
   if (!is.null(bind.assay)) {
     if (bind.assay %ni% names(object)) {
       stop("No bind.assay is found. Make sure you specify the correct assay name.")
     } else {
-      message(paste0("Working on binding assay ", bind.assay))
+      if (isTRUE(verbose)) {
+        message(paste0("Working on binding assay ", bind.assay))
+      }
     }
   }
 
@@ -69,8 +80,10 @@ RunBlockCorr <- function(object = NULL,
   
   features <- features %||% AutoCorrFeatures(object)
   features <- intersect(features, rownames(object))
-  
-  message(paste0("Working on ", length(features), " features."))
+
+  if (isTRUE(verbose)) {
+    message(paste0("Working on ", length(features), " features."))
+  }
   threads <- getCores(threads)
 
   W <- object[[weight.matrix.name]]
@@ -104,8 +117,10 @@ RunBlockCorr <- function(object = NULL,
   idx <- match(features, rownames(tab))
   tab0 <- tab[idx,]
   blocks <- intersect(unique(tab0[[bind.name]]), blocks)
-  
-  message(paste0("Processing ", length(blocks), " blocks.."))
+
+  if (isTRUE(verbose)) {
+    message(paste0("Processing ", length(blocks), " blocks.."))
+  }
   tab <- subset(tab, tab[[bind.name]] %in% blocks)
   features <- intersect(features, rownames(tab))
 
@@ -114,7 +129,9 @@ RunBlockCorr <- function(object = NULL,
   if (bind.assay %ni% names(object)) {
 
     if (min.features.per.block == 1) {
-      message("No bind.assay specified, update min.features.per.block to 2.")
+      if (isTRUE(verbose)) {
+        message("No bind.assay specified, update min.features.per.block to 2.")
+      }
       min.features.per.block <- 2
       blocks <- names(which(table(tab[[bind.name]]) >= min.features.per.block))
       tab <- subset(tab, tab[[bind.name]] %in% blocks)
@@ -133,8 +150,9 @@ RunBlockCorr <- function(object = NULL,
     
     cs <- cs[cells]
     W <- W[cells,cells]
-    
-    message("Aggregate counts..")
+    if (isTRUE(verbose)) {
+      message("Aggregate counts..")
+    }
     x0 <- x[rownames(tab),cells]
     x0 <- as(x0, "TsparseMatrix")
     
@@ -166,8 +184,9 @@ RunBlockCorr <- function(object = NULL,
     features <- intersect(features, features1)
     #tab <- tab[features,]
     blocks <- unique(tab[[bind.name]])
-    
-    message(paste0("Trying to retrieve data from assay ", bind.assay,".."))
+    if (isTRUE(verbose)) {
+      message(paste0("Trying to retrieve data from assay ", bind.assay,".."))
+    }
     old.assay <- DefaultAssay(object)
     DefaultAssay(object) <- bind.assay
     blocks <- intersect(blocks, rownames(object))
@@ -197,8 +216,9 @@ RunBlockCorr <- function(object = NULL,
   tab <- tab[features,]
   bidx <- match(tab[[bind.name]],rownames(y))
   idx <- match(features, rownames(x))
-  
-  message(paste0("Test dissimlarity of binding features with ", threads, " threads."))
+  if (isTRUE(verbose)) {
+    message(paste0("Test dissimlarity of binding features with ", threads, " threads."))
+  }
   gc()
   ta <- .Call("D_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm, seed);
   if (length(ta) == 1) stop(ta[[1]])
@@ -236,8 +256,9 @@ RunBlockCorr <- function(object = NULL,
   gc()
 
   tt <- Sys.time()-tt
-  
-  message(paste0("Runtime : ",format(tt)));
+  if (isTRUE(verbose)) {
+    message(paste0("Runtime : ",format(tt)));
+  }
   object
 }
 
