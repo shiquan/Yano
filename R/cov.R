@@ -103,6 +103,7 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
 
   if (is.list(bamfile)) {
     nm <- names(bamfile)
+    if (is.null(nm)) nm <- c(1:length(bamfile))
     if (is.list(cell.group)) {
       dl <- lapply(nm, function(x) {
         bamcov0(bamfile=bamfile[[x]], chr=as.character(chr), start=start, end=end, strand=strand,

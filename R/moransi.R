@@ -30,6 +30,7 @@ RunAutoCorr <- function(object = NULL,
                         weight.matrix.name = "WeightMatrix",
                         prefix="moransi",
                         threads=0,
+                        verbose = TRUE,
                         ...)
 {
   check.par <- 0
@@ -45,7 +46,9 @@ RunAutoCorr <- function(object = NULL,
     snns <- grep("_snn$", names(object), value=TRUE)
     if (length(snns) == 0) stop("No SNN graph found at object, try to specify snn.name first or run Seurat::FindNeighbors.")
     snn.name <- snns[1]
-    message("Using ", snn.name, " to construct cell weight matrix.")
+    if (isTRUE(verbose)) {
+      message("Using ", snn.name, " to construct cell weight matrix.")
+    }
   }
 
   if (packageVersion("Seurat") >= 5) {
@@ -58,7 +61,9 @@ RunAutoCorr <- function(object = NULL,
   tt <- Sys.time()
   
   assay <- assay %||% DefaultAssay(object = object)
-  message(paste0("Working on assay : ", assay))
+  if (isTRUE(verbose)) {
+    message(paste0("Working on assay : ", assay))
+  }
 
   cells <- order.cells %||% cells
   cells <- cells %||% colnames(object)
@@ -101,7 +106,9 @@ RunAutoCorr <- function(object = NULL,
   x0 <- as(x0, "CsparseMatrix")
 
   W <- W[cells, cells]
-  message(paste0("Run autocorrelation test for ", length(features), " features."))
+  if (isTRUE(verbose)) {
+    message(paste0("Run autocorrelation test for ", length(features), " features."))
+  }
   moransi.vals <- .Call("autocorrelation_test", x0, W, TRUE, threads)
 
   if (length(moransi.vals) == 1) stop(moransi.vals[[1]])
@@ -125,7 +132,9 @@ RunAutoCorr <- function(object = NULL,
   gc()
 
   tt <- Sys.time()-tt
-  message(paste0("Runtime : ",format(tt)));
+  if (isTRUE(verbose)) {
+    message(paste0("Runtime : ",format(tt)));
+  }
   object
 }
 
@@ -148,7 +157,9 @@ SetAutoCorrFeatures <- function(object = NULL,
 
   idx <- which(object0[[prefix]] > moransi.min & object0[[prefix.p]] <= p.cutoff)
 
-  message(paste0(length(idx), " autocorrelated features."))
+  if (isTRUE(verbose)) {
+    message(paste0(length(idx), " autocorrelated features."))
+  }
   object0[["autocorr.variable"]] <- FALSE
 
   all <- object0[["autocorr.variable"]][[1]]
