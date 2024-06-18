@@ -105,8 +105,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
       tab0 <- subset(tab0, type %in% types)
       if (nrow(tab0) == 0) stop("Empty records.")
     }
-    #lv <- mixedsort(unique(tab0[[chr]]))
-    lv <- levels(tab0[[chr]]) == NULL ? mixedsort(unique(tab0[[chr]])) : levels(tab0[[chr]])
+    lv <- is.null(levels(tab0[[chr]])) ? mixedsort(unique(tab0[[chr]])) : levels(tab0[[chr]])
     tab <- data.frame(chr = factor(tab0[[chr]], levels = lv),
                       start = as.numeric(tab0[[start]]),
                       qval = -log10(as.numeric(tab0[[val]])),
