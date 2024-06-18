@@ -97,6 +97,7 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
     
     if (!is.null(sel.chrs)) {
       tab0 <- tab0 %>% filter (chr %in% sel.chrs)
+      levels(tab0[[chr]]) <- levels(sel.chrs)
     }
     
     if (!is.null(types)) {
