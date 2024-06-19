@@ -3,7 +3,6 @@
 #'@importFrom viridis scale_color_viridis scale_fill_viridis
 #'@import ggrepel
 #' 
-#'@export
 FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xlab = "Chromosome", ylab = expression(-log[10](p[adj])), point.label = NULL, arrange.type = FALSE, label.size=3, ...)
 {
   data_cum <- tab %>% group_by(chr) %>% summarise(max_bp = max(start)) %>%
@@ -158,7 +157,6 @@ theme_cov <- function(...) {
   )
 }
 
-#' @export
 plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes = NULL, label=TRUE, highlights=NULL, ...)
 {
   if (is.null(gtf)) stop("No database specified.")
@@ -215,7 +213,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
   p
 }
-#' @export
+
 plot.bed <- function(start = NULL, end = NULL, peaks = NULL, type.col = NULL, group.title.size=rel(2), highlights=NULL)
 {
   tab <- subset(peaks, start >= start, end <= end)
@@ -250,7 +248,6 @@ plot.bed <- function(start = NULL, end = NULL, peaks = NULL, type.col = NULL, gr
 
 #' @import patchwork
 #' @importFrom scales pretty_breaks
-#' @export
 plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
                      strand = c("both", "forward", "reverse", "ignore"),
                      max.depth = 0,
@@ -338,7 +335,6 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
 
 #' @import patchwork
 #' @import dplyr
-#' @export
 plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
                       max.depth = 0,
                       split.bc = FALSE, bin = 1000,

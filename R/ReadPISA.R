@@ -24,6 +24,8 @@ ReadMM <- function(file = NULL)
 #' @import R.utils
 #' @export
 ReadPISA <- function(mex_dir=NULL,
+                     prefix=NULL,
+                     cells=NULL,
                      barcode.path = NULL,
                      feature.path = NULL,
                      matrix.path=NULL,
@@ -31,7 +33,6 @@ ReadPISA <- function(mex_dir=NULL,
                      spliced.path=NULL,
                      unspliced.path=NULL,
                      spanning.path=NULL,
-                     antisense.path=NULL,
                      use_10X=FALSE,
                      spatial=FALSE
                      ) {
@@ -71,8 +72,18 @@ ReadPISA <- function(mex_dir=NULL,
     stop(paste0("No barcode file found at ", mex_dir))
   }
 
-  
-  .ReadPISA1 <- function(barcode.path, peak.path, matrix.path) {
+  .renameMatrix <- function(mat, prefix = NUL, cells = NULL) {
+    if (!is.null(prefix)) {
+      colnames(mat) <- paste0(prefix, colnames(mat))      
+    }
+
+    if (!is.null(cells)) {
+      cells <- intersect(cells, colnames(mat))
+      mat <- mat[,cells]
+    }
+    mat
+  }
+  .ReadPISA1 <- function(barcode.path, peak.path, matrix.path, prefix, cells) {
     mat <- ReadMM(file = matrix.path)
     temp <- read.delim(peak.path, header = FALSE)
     feature.names <- paste0(temp$V1, ":", temp$V2, "-", temp$V3)
@@ -83,19 +94,19 @@ ReadPISA <- function(mex_dir=NULL,
     colnames(mat) <- barcode.names$V1
     rownames(mat) <- make.unique(feature.names)
    
-    mat
+    .renameMatrix(mat, prefix, cells)
   }
   
   if (!file.exists(feature.path)) {
     message("Load peaks X cells matrix ...")
     if (file.exists(peak.path)) {
-      return(.ReadPISA1(barcode.path, peak.path, matrix.path))
+      return(.ReadPISA1(barcode.path, peak.path, matrix.path, prefix, cells))
     } else {
       stop(paste0("No feature file found at ", mex_dir))
     }
   }
   
-  .ReadPISA0 <- function(barcode.path, feature.path, matrix.path, use_10X, spatial) {
+  .ReadPISA0 <- function(barcode.path, feature.path, matrix.path, use_10X, spatial, prefix, cells) {
     mat <- ReadMM(file = matrix.path)
     feature.names <- read.delim(feature.path,
                                 header = FALSE,
@@ -115,19 +126,12 @@ ReadPISA <- function(mex_dir=NULL,
     } else {
       rownames(mat) <- make.unique(feature.names$V1)
     }
-    
-    if (isTRUE(spatial)) {
-      sce <- SingleCellExperiment(counts = mat)
-      tab  <- data.frame(x = as.integer(barcode.names$V1), y = as.integer(barcode.names$V2))
-      rownames(tab) <- colnames(sce)
-      reducedDim(sce, "X_Spatial")<- tab
-      return(sce)
-    }
-    return(mat)
+
+    .renameMatrix(mat, prefix, cells)
   }
   
   if (!file.exists(spliced.path) && file.exists(matrix.path)) {
-    return(.ReadPISA0(barcode.path, feature.path, matrix.path, use_10X, spatial))
+    return(.ReadPISA0(barcode.path, feature.path, matrix.path, use_10X, spatial, prefix, cells))
   }
   mat <- list()
   cat("Load spliced matrix ...\n")
@@ -140,11 +144,6 @@ ReadPISA <- function(mex_dir=NULL,
     mat$spanning <- ReadMM(file = spanning.path)
   } else {
     cat("Spanning matrix is null.\n")
-  }
-
-  if (file.exists(antisense.path)) {
-    cat("Load antisense matrix ...\n")
-    mat$antisense <- ReadMM(file = antisense.path)
   }
 
   feature.names <- read.delim(feature.path,
@@ -163,22 +162,20 @@ ReadPISA <- function(mex_dir=NULL,
   rownames(mat$spliced) <- make.unique(feature.names$V1)
   colnames(mat$unspliced) <- barcode.names$V1
   rownames(mat$unspliced) <- make.unique(feature.names$V1)
+
+  mat$spliced <- .renameMatrix(mat$spliced, prefix, cells)
+  mat$unspliced <- .renameMatrix(mat$unspliced, prefix, cells)
   if (file.exists(spanning.path)) {
     colnames(mat$spanning) <- barcode.names$V1
     rownames(mat$spanning) <- make.unique(feature.names$V1)
-  }
-  if (file.exists(antisense.path)) {
-    colnames(mat$antisense) <- barcode.names$V1
-    rownames(mat$antisense) <- make.unique(feature.names$V1)
+    mat$spanning <- .renameMatrix(mat$spanning, prefix, cells)
   }
   
   if (isTRUE(spatial)) {
     tab  <- data.frame(x = as.integer(barcode.names$V1), y = as.integer(barcode.names$V2))
-    rownames(tab) <- colnames(sce)
-    #reducedDim(sce, "X_Spatial")<- tab
     mat$dim <- tab
   }
-
+  
   mat
 }
 #' @export
