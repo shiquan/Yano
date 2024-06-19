@@ -65,9 +65,6 @@ ReadPISA <- function(mex_dir=NULL,
   if (is.null(spanning.path)) {
     spanning.path <- paste0(mex_dir, "/spanning.mtx.gz")
   }
-  if (is.null(antisense.path)) {
-    antisense.path <- paste0(mex_dir, "/antisense.mtx.gz")
-  }
   if (!file.exists(barcode.path)){
     stop(paste0("No barcode file found at ", mex_dir))
   }
