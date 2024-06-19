@@ -391,7 +391,8 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
     if (is.null(gtf)) stop("gtf is not specified.")
     if (!isGTF(gtf)) stop("Not like a GTF database, use gtf2db to read GTF first.")
     sl <- .Call("G_query_gene", gtf, gene)
-
+    if (is.null(sl)) stop(paste0("No gene ", gene, " found in the database!!"))
+    
     chr <- sl[[1]]
     start <- sl[[2]]
     end <- sl[[3]]

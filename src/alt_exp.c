@@ -150,6 +150,8 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
 
         double t = (delta - mean)/var;
 
+        R_Free(es);
+        
 #pragma omp critical
         {
             REAL(Dval)[i] = delta;

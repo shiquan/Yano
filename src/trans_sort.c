@@ -190,6 +190,7 @@ SEXP G_query_gene(SEXP db, SEXP gene)
     struct gtf_spec *G = (struct gtf_spec *)R_ExternalPtrAddr(db);
     const char *gene0 = translateChar(STRING_ELT(gene, 0));
     struct gtf *g = gtf_query_gene(G, gene0);
+    if (g == NULL) return R_NilValue;
     if (g->ext)
         Rprintf("More than one record found for gene %s, just pick the first record..", gene0);
 
