@@ -38,7 +38,7 @@ bamcov0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "
     dlst <- .Call("depth2matrix", bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, NULL, 0, NULL, NULL, FALSE)
   }
 
-  if (is.null(dlst)) stop("No cell found in the bam. Check cell names.")
+  if (is.null(dlst)) return(NULL) ##stop("No cell found in the bam. Check cell names.")
   
   idx.0 <- which(dlst[[3]] == 0)
   idx.1 <- which(dlst[[3]] == 1)
@@ -167,7 +167,7 @@ bamjunc0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = 
     dlst <- .Call("depth2matrix", bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, NULL, 0, NULL, NULL, TRUE)
   }
 
-  if (is.null(dlst)) stop("No cell found in the bam. Check cell names.")
+  if (is.null(dlst)) return(NULL) ##stop("No cell found in the bam. Check cell names.")
   
   strands <- c("+","-")
   
