@@ -20,7 +20,7 @@ static int cmpfunc1 (const void *_a, const void *_b)
 SEXP gene_tracks0(const char *chr, int start, int end, struct gtf_spec *G, struct dict *genes)
 {
     struct region_itr *itr = gtf_query(G, chr, start, end);
-    if (itr == NULL) return NULL;
+    if (itr == NULL) return R_NilValue;
 
     struct gtf **pool = NULL;
     int n = 0;
