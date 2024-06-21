@@ -1,6 +1,6 @@
 #' @importFrom data.table fread
 #' @importFrom Matrix sparseMatrix
-ReadMM <- function(file = NULL)
+.ReadMM <- function(file = NULL)
 {
   DT <- fread(file,sep='\t', skip = "%", header = FALSE)
   nr <- DT[1,1]
@@ -81,7 +81,7 @@ ReadPISA <- function(mex_dir=NULL,
     mat
   }
   .ReadPISA1 <- function(barcode.path, peak.path, matrix.path, prefix, cells) {
-    mat <- ReadMM(file = matrix.path)
+    mat <- .ReadMM(file = matrix.path)
     temp <- read.delim(peak.path, header = FALSE)
     feature.names <- paste0(temp$V1, ":", temp$V2, "-", temp$V3)
     barcode.names <- read.delim(barcode.path,
@@ -104,7 +104,7 @@ ReadPISA <- function(mex_dir=NULL,
   }
   
   .ReadPISA0 <- function(barcode.path, feature.path, matrix.path, use_10X, spatial, prefix, cells) {
-    mat <- ReadMM(file = matrix.path)
+    mat <- .ReadMM(file = matrix.path)
     feature.names <- read.delim(feature.path,
                                 header = FALSE,
                                 stringsAsFactors = FALSE
@@ -132,13 +132,13 @@ ReadPISA <- function(mex_dir=NULL,
   }
   mat <- list()
   cat("Load spliced matrix ...\n")
-  mat$spliced <- ReadMM(file = spliced.path)
+  mat$spliced <- .ReadMM(file = spliced.path)
   cat("Load unspliced matrix ...\n")
-  mat$unspliced <- ReadMM(file = unspliced.path)
+  mat$unspliced <- .ReadMM(file = unspliced.path)
 
   if (file.exists(spanning.path)) {
     cat("Load spanning matrix ...\n")
-    mat$spanning <- ReadMM(file = spanning.path)
+    mat$spanning <- .ReadMM(file = spanning.path)
   } else {
     cat("Spanning matrix is null.\n")
   }

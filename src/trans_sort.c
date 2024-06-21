@@ -15,7 +15,8 @@ static int cmpfunc1 (const void *_a, const void *_b)
     if (a->start != b->start) return (a->start > b->start) - (a->start < b->start);
     return (a->end > b->end) - (a->end < b->end) ;
 }
-
+// type == 1, gene
+// type == 2, transcript
 SEXP gene_tracks0(const char *chr, int start, int end, struct gtf_spec *G, struct dict *genes)
 {
     struct region_itr *itr = gtf_query(G, chr, start, end);
