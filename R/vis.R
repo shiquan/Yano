@@ -325,7 +325,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   gname <- as.data.frame(gname)
   gname$med <- (gname$start + gname$end)/2
 
-  if (isTRUE(print.genes)) {
+  if (!is.null(print.genes)) {
     gname %>% filter(gene %in% print.genes)-> gname
   } else {
     if (nrow(gname) > max.genes) {
@@ -345,7 +345,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
     df$ymax <- mi
     p <- p + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
   }
-  if (max.genes > 0) {
+  if (max.genes > 0 || !is.null(print.genes)) {
     p <- p + geom_text_repel(data=gname,aes(x=med,y=idx, label=gene), nudge_y = gname$nudge_y, size=5, max.overlaps=Inf, segment.color = "grey50")
   }
   p <- p + theme_minimal()
