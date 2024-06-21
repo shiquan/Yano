@@ -182,9 +182,6 @@ FbtPlot <- function(object = NULL,
       chr1 <- sl[[1]]
       start1 <- sl[[2]]
       end1 <- sl[[3]]
-
-      start1 <- start1 - upstream
-      end1 <- end1 + downstream
       zoom.in <- TRUE
     }
   }
@@ -245,13 +242,14 @@ FbtPlot <- function(object = NULL,
 
   tab <- data.table::rbindlist(sl)
 
-  start1 <- start1 - upstream
-  end1 <- end1 + downstream
-
-  if (start1 < 0) {
-    start1 <- 0
+  if (isTRUE(zoom.in)) {
+    if (start1 > 0) {
+      start1 <- start1 - upstream
+    }
+    if (end1 != -1) {
+      end1 <- end1 + downstream
+    }
   }
-  
   if (n == 1) {
     p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, ...)
   } else {
