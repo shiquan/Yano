@@ -141,7 +141,7 @@ FbtPlot0 <- function(tab = NULL,
 FbtPlot <- function(object = NULL,
                     val = NULL,
                     assay = NULL,
-                    chr.name = "chr", start.name = "start",
+                    chr.name = "chr", start.name = "start", end.name = "end",
                     col.by = NULL, cols = NULL, sel.chrs = NULL,
                     xlab = "Chromosome", ylab = expression(-log[10](p)),
                     types = NULL,
@@ -224,7 +224,10 @@ FbtPlot <- function(object = NULL,
                       start = as.numeric(tab0[[start.name]]),
                       qval = -log10(as.numeric(tab0[[val]])),
                       name = rownames(tab0))
-    
+
+    if (end.name %in% colnames(tab0)) {
+      tab[['start']] <- (tab0[[start.name]] + tab0[[end.name]])/2
+    }
     if (!is.null(col.by)) {
       tab[[col.by]] <- tab0[[col.by]]
     }
