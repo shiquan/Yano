@@ -295,7 +295,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
     p <- ggplot()
     p <- p + ylab("") + xlab("")
     if (end > 0) {
-      p <- p + coord_cartesian(xlim=c(start, end, expand=FALSE))
+      p <- p + coord_cartesian(xlim=c(start, end), expand=FALSE)
     }
     p <- p + ylim(0,1) + theme_void()
     
