@@ -226,7 +226,7 @@ FbtPlot <- function(object = NULL,
                       name = rownames(tab0))
 
     if (end.name %in% colnames(tab0)) {
-      tab[['start']] <- (tab0[[start.name]] + tab0[[end.name]])/2
+      tab[['start']] <- as.integer((tab0[[start.name]] + tab0[[end.name]])/2)
     }
     if (!is.null(col.by)) {
       tab[[col.by]] <- tab0[[col.by]]
