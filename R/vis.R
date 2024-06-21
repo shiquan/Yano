@@ -59,7 +59,7 @@ FbtPlot0 <- function(tab = NULL,
   data <- data %>% arrange(col.by)
 
   qval.min <- min(data$qval)
-  qval.min <- max(data$qval)
+  qval.max <- max(data$qval)
 
   if (qval.min == 0) {
     qval.min <- -1
