@@ -151,6 +151,7 @@ FbtPlot <- function(object = NULL,
                     shape.by= NULL,
                     chr = NULL, start = NULL, end = NULL,
                     gtf = NULL, gene = NULL, upstream=1000, downstream=1000,
+                    print.genes = NULL,
                     ...)
 {
   if (is.null(val)) stop("No value name specified.")  
@@ -251,12 +252,12 @@ FbtPlot <- function(object = NULL,
     }
   }
   if (n == 1) {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, ...)
   } else {
     if (is.null(shape.by)) {
       shape.by <- "assay"
     }
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, ...)
   }
   p
 }
