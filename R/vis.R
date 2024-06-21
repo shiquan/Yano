@@ -129,7 +129,7 @@ FbtPlot0 <- function(tab = NULL,
   if (isTRUE(zoom.in) && !is.null(gtf)) {
     chr <- unique(tab$chr)
     p1 <- plot.genes(chr = chr, start = start, end = end, gtf = gtf, print.genes = print.genes, max.genes = max.genes)
-    return(p/p1 + plot_layout(heights=layout_heights)
+    return(p/p1 + plot_layout(heights=layout_heights))
   }
   p
 }
