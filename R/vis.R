@@ -13,6 +13,8 @@ FbtPlot0 <- function(tab = NULL,
                      zoom.in = FALSE,
                      gtf = NULL,
                      print.genes = NULL,
+                     start = NULL,
+                     end = NULL,
                      max.genes = 20,
                      ...)
 {
@@ -23,16 +25,25 @@ FbtPlot0 <- function(tab = NULL,
         return(p)
       } else {
         chr <- unique(tab$chr)
-        start <- min(tab$start)
-        end <- max(tab$start)
+        if (is.null(start)) {
+          start <- min(tab$start)
+        }
+        if (is.null(end)) {
+          end <- max(tab$start)
+        }
         p1 <- plot.genes(chr = chr, start = start, end = end, gtf = gtf)
         return(p/p1 + plot_layout(heights=c(5,3)))
       }
     }
 
     chr <- unique(tab$chr)
-    start <- min(tab$start)
-    end <- max(tab$start)
+
+    if (is.null(start)) {
+      start <- min(tab$start)
+    }
+    if (is.null(end)) {
+      end <- max(tab$start)
+    }
 
     message(paste0("Zoom in ", chr, " : ", start, "-", end))
     data <- tab
@@ -112,7 +123,7 @@ FbtPlot0 <- function(tab = NULL,
       p <- p + geom_label_repel(data=subset(data, name %in% sel),aes(x=bp_cum, y=qval,label=name),box.padding = 0.5, max.overlaps = Inf, size=label.size)
     }
   }
-  if (!is.null(gtf)) {
+  if (isTRUE(zoom.in) && !is.null(gtf)) {
     chr <- unique(tab$chr)
     p1 <- plot.genes(chr = chr, start = start, end = end, gtf = gtf, print.genes = print.genes, max.genes = max.genes)
     return(p/p1 + plot_layout(heights=c(5,2)))
@@ -226,12 +237,12 @@ FbtPlot <- function(object = NULL,
   tab <- data.table::rbindlist(sl)
 
   if (n == 1) {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, gtf = gtf, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, ...)
   } else {
     if (is.null(shape.by)) {
       shape.by <- "assay"
     }
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, label.size=label.size, zoom.in = zoom.in, gtf = gtf, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, ...)
   }
   p
 }
