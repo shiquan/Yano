@@ -1,3 +1,21 @@
+  fbt_theme <- function() {
+    theme(
+      legend.text = element_text(face = "italic",color = "black",family = "Helvetica",size = rel(1.5)),
+      axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
+      axis.title.x = element_text(color = "black", family = "Helvetica",size = rel(1.5)),
+      axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
+      axis.line = element_blank(),
+      axis.ticks = element_line(size = rel(1), color = "black"),
+      panel.border = element_rect(color = "black", fill = NA, size= rel(2), linetype = "solid"),
+      panel.grid.major = element_blank(),
+      panel.grid.minor = element_blank(),
+      panel.background = element_rect(fill = "whitesmoke"),
+      legend.key = element_rect(fill = "whitesmoke"),
+      legend.title = element_text(size = rel(1.5),family = "Helvetica"),
+      plot.title = element_text(color = "black",face = "bold",size = rel(1.7),family = "Helvetica")
+    )
+  }
+
 #'@importFrom gtools mixedsort
 #'@importFrom ggrepel geom_label_repel
 #'@importFrom viridis scale_color_viridis scale_fill_viridis
@@ -62,24 +80,6 @@ FbtPlot0 <- function(tab = NULL,
   qval.min <- min(data$qval) - 1
   qval.max <- max(data$qval) + 1
   
-  fbt_theme <- function() {
-    theme(
-      legend.text = element_text(face = "italic",color = "black",family = "Helvetica",size = rel(1.5)),
-      axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
-      axis.title.x = element_text(color = "black", family = "Helvetica",size = rel(1.5)),
-      axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
-      axis.line = element_blank(),
-      axis.ticks = element_line(size = rel(1), color = "black"),
-      panel.border = element_rect(color = "black", fill = NA, size= rel(2), linetype = "solid"),
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      panel.background = element_rect(fill = "whitesmoke"),
-      legend.key = element_rect(fill = "whitesmoke"),
-      legend.title = element_text(size = rel(1.5),family = "Helvetica"),
-      plot.title = element_text(color = "black",face = "bold",size = rel(1.7),family = "Helvetica")
-    )
-  }
-
   p <- ggplot(data) 
   if  (isFALSE(zoom.in)) {
     xi <- data_cum$bp_add
@@ -295,7 +295,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
     if (end > 0) {
       p <- p + coord_cartesian(xlim=c(start, end), expand=FALSE)
     }
-    p <- p + ylim(0,1) + theme_void()
+    p <- p + ylim(0,1)
     
     if (!is.null(highlights)) {
       df <- as.data.frame(highlights)
@@ -303,6 +303,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
       df$ymax <- 1
       p <- p + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
     }
+    p <- p + fbt_theme()
     return(p)
   }
 
@@ -346,7 +347,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   if (max.genes > 0 || !is.null(print.genes)) {
     p <- p + geom_text_repel(data=gname,aes(x=med,y=idx, label=gene), nudge_y = gname$nudge_y, size=5, max.overlaps=Inf, segment.color = "grey50")
   }
-  p <- p + theme_minimal()
+  p <- p + fbt_theme()
   p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(),
                  axis.title =element_blank(), 
                  axis.ticks =element_blank())
