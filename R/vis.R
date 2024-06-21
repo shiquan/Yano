@@ -25,7 +25,7 @@ FbtPlot0 <- function(tab = NULL,
         return(p)
       } else {
         chr <- unique(tab$chr)
-        if (is.null(start) || start == 0) {
+        if (is.null(start)) {
           start <- min(tab$start)
         }
         if (is.null(end) || end == -1) {
