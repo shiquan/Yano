@@ -58,6 +58,13 @@ FbtPlot0 <- function(tab = NULL,
   
   data <- data %>% arrange(col.by)
 
+  qval.min <- min(data$qval)
+  qval.min <- max(data$qval)
+
+  if (qval.min == 0) {
+    qval.min <- -1
+  }
+  
   fbt_theme <- function() {
     theme(
       legend.text = element_text(face = "italic",color = "black",family = "Helvetica",size = rel(1.5)),
@@ -110,7 +117,7 @@ FbtPlot0 <- function(tab = NULL,
                                 limits = c(min(data$bp_cum), max(data$bp_cum)),
                                 expand=c(0.01,0.01)) # , guide = guide_axis(n.dodge=2))
   } else {
-    p <- p + coord_cartesian(xlim=c(start, end), expand=FALSE) + scale_x_continuous(labels = scales::label_comma())
+    p <- p + coord_cartesian(xlim=c(start, end), ylim=c(qval.min, qval.max), expand=FALSE) + scale_x_continuous(labels = scales::label_comma())
   }
   p <- p + fbt_theme() + theme(axis.title.y = element_text(size = rel(1.5), angle = 90))
   p <- p + xlab(xlab) + ylab(ylab)
