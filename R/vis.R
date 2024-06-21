@@ -58,12 +58,8 @@ FbtPlot0 <- function(tab = NULL,
   
   data <- data %>% arrange(col.by)
 
-  qval.min <- min(data$qval)
+  qval.min <- min(data$qval) - 1
   qval.max <- max(data$qval) + 1
-
-  if (qval.min == 0) {
-    qval.min <- -1
-  }
   
   fbt_theme <- function() {
     theme(
@@ -224,7 +220,7 @@ FbtPlot <- function(object = NULL,
                       name = rownames(tab0))
 
     if (end.name %in% colnames(tab0)) {
-      tab[['start']] <- as.integer((tab0[[start.name]] + tab0[[end.name]])/2)
+      tab[['start']] <- as.numeric(as.integer((tab0[[start.name]] + tab0[[end.name]])/2))
     }
     if (!is.null(col.by)) {
       tab[[col.by]] <- tab0[[col.by]]
@@ -236,7 +232,7 @@ FbtPlot <- function(object = NULL,
 
     tab[['assay']] <- assay0
 
-    tab <- subset(tab, !is.na(qval))
+    ## tab <- subset(tab, !is.na(qval))
 
     tab
   })
