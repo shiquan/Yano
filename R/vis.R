@@ -232,7 +232,7 @@ FbtPlot <- function(object = NULL,
 
     tab[['assay']] <- assay0
 
-    ## tab <- subset(tab, !is.na(qval))
+    tab <- subset(tab, !is.na(qval))
 
     tab
   })
