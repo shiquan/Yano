@@ -25,10 +25,10 @@ FbtPlot0 <- function(tab = NULL,
         return(p)
       } else {
         chr <- unique(tab$chr)
-        if (is.null(start)) {
+        if (is.null(start) || start == 0) {
           start <- min(tab$start)
         }
-        if (is.null(end)) {
+        if (is.null(end) || end == -1) {
           end <- max(tab$start)
         }
         p1 <- plot.genes(chr = chr, start = start, end = end, gtf = gtf)
@@ -37,14 +37,12 @@ FbtPlot0 <- function(tab = NULL,
     }
 
     chr <- unique(tab$chr)
-
-    if (is.null(start)) {
+    if (is.null(start) || start == 0) {
       start <- min(tab$start)
     }
-    if (is.null(end)) {
+    if (is.null(end) || end == -1) {
       end <- max(tab$start)
     }
-
     message(paste0("Zoom in ", chr, " : ", start, "-", end))
     data <- tab
     data[["bp_cum"]] <- data[["start"]]
