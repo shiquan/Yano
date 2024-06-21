@@ -59,7 +59,7 @@ FbtPlot0 <- function(tab = NULL,
   data <- data %>% arrange(col.by)
 
   qval.min <- min(data$qval)
-  qval.max <- max(data$qval)
+  qval.max <- max(data$qval) + 1
 
   if (qval.min == 0) {
     qval.min <- -1
@@ -98,11 +98,12 @@ FbtPlot0 <- function(tab = NULL,
         p <- p + scale_fill_manual(values = cols)
       }
     } else {
-      p <- p + geom_point(aes(x=bp_cum, y=qval, col=.data[[col.by]], shape=.data[[shape.by]]), ...)
+      p <- p + geom_point(aes(x=bp_cum, y=qval, fill=.data[[col.by]], shape=.data[[shape.by]]), ...)
+      p <- p + scale_shape_manual(values = c(21, 22, 23, 24, 25)) 
       if (is.numeric(data[[col.by]])) {
-        p <- p + scale_color_viridis()
+        p <- p + scale_fill_viridis()
       } else {
-        p <- p + scale_color_manual(values = cols)
+        p <- p + scale_fill_manual(values = cols)
       }
     }
   } else {
