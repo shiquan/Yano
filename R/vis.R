@@ -99,7 +99,7 @@ FbtPlot0 <- function(tab = NULL,
       }
     } else {
       p <- p + geom_point(aes(x=bp_cum, y=qval, fill=.data[[col.by]], shape=.data[[shape.by]]), ...)
-      p <- p + scale_shape_manual(values = c(21, 22, 23, 24, 25)) 
+      p <- p + scale_shape_manual(values = c(21, 24, 22, 23, 25)) 
       if (is.numeric(data[[col.by]])) {
         p <- p + scale_fill_viridis()
       } else {
