@@ -2,19 +2,52 @@
 #'@importFrom ggrepel geom_label_repel
 #'@importFrom viridis scale_color_viridis scale_fill_viridis
 #'@import ggrepel
+#'@import scales
 #' 
-FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xlab = "Chromosome", ylab = expression(-log[10](p[adj])), point.label = NULL, arrange.type = FALSE, label.size=3, ...)
+FbtPlot0 <- function(tab = NULL,
+                     col.by = NULL,
+                     cols = NULL,
+                     shape.by = NULL,
+                     xlab = NULL, ylab = NULL,
+                     point.label = NULL,  label.size=3,                     
+                     zoom.in = FALSE,
+                     gtf = NULL,
+                     print.genes = NULL,
+                     max.genes = 20,
+                     ...)
 {
-  data_cum <- tab %>% group_by(chr) %>% summarise(max_bp = max(start)) %>%
-    mutate(bp_add = lag(cumsum(max_bp), default = 0)) %>% select(chr, bp_add)
-  
-  data <- tab %>% inner_join(data_cum, by = "chr") %>% mutate(bp_cum = start + bp_add)
-  axis_set <- data %>% group_by(chr) %>% summarize(center = mean(bp_cum))
+  if (isTRUE(zoom.in)) {
+    if (nrow(tab) == 0) {
+      p <- ggplot()
+      if (is.null(gtf)) {
+        return(p)
+      } else {
+        chr <- unique(tab$chr)
+        start <- min(tab$start)
+        end <- max(tab$start)
+        p1 <- plot.genes(chr = chr, start = start, end = end, gtf = gtf)
+        return(p/p1 + plot_layout(heights=c(5,3)))
+      }
+    }
 
+    chr <- unique(tab$chr)
+    start <- min(tab$start)
+    end <- max(tab$start)
+
+    message(paste0("Zoom in ", chr, " : ", start, "-", end))
+    data <- tab
+    data[["bp_cum"]] <- data[["start"]]
+    xlab = NULL
+  } else {
+    data_cum <- tab %>% group_by(chr) %>% summarise(max_bp = max(start)) %>%
+      mutate(bp_add = lag(cumsum(max_bp), default = 0)) %>% select(chr, bp_add)
+    
+    data <- tab %>% inner_join(data_cum, by = "chr") %>% mutate(bp_cum = start + bp_add)
+    axis_set <- data %>% group_by(chr) %>% summarize(center = mean(bp_cum))
+  }
   data$name <- tab$name
-  #rownames(data) <- rownames(tab)
   
-  if (isTRUE(arrange.type)) data <- data %>% arrange(type)
+  data <- data %>% arrange(col.by)
 
   fbt_theme <- function() {
     theme(
@@ -34,10 +67,12 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
     )
   }
 
-  xi <- data_cum$bp_add
-  xi <- xi[-1]
-  p <- ggplot(data) + geom_vline(xintercept = xi, color="red", linetype="dotted")
-  
+  p <- ggplot(data) 
+  if  (isFALSE(zoom.in)) {
+    xi <- data_cum$bp_add
+    xi <- xi[-1]
+    p <- p + geom_vline(xintercept = xi, color="red", linetype="dotted")
+  }
   if (!is.null(col.by)) {
     if (is.null(shape.by)) {
       p <- p + geom_point(aes(x=bp_cum, y=qval, fill=.data[[col.by]]), shape=21, ...)
@@ -61,9 +96,13 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
       p <- p + geom_point(aes(x=bp_cum, y=qval, shape = .data[[shape.by]]),  ...)
     }
   }
-  p <- p + scale_x_continuous(label = axis_set$chr, breaks = axis_set$center,
-                              limits = c(min(data$bp_cum), max(data$bp_cum)),
-                              expand=c(0.01,0.01)) # , guide = guide_axis(n.dodge=2))
+  if (isFALSE(zoom.in)) {
+    p <- p + scale_x_continuous(label = axis_set$chr, breaks = axis_set$center,
+                                limits = c(min(data$bp_cum), max(data$bp_cum)),
+                                expand=c(0.01,0.01)) # , guide = guide_axis(n.dodge=2))
+  } else {
+    p <- p + coord_cartesian(xlim=c(start, end), expand=FALSE) + scale_x_continuous(labels = scales::label_comma())
+  }
   p <- p + fbt_theme() + theme(axis.title.y = element_text(size = rel(1.5), angle = 90))
   p <- p + xlab(xlab) + ylab(ylab)
 
@@ -73,11 +112,29 @@ FbtPlot0 <- function(tab = NULL, col.by = NULL, cols = NULL, shape.by = NULL, xl
       p <- p + geom_label_repel(data=subset(data, name %in% sel),aes(x=bp_cum, y=qval,label=name),box.padding = 0.5, max.overlaps = Inf, size=label.size)
     }
   }
+  if (!is.null(gtf)) {
+    chr <- unique(tab$chr)
+    p1 <- plot.genes(chr = chr, start = start, end = end, gtf = gtf, print.genes = print.genes, max.genes = max.genes)
+    return(p/p1 + plot_layout(heights=c(5,2)))
+  }
   p
 }
 
 #'@export
-FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", val = NULL, col.by = NULL, cols = NULL, sel.chrs = NULL, xlab = "Chromosome", ylab = expression(-log[10](p[adj])), types = NULL, point.label = NULL, arrange.type = FALSE, label.size=3, idents = NULL, shape.by= NULL, ...)
+FbtPlot <- function(object = NULL,
+                    val = NULL,
+                    assay = NULL,
+                    chr.name = "chr", start.name = "start",
+                    col.by = NULL, cols = NULL, sel.chrs = NULL,
+                    xlab = "Chromosome", ylab = expression(-log[10](p)),
+                    types = NULL,
+                    point.label = NULL,
+                    label.size=3,
+                    idents = NULL,
+                    shape.by= NULL,
+                    chr = NULL, start = NULL, end = NULL,
+                    gtf = NULL, gene = NULL, upstream=1000, downstream=1000,
+                    ...)
 {
   if (is.null(val)) stop("No value name specified.")  
   cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
@@ -85,18 +142,55 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
 
   n <- length(assay)
 
+  chr1 <- chr
+  start1 <- start
+  end1 <- end
+  
+  zoom.in <- FALSE
+  if (!is.null(chr)) {
+    zoom.in <- TRUE
+    if (is.null(start)) {
+      start1 <- 0
+    }
+    if (is.null(end)) {
+      end1 <- -1
+    }
+  }
+
+  if (!is.null(gtf)) {
+    if (!isGTF(gtf)) stop("Not like a GTF database, use gtf2db to read GTF first.")
+    if (!is.null(gene)) {
+      sl <- .Call("G_query_gene", gtf, gene)
+      if (is.null(sl)) stop(paste0("No gene ", gene, " found in the database!!"))
+      chr1 <- sl[[1]]
+      start1 <- sl[[2]]
+      end1 <- sl[[3]]
+
+      start1 <- start1 - upstream
+      end1 <- end1 + downstream
+      zoom.in <- TRUE
+    }
+  }
+  
   sl <- lapply(1:n, function(i) {
     assay0 <- assay[i]
     object0 <- object[[assay0]]
     tab0 <- object0[[]]
     
-    if (chr %ni% colnames(tab0)) stop("No chr name found.")
-    if (start %ni% colnames(tab0)) stop("No start name found.")
+    if (chr.name %ni% colnames(tab0)) stop("No chr name found.")
+    if (start.name %ni% colnames(tab0)) stop("No start name found.")
     if (val %ni% colnames(tab0)) stop("No val name found.")
-    
+
+    if (zoom.in) {
+      tab0 %>% filter(chr %in% chr1 & start >= start1) -> tab0
+      if (end1 > 0) {
+        tab0 <- subset(tab0, start <=end1)
+      }
+    }
+
     if (!is.null(sel.chrs)) {
       tab0 <- tab0 %>% filter (chr %in% sel.chrs)
-      levels(tab0[[chr]]) <- levels(sel.chrs)
+      levels(tab0[[chr.name]]) <- levels(sel.chrs)
     }
     
     if (!is.null(types)) {
@@ -104,13 +198,13 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
       tab0 <- subset(tab0, type %in% types)
       if (nrow(tab0) == 0) stop("Empty records.")
     }
-    if (is.null(levels(tab0[[chr]]))) {
-      lv <- mixedsort(unique(tab0[[chr]]))
+    if (is.null(levels(tab0[[chr.name]]))) {
+      lv <- mixedsort(unique(tab0[[chr.name]]))
     } else {
-      lv <- levels(tab0[[chr]])
+      lv <- levels(tab0[[chr.name]])
     }
-    tab <- data.frame(chr = factor(tab0[[chr]], levels = lv),
-                      start = as.numeric(tab0[[start]]),
+    tab <- data.frame(chr = factor(tab0[[chr.name]], levels = lv),
+                      start = as.numeric(tab0[[start.name]]),
                       qval = -log10(as.numeric(tab0[[val]])),
                       name = rownames(tab0))
     
@@ -125,25 +219,25 @@ FbtPlot <- function(object = NULL, assay = NULL, chr = "chr", start = "start", v
     tab[['assay']] <- assay0
 
     tab <- subset(tab, !is.na(qval))
+
     tab
   })
 
   tab <- data.table::rbindlist(sl)
 
   if (n == 1) {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, shape.by=shape.by, label.size=label.size, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, gtf = gtf, ...)
   } else {
     if (is.null(shape.by)) {
       shape.by <- "assay"
     }
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, arrange.type = FALSE, label.size=label.size,  ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, label.size=label.size, zoom.in = zoom.in, gtf = gtf, ...)
   }
   p
 }
 
 theme_cov <- function(...) {
   theme(
-    #legend.text = element_blank(),
     axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
     axis.title.x = element_blank(),
     axis.text.y = element_text(family = "Helvetica",color = "black",size = rel(1)),
@@ -151,22 +245,32 @@ theme_cov <- function(...) {
     axis.line = element_blank(),
     axis.ticks = element_blank(),
     panel.background = element_rect(fill = "whitesmoke"),
-    #legend.position = "none",
     plot.title = element_blank(),
     ...
   )
 }
 
-plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes = NULL, label=TRUE, highlights=NULL, ...)
+plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes = NULL, label=TRUE, highlights=NULL, print.genes = NULL, max.genes = 20, ...)
 {
   if (is.null(gtf)) stop("No database specified.")
   if (!isGTF(gtf)) stop("Not like a GTF database, use gtf2db to read GTF first.")
+  if (is.null(chr)) stop("No chromosome specified.")
   
-  tracks <- .Call("gene_tracks", chr, start, end, gtf, genes)
+  if (is.null(start)) {
+    start = 0;
+  }
+  if (is.null(end)) {
+    end = -1;
+  }
+  
+  tracks <- .Call("gene_tracks", as.character(chr), start, end, gtf, genes)
   
   if (is.null(tracks)) {
     p <- ggplot()
-    p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start, end, expand=FALSE))
+    p <- p + ylab("") + xlab("")
+    if (end > 0) {
+      p <- p + coord_cartesian(xlim=c(start, end, expand=FALSE))
+    }
     p <- p + ylim(0,1) + theme_void()
     
     if (!is.null(highlights)) {
@@ -181,8 +285,10 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   idx <- which(tracks$start < start)
   tracks[idx,"start"] <- start
   idx <- which(tracks$end >end)
-  tracks[idx,"end"] <- end
-  tracks <- subset(tracks, start < end)
+  if (end > 0) {
+    tracks[idx,"end"] <- end
+    tracks <- subset(tracks, start < end)
+  }
 
   mi <- as.integer(max(tracks$idx)/3 *4)
   tracks %>%
@@ -192,7 +298,18 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   
   gname <- as.data.frame(gname)
   gname$med <- (gname$start + gname$end)/2
-  
+
+  if (isTRUE(print.genes)) {
+    gname %>% filter(gene %in% print.genes)-> gname
+  } else {
+    if (nrow(gname) > max.genes) {
+      if (max.genes > 0) {
+        message(paste0("Over ", max.genes, " genes. Only print ", max.genes, " gene names."))
+        idx <- sample(1:nrow(gname), max.genes)
+        gname <- gname[idx,]
+      }
+    }
+  }
   p <- ggplot() + geom_segment(data = subset(tracks, type == 1),aes(x = start, xend = end, y = idx, yend = idx, color=strand), size=1)
   p <- p + geom_segment(data = subset(tracks, type == 2), aes(x = start, xend = end, y = idx, yend = idx),color="black", size = 3)
 
@@ -202,8 +319,9 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
     df$ymax <- mi
     p <- p + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
   }
-
-  p <- p + geom_text_repel(data=gname,aes(x=med,y=idx, label=gene), nudge_y = gname$nudge_y, size=5, max.overlaps=Inf, segment.color = "grey50")
+  if (max.genes > 0) {
+    p <- p + geom_text_repel(data=gname,aes(x=med,y=idx, label=gene), nudge_y = gname$nudge_y, size=5, max.overlaps=Inf, segment.color = "grey50")
+  }
   p <- p + theme_minimal()
   p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(),
                  axis.title =element_blank(), 
@@ -450,4 +568,3 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
   }
   return(p1 / p2 + plot_layout(heights=layout_heights[c(2,3)]))
 }
-
