@@ -118,8 +118,12 @@ FbtPlot0 <- function(tab = NULL,
     p <- p + coord_cartesian(xlim=c(start, end), ylim=c(qval.min, qval.max), expand=FALSE) + scale_x_continuous(labels = scales::label_comma())
   }
   p <- p + fbt_theme() + theme(axis.title.y = element_text(size = rel(1.5), angle = 90))
-  p <- p + xlab(xlab) + ylab(ylab)
-
+  if (!is.null(xlab)) {
+    p <- p + xlab(xlab)
+  }
+  if (!is.null(ylab)) {
+    p <- p + ylab(ylab)
+  }
   if (!is.null(point.label)) {
     sel <- intersect(point.label, data$name)
     if (length(sel) > 0) {
