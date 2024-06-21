@@ -348,9 +348,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
     p <- p + geom_text_repel(data=gname,aes(x=med,y=idx, label=gene), nudge_y = gname$nudge_y, size=5, max.overlaps=Inf, segment.color = "grey50")
   }
   p <- p + fbt_theme()
-  p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(),
-                 axis.title =element_blank(), 
-                 axis.ticks =element_blank())
+  # p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(), axis.title =element_blank(), axis.ticks =element_blank())
   p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start, end), expand=FALSE)
   p <- p + ylim(0,mi)
   p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
