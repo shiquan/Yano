@@ -245,6 +245,13 @@ FbtPlot <- function(object = NULL,
 
   tab <- data.table::rbindlist(sl)
 
+  start1 <- start1 - upstream
+  end1 <- end1 + downstream
+
+  if (start1 < 0) {
+    start1 <- 0
+  }
+  
   if (n == 1) {
     p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, ...)
   } else {
