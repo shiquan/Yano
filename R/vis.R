@@ -129,6 +129,7 @@ FbtPlot0 <- function(tab = NULL,
   if (isTRUE(zoom.in) && !is.null(gtf)) {
     chr <- unique(tab$chr)
     p1 <- plot.genes(chr = chr, start = start, end = end, gtf = gtf, print.genes = print.genes, max.genes = max.genes)
+    p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(), axis.title =element_blank(), axis.ticks =element_blank())
     return(p/p1 + plot_layout(heights=layout_heights))
   }
   p
@@ -348,7 +349,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
     p <- p + geom_text_repel(data=gname,aes(x=med,y=idx, label=gene), nudge_y = gname$nudge_y, size=5, max.overlaps=Inf, segment.color = "grey50")
   }
   p <- p + fbt_theme()
-  # p <- p + theme(panel.spacing= unit(0, "lines"), axis.text = element_blank(), axis.title =element_blank(), axis.ticks =element_blank())
+  p <- p + coord_cartesian(xlim=c(start, end), ylim=c(qval.min, qval.max), expand=FALSE) + scale_x_continuous(labels = scales::label_comma())
   p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start, end), expand=FALSE)
   p <- p + ylim(0,mi)
   p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
