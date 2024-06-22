@@ -274,7 +274,7 @@ theme_cov <- function(...) {
     ...
   )
 }
-
+#'@export
 plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes = NULL, label=TRUE, highlights=NULL, print.genes = NULL, max.genes = 20, ...)
 {
   if (is.null(gtf)) stop("No database specified.")
@@ -356,7 +356,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
   p
 }
-
+#'@export
 plot.bed <- function(start = NULL, end = NULL, peaks = NULL, type.col = NULL, group.title.size=rel(2), highlights=NULL)
 {
   tab <- subset(peaks, start >= start, end <= end)

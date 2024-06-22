@@ -19,6 +19,7 @@ RunAutoCorr(
   weight.matrix.name = "WeightMatrix",
   prefix = "moransi",
   threads = 0,
+  verbose = TRUE,
   ...
 )
 }
