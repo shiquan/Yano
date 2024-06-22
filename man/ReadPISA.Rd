@@ -6,6 +6,8 @@
 \usage{
 ReadPISA(
   mex_dir = NULL,
+  prefix = NULL,
+  cells = NULL,
   barcode.path = NULL,
   feature.path = NULL,
   matrix.path = NULL,
@@ -13,7 +15,6 @@ ReadPISA(
   spliced.path = NULL,
   unspliced.path = NULL,
   spanning.path = NULL,
-  antisense.path = NULL,
   use_10X = FALSE,
   spatial = FALSE
 )
