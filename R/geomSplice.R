@@ -28,6 +28,7 @@ geom_splice <- function(mapping = NULL,
 
 #' @importFrom ggplot2 ggproto
 #' @importFrom grid gpar
+#' @export
 GeomSplice <- ggproto("GeomSplice", Geom,
                       draw_panel = function(data,
                                             panel_params,
@@ -73,6 +74,7 @@ GeomSplice <- ggproto("GeomSplice", Geom,
                       )
                       )
 #' @importFrom graphics xspline
+#' @export
 create_splice <- function(x, y, xend, height = 0, spline_shape = -0.5) {
   if (height == 0) {
     rlang::abort("`height` must be greater than zero.")
@@ -89,6 +91,7 @@ create_splice <- function(x, y, xend, height = 0, spline_shape = -0.5) {
   data.frame(x=tmp$x, y=tmp$y)
 }
 #' @importFrom grid unit is.unit gTree
+#' @export
 spliceGrob <- function(data,
                        #default.units = "native",
                        spline_shape = -0.5,
@@ -105,6 +108,7 @@ spliceGrob <- function(data,
   )
 }
 #' @importFrom grid convertX convertY polylineGrob gList setChildren
+#' @export
 makeContent.splice <- function(x) {
   data <- x$data
   
