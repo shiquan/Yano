@@ -20,7 +20,7 @@
 #'@importFrom ggrepel geom_label_repel
 #'@importFrom viridis scale_color_viridis scale_fill_viridis
 #'@import ggrepel
-#'@import scales
+#'@importFrom scales label_comma
 #' 
 FbtPlot0 <- function(tab = NULL,
                      col.by = NULL,
