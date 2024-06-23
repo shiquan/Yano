@@ -348,12 +348,12 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   if (max.genes > 0 || !is.null(print.genes)) {
     p <- p + geom_text_repel(data=gname,aes(x=med,y=idx, label=gene), nudge_y = gname$nudge_y, size=5, max.overlaps=Inf, segment.color = "grey50")
   }
-  p <- p + fbt_theme()
   p <- p + scale_x_continuous(labels = scales::label_comma())
   p <- p + theme(panel.spacing= unit(0, "lines"), axis.text.y = element_blank(), axis.title.y =element_blank(), axis.ticks.y =element_blank())
   p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start, end), expand=FALSE)
   p <- p + ylim(0,mi)
   p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
+  p <- p + fbt_theme()
   p
 }
 #'@export
