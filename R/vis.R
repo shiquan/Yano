@@ -34,7 +34,7 @@ FbtPlot0 <- function(tab = NULL,
                      start = NULL,
                      end = NULL,
                      max.genes = 20,
-                     layout_heights = c(3,2),
+                     layout.heights = c(3,2),
                      ...)
 {
   if (isTRUE(zoom.in)) {
@@ -130,7 +130,7 @@ FbtPlot0 <- function(tab = NULL,
     chr <- unique(tab$chr)
     p1 <- plot.genes(chr = chr, start = start, end = end, gtf = gtf, print.genes = print.genes, max.genes = max.genes)
     p <- p + theme(panel.spacing= unit(0, "lines"), axis.text.x = element_blank(), axis.title.x =element_blank())
-    return(p/p1 + plot_layout(heights=layout_heights))
+    return(p/p1 + plot_layout(heights=layout.heights))
   }
   p
 }
@@ -150,7 +150,7 @@ FbtPlot <- function(object = NULL,
                     chr = NULL, start = NULL, end = NULL,
                     gtf = NULL, gene = NULL, upstream=1000, downstream=1000,
                     print.genes = NULL,
-                    layout_heights = c(3,2),
+                    layout.heights = c(3,2),
                     ...)
 {
   if (is.null(val)) stop("No value name specified.")  
@@ -226,15 +226,23 @@ FbtPlot <- function(object = NULL,
       tab[['start']] <- as.numeric(as.integer((tab0[[start.name]] + tab0[[end.name]])/2))
     }
     if (!is.null(col.by)) {
-      tab[[col.by]] <- tab0[[col.by]]
+      if (col.by %in% colnames(tab0)) {
+        tab[[col.by]] <- tab0[[col.by]]
+      } else {
+        warnings(paste0("No ", col.by, " found at meta.features."))
+      }
     }
-
+    
     if (!is.null(shape.by)) {
-      tab[[shape.by]] <- tab0[[shape.by]]
+      if (shape.by %in% colnames(tab0)) {
+        tab[[shape.by]] <- tab0[[shape.by]]
+      } else {
+        warnings(paste0("No ", shape.by, " found at meta.features."))
+      }
     }
-
+    
     tab[['assay']] <- assay0
-
+    
     tab <- subset(tab, !is.na(qval))
 
     tab
@@ -251,12 +259,12 @@ FbtPlot <- function(object = NULL,
     }
   }
   if (n == 1) {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout_heights = layout_heights, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout.heights = layout.heights, ...)
   } else {
-    if (is.null(shape.by)) {
-      shape.by <- "assay"
-    }
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout_heights = layout_heights, ...)
+    ## if (is.null(shape.by)) {
+    ##   shape.by <- "assay"
+    ## }
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout.heights = layout.heights, ...)
   }
   p
 }
@@ -521,7 +529,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
                         fragfile = NULL,
                         atac.log.scaled = FALSE,
                         atac.max.depth = 0,
-                        anno.col = "blue", type.col = NULL, layout_heights =c(1,10,2),
+                        anno.col = "blue", type.col = NULL, layout.heights =c(1,10,2),
                         highlights = NULL, junc = FALSE,
                         ...)
                         
@@ -583,13 +591,13 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
   
   if (!is.null(p0)) {
     if (!is.null(p3)) {
-      return(p0/ p1 / p3/ p2 + plot_layout(heights=layout_heights[c(1,2,2,3)]))
+      return(p0/ p1 / p3/ p2 + plot_layout(heights=layout.heights[c(1,2,2,3)]))
     } else {
-      return(p0/ p1 / p2 + plot_layout(heights=layout_heights))
+      return(p0/ p1 / p2 + plot_layout(heights=layout.heights))
     }
   }
   if (!is.null(p3)) {
-    return(p1 / p3/ p2 + plot_layout(heights=layout_heights[c(2,2,3)]))
+    return(p1 / p3/ p2 + plot_layout(heights=layout.heights[c(2,2,3)]))
   }
-  return(p1 / p2 + plot_layout(heights=layout_heights[c(2,3)]))
+  return(p1 / p2 + plot_layout(heights=layout.heights[c(2,3)]))
 }
