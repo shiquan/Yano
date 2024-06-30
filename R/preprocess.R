@@ -82,9 +82,16 @@ setMethod(f = "QuickRecipe",
 #'@importFrom parallel detectCores
 getCores <- function(threads = 0)
 {
-  if (threads > 0) return(threads)
-  threads <- detectCores() - 1
-  if (threads > 1) return(threads)
+  check <- .Call("openmp_support")
+  if (isTRUE(check)) {
+    if (threads > 0) return(threads)
+    threads <- detectCores() - 1
+    if (threads > 1) return(threads)
+    return(1)
+  }
+  if (threads > 1) {
+    message("No openmp support, multithreads disabled.")
+  }
   return(1)
 }
 
