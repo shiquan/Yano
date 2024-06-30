@@ -19,6 +19,13 @@ static cholmod_common c;
 #define CACHE_PER_BATCH 10000
 #define MIN_HIT 1
 
+SEXP openmp_support()
+{
+#ifdef _OPENMP
+    return ScalarLogical(1);
+#endif
+    return ScalarLogical(0);
+}
 double * shuffle_double_arr(double *a, const int n)
 {
     double *s = R_Calloc(n, double);

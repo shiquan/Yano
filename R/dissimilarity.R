@@ -167,7 +167,7 @@ RunBlockCorr <- function(object = NULL,
 
     norm <- TRUE
   } else {
-    if (packageVersion("Seurat") >= 5) {
+    if (packageVersion("Seurat") >= numeric_version(as.character(5))) {
       layer <- Layers(object = object0, search = "data")
       if (is.null(layer)) {
         abort("No layer found. Please run NormalizeData or RunTFIDF and retry..")
@@ -190,7 +190,7 @@ RunBlockCorr <- function(object = NULL,
     old.assay <- DefaultAssay(object)
     DefaultAssay(object) <- bind.assay
     blocks <- intersect(blocks, rownames(object))
-    if (packageVersion("Seurat") >= 5) {
+    if (packageVersion("Seurat") >= numeric_version(as.character(5))) {
       layer <- Layers(object = object[[bind.assay]], search = "data")
       if (is.null(layer)) {
         abort(paste0("No layer found. Please run NormalizeData or RunTFIDF for assay ", assay, " and retry.."))
