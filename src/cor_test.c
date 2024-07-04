@@ -528,6 +528,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     srand(seed);
     
     int mode = asInteger(_mode);
+    if (mode != 1 && mode != 2 && mode != 3) return mkString("Unknown supported mode!");
     //if (A->stype) return mkString("A cannot be symmetric");
     //if (B->stype) return mkString("B cannot be symmetric");
     if (W->stype) return mkString("W cannot be symmetric");
@@ -626,6 +627,8 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             if (mode == 2) {
                 tmpb[cid] = tmpb[cid] - tmpa[cid];
                 if (tmpb[cid] < 0) tmpb[cid] = 0;
+            } else if (mode == 3) {
+                tmpb[cid] = tmpb[cid] + tmpa[cid];
             }
             if (norm) {
                 tmpb[cid] = log(tmpb[cid]/REAL(cs)[cid]*scale_factor + 1);
