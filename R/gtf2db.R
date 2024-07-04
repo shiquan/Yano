@@ -1,7 +1,7 @@
 #'@export
-gtf2db <- function(filename = NULL) {
+gtf2db <- function(filename = NULL, use_utr = FALSE) {
   if (is.null(filename)) stop("No gtf file.")
-  db <- .Call("gtf2db", normalizePath(filename))
+  db <- .Call("gtf2db", normalizePath(filename), use_utr)
   class(db) <- "GTF"
   return(db)
 }
