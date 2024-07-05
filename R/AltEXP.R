@@ -501,6 +501,6 @@ RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL
     tb[[gene.name]] = df[tb$feature, gene.name]
   }
   DefaultAssay(object) <- old.assay
-  tb <- tb[,-c("bind.feature","bind.feature.pct.1","bind.feature.pct.2")]
+  #tb <- tb[,-c("bind.feature","bind.feature.pct.1","bind.feature.pct.2")]
   tb
 }
