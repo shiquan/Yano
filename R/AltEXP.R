@@ -174,6 +174,7 @@ AlternativeExpressionTest <- function(object,
                                       min.cells.group = 3,
                                       min.pct.bind.feature = 0.05,
                                       pesudo.group = 3,
+                                      return.thresh = 0.01,
                                       mode = 1,
                                       threads = 1,
                                       perm = 100,
@@ -291,6 +292,10 @@ AlternativeExpressionTest <- function(object,
     rst <- DEXSeqTest(x, y, cells.1, cells.2, pesudo.group, rst, mode = mode, threads = threads, ...)
   } else if (method == "PSI") {
     rst <- PermTest(x, y, cells.1, cells.2, rst, perm = perm, seed = seed, mode = mode, threads = threads, ...)
+  }
+  
+  if (!is.null(return.thresh)) {
+    rst <- subset(rst, padj < return.thresh)
   }
   rst
 }
@@ -410,7 +415,43 @@ FindAllAEMarkers <- function(object,
   }
   
   rownames(x = gde.all) <- make.unique(names = as.character(x = gde.all$feature))
+  
   return(gde.all)
+}
+
+#'
+#' @export
+RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, assay = NULL, bind.assay = NULL, features = NULL, bind.features = NULL, min.pct = 0.05, min.pct.bind.feature = 0.05, return.thresh = 1e-2, node = NULL, pesudo.group = 3, mode = 1, threads = 1)
+{
+  if (is.null(object)) {
+    stop("No object specified.")
+  }
+
+  if (is.null(bind.name)) {
+    stop("No bind.name specified.")
+  }
+  
+  assay <- assay %||% DefaultAssay(object)
+  old.assay <- DefaultAssay(object)
+  DefaultAssay(object) <- assay
+  
+  df <- object[[assay]][[]]
+  if (bind.name %ni% colnames(df)) {
+    stop("No bind.name found in meta data. You may need ParseExonName first.")
+  }
+
+  if (!is.null(ident.1) | !is.null(cells.1)) {
+    tb <- AlternativeExpressionTest(object, ident.1 = ident.1, ident.2 = ident.2, cells.1 = cells.1, cells.2 = cells.2, assay = assay, bind.assay = bind.assay,
+                                    bind.name = bind.name, test.use = "DEXSeq", min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature, mode = mode,
+                                    return.thresh = return.thresh,
+                                    pesudo.group = pesudo.group, threads = threads)
+  } else {
+    tb <- FindAllAEMarkers(object, assay = assay, bind.assay = bind.assay, bind.name = bind.name, test.use = "DEXSeq", node = node, features = features,
+                           return.thresh = return.thresh,
+                           min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature, mode = mode, pesudo.group = pesudo.group, threads = threads)
+  }
+  
+  tb
 }
 #' 
 #' @export
@@ -459,6 +500,7 @@ RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL
                            min.pct = min.pct, min.pct.bind.feature = min.pct.exclude, mode = 3, perm = perm, seed = seed)
     tb[[gene.name]] = df[tb$feature, gene.name]
   }
-  #tb[,c("bind.feature","bind.feature.pct.1","bind.feature.pct.2"):=NULL]
+  DefaultAssay(object) <- old.assay
+  tb <- tb[,-c("bind.feature","bind.feature.pct.1","bind.feature.pct.2")]
   tb
 }
