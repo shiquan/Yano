@@ -141,6 +141,9 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
             mean = mean + es[k];
         }
 
+        R_Free(tmpa);
+        R_Free(tmpb);
+        
         mean = mean/perm;
         
         for (int k = 0; k < perm; ++k) {
