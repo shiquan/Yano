@@ -50,7 +50,7 @@ ValidateCellGroups <- function(
     )
   }
 }
-#
+
 #'@export
 PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode = 3, threads = 1, ...)
 {
@@ -74,7 +74,7 @@ PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode =
 
   rst$pval <- pt(rst$tval, df = perm - 1, lower.tail = FALSE)
   rst$padj <- p.adjust(rst$pval, method = "BH")
-  rst
+  return (rst)
 }
 DEXSeqTest <- function(x, y, cells.1, cells.2, pesudo.group, rst, mode = 1, threads = 1, ...)
 {
@@ -171,8 +171,8 @@ AlternativeExpressionTest <- function(object,
                                       features = NULL,
                                       bind.features = NULL,
                                       min.pct = 0.05,
-                                      min.pct.bind.feature = 0.05,
                                       min.cells.group = 3,
+                                      min.pct.bind.feature = 0.05,
                                       pesudo.group = 3,
                                       mode = 1,
                                       threads = 1,
@@ -302,9 +302,9 @@ FindAllAEMarkers <- function(object,
                              layer = "counts",
                              features = NULL,
                              node = NULL,
-                             min.pct = 0.1,
+                             min.pct = 0.05,
                              min.cells.group = 3,
-                             min.pct.bind.feature = 0.1,
+                             min.pct.bind.feature = 0.05,
                              pesudo.group = 3,
                              return.thresh = 1e-2,
                              mode = 1,
@@ -412,4 +412,53 @@ FindAllAEMarkers <- function(object,
   rownames(x = gde.all) <- make.unique(names = as.character(x = gde.all$feature))
   return(gde.all)
 }
+#' 
+#' @export
+RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, exon.assay = NULL, exclude.assay = NULL, features = NULL, genes = NULL, gene.name = "gene_name", exon.name = "exon_name", min.pct = 0.05, min.pct.exclude = 0.05, return.thresh = 1e-2, node = NULL, perm = 100, seed = 999)
+{
+  if (is.null(object)) {
+    stop("No object specified.")
+  }
+
+  if (is.null(exclude.assay)) {
+    stop("No exon exclude assay specified.")
+  }
+
+  exon.assay <- exon.assay %||% DefaultAssay(object)
+  old.assay <- DefaultAssay(object)
+  DefaultAssay(object) <- exon.assay
   
+  df <- object[[exon.assay]][[]] 
+  if (gene.name %ni% colnames(df)) {
+    stop("No gene name found in meta data. Run ParseExonName for exon assay first.")
+  }
+
+  if (exon.name %ni% colnames(df)) {
+    object[[exon.assay]][[exon.name]] <- rownames(object)
+    df <- object[[exon.assay]][[]] 
+  }
+  
+  if (!is.null(genes)) {
+    genes0 <- CheckBindName(object, gene.name, assay = exon.assay)
+    genes <- intersect(genes, genes0)
+  }  else {
+    genes <- CheckBindName(object, gene.name, assay = exon.assay)
+  }
+
+  df <- df[which(df[[gene.name]] %in% genes),]
+
+  features <- df[['exon_name']]
+
+  if (!is.null(ident.1) | !is.null(cells.1)) {
+    tb <- AlternativeExpressionTest(object, ident.1 = ident.1, ident.2 = ident.2, cells.1 = cells.1, cells.2 = cells.2, assay = exon.assay, bind.assay = exclude.assay,
+                                    bind.name = "exon_name", test.use = "PSI", min.pct = min.pct, min.pct.bind.feature = min.pct.exclude, mode = 3, perm = perm, seed = seed)
+    tb[[gene.name]] = df[tb$feature, gene.name]
+  } else {
+    tb <- FindAllAEMarkers(object, assay = exon.assay, bind.assay = exclude.assay, bind.name = "exon_name", test.use = "PSI", node = node, features = features,
+                           return.thresh = return.thresh,
+                           min.pct = min.pct, min.pct.bind.feature = min.pct.exclude, mode = 3, perm = perm, seed = seed)
+    tb[[gene.name]] = df[tb$feature, gene.name]
+  }
+  #tb[,c("bind.feature","bind.feature.pct.1","bind.feature.pct.2"):=NULL]
+  tb
+}
