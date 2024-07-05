@@ -455,7 +455,7 @@ RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, id
 }
 #' 
 #' @export
-RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, exon.assay = NULL, exclude.assay = NULL, features = NULL, genes = NULL, gene.name = "gene_name", exon.name = "exon_name", min.pct = 0.05, min.pct.exclude = 0.05, return.thresh = 1e-2, node = NULL, perm = 100, seed = 999)
+RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, exon.assay = NULL, exclude.assay = NULL, features = NULL, genes = NULL, gene.name = "gene_name", exon.name = "exon_name", min.pct = 0.05, min.pct.exclude = 0.05, return.thresh = 1e-2, node = NULL, perm = 100, seed = 999, threads = 1)
 {
   if (is.null(object)) {
     stop("No object specified.")
@@ -492,12 +492,12 @@ RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL
 
   if (!is.null(ident.1) | !is.null(cells.1)) {
     tb <- AlternativeExpressionTest(object, ident.1 = ident.1, ident.2 = ident.2, cells.1 = cells.1, cells.2 = cells.2, assay = exon.assay, bind.assay = exclude.assay,
-                                    bind.name = "exon_name", test.use = "PSI", min.pct = min.pct, min.pct.bind.feature = min.pct.exclude, mode = 3, perm = perm, seed = seed)
+                                    bind.name = "exon_name", test.use = "PSI", min.pct = min.pct, min.pct.bind.feature = min.pct.exclude, mode = 3, perm = perm, seed = seed, threads = threads)
     tb[[gene.name]] = df[tb$feature, gene.name]
   } else {
     tb <- FindAllAEMarkers(object, assay = exon.assay, bind.assay = exclude.assay, bind.name = "exon_name", test.use = "PSI", node = node, features = features,
                            return.thresh = return.thresh,
-                           min.pct = min.pct, min.pct.bind.feature = min.pct.exclude, mode = 3, perm = perm, seed = seed)
+                           min.pct = min.pct, min.pct.bind.feature = min.pct.exclude, mode = 3, perm = perm, seed = seed, threads = threads)
     tb[[gene.name]] = df[tb$feature, gene.name]
   }
   DefaultAssay(object) <- old.assay
