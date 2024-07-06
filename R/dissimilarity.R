@@ -1,11 +1,21 @@
-
 #'@export
 DScore <- function(x = NULL, y = NULL, W = NULL)
 {
   d <- .Call("D_score_lite", x, y, W)
   d
 }
-
+#' @name RunBlockCorr
+#' @title Run spatial dissimilarity test for features and their binding features in parallel.
+#' @param object Seurat object
+#' @param bind.name Title name for binding features in the meta table. Consider most users start Yano to perform alternative splicing analysis, the default bind.name set to "gene_name".
+#' @param features 
+#' @param assay
+#' @param min.cells
+#' @param bind.assay
+#' @param bind.features
+#' @param min.cells.bind
+#' @param prefix
+#' @param filter
 #' @importFrom Matrix sparseMatrix
 #' @export
 RunBlockCorr <- function(object = NULL,
@@ -18,7 +28,7 @@ RunBlockCorr <- function(object = NULL,
                          #cells = NULL,
                          min.cells.bind = 10,
                          prefix = NULL,
-                         feature.types = NULL,          
+                         subset = NULL,
                          min.features.per.block = 1,
                          scale.factor = 1e4,
                          weight.matrix.name = "WeightMatrix",
@@ -98,10 +108,16 @@ RunBlockCorr <- function(object = NULL,
   if (bind.name %ni% colnames(tab)) {
     stop(paste0("No bind.name found in the feature table of assay ", assay, ". Run LoadEPTanno or LoadVARanno first."))
   }
+
+  # skip unannotated records
+  tab <- tab[tab[[bind.name]] != "." & !is.na(tab[[bind.name]]),] 
   
-  tab <- tab[tab[[bind.name]] != ".",] # skip unannotated records
-  if (!is.null(feature.types) & "type" %in% colnames(tab)) {
-    tab <- subset(tab, type %in% feature.types)
+  ## if (!is.null(feature.types) & "type" %in% colnames(tab)) {
+  ##   tab <- subset(tab, type %in% feature.types)
+  ## }
+
+  if (!is.null(subset)) {
+    tab <- base::subset(tab, subset = subset)
   }
   
   blocks <- names(which(table(tab[[bind.name]]) >= min.features.per.block))
@@ -113,7 +129,7 @@ RunBlockCorr <- function(object = NULL,
   if (length(features) == 0) {
     stop("No features found.")
   }
-
+  
   idx <- match(features, rownames(tab))
   tab0 <- tab[idx,]
   blocks <- intersect(unique(tab0[[bind.name]]), blocks)

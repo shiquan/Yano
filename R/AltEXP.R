@@ -75,7 +75,7 @@ PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode =
   rst$padj <- p.adjust(rst$pval, method = "BH")
   return (rst)
 }
-DEXSeqTest <- function(x, y, cells.1, cells.2, pesudo.group, rst, mode = 1, threads = 1, ...)
+DEXSeqTest <- function(x, y, cells.1 = NULL, cells.2 = NULL, pseudo.group = 3, rst = NULL, mode = 1, threads = 1, ...)
 {
   if (!PackageCheck('DEXSeq', error = FALSE)) {
     stop("Install DEXSeq package first. BiocManager::install('DEXSeq')")
@@ -84,8 +84,8 @@ DEXSeqTest <- function(x, y, cells.1, cells.2, pesudo.group, rst, mode = 1, thre
   n1 <- length(cells.1)
   n2 <- length(cells.2)
 
-  new.group1 <- rep(1:pesudo.group,(n1/pesudo.group+1), length.out = n1)
-  new.group2 <- rep((pesudo.group+1):(pesudo.group*2),(n2/pesudo.group+1), length.out = n2)
+  new.group1 <- rep(1:pseudo.group,(n1/pseudo.group+1), length.out = n1)
+  new.group2 <- rep((pseudo.group+1):(pseudo.group*2),(n2/pseudo.group+1), length.out = n2)
   
   new.group <- c(new.group1,new.group2)
 
@@ -93,16 +93,16 @@ DEXSeqTest <- function(x, y, cells.1, cells.2, pesudo.group, rst, mode = 1, thre
   x <- x[, c(cells.1, cells.2)]
   x <- as(x,"TsparseMatrix")
   x <- Matrix::sparseMatrix(i=(x@i+1),j=new.group[x@j+1], x=x@x)
-  colnames(x) <- paste0("group_",1:(pesudo.group*2))
+  colnames(x) <- paste0("group_",1:(pseudo.group*2))
 
   y <- y[, c(cells.1, cells.2)]
   y <- as(y, "TsparseMatrix")
   y <- Matrix::sparseMatrix(i=(y@i+1),j=new.group[y@j+1], x=y@x)
-  colnames(y) <- paste0("group_",1:(pesudo.group*2))
+  colnames(y) <- paste0("group_",1:(pseudo.group*2))
 
   meta.tab <- data.frame(row.names=colnames(x),
-                         condition=c(rep("cluster1", pesudo.group),
-                                     rep("cluster2", pesudo.group)))
+                         condition=c(rep("cluster1", pseudo.group),
+                                     rep("cluster2", pseudo.group)))
   
   if (length(x = features) == 0) {
     warning("No feature pass min.pct threshold; returning NULL.")
@@ -141,7 +141,9 @@ DEXSeqTest <- function(x, y, cells.1, cells.2, pesudo.group, rst, mode = 1, thre
   BPPARAM <- BiocParallel::MulticoreParam(workers = threads)
 
   results <- DEXSeq::DEXSeq(dxd, BPPARAM=BPPARAM, ...)
-
+  if (is.character(results)) {
+    return(results)
+  }
   rst$log2fc <- results$log2fold_cluster2_cluster1
   rst$pval <- results$pvalue
   rst$padj <- results$padj
@@ -162,7 +164,7 @@ AlternativeExpressionTest <- function(object,
                                       min.pct = 0.01,
                                       min.cells.group = 3,
                                       min.pct.bind.feature = 0.01,
-                                      pesudo.group = 3,
+                                      pseudo.group = 3,
                                       return.thresh = 1e-2,
                                       mode = 1,
                                       threads = 1,
@@ -296,7 +298,7 @@ AlternativeExpressionTest <- function(object,
 
   ## No matter which mode you set before, now y has been adjusted, so use mode ==1 here.
   if (method == "DEXSeq") {
-    rst <- DEXSeqTest(x, y, cells.1, cells.2, pesudo.group, rst, mode = 1, threads = threads, ...)
+    rst <- DEXSeqTest(x, y, cells.1, cells.2, pseudo.group = pseudo.group, rst = rst, mode = 1, threads = threads, ...)
   } else if (method == "PSI") {
     rst <- PermTest(x, y, cells.1, cells.2, rst, perm = perm, seed = seed, mode = 1, threads = threads, ...)
   }
@@ -316,7 +318,7 @@ FindAllAEMarkers <- function(object,
                              min.pct = 0.01,
                              min.cells.group = 3,
                              min.pct.bind.feature = 0.01,
-                             pesudo.group = 3,
+                             pseudo.group = 3,
                              return.thresh = 1e-2,
                              mode = 1,
                              test.use = c("DEXSeq", "PSI"),
@@ -382,7 +384,7 @@ FindAllAEMarkers <- function(object,
           features = features,
           layer = layer,
           min.pct = min.pct,
-          min.cells.feature = min.cells.feature,
+          min.cells.group = min.cells.group,
           min.pct.bind.feature = min.pct.bind.feature,
           mode = mode,
           test.use = test.use,
@@ -442,7 +444,7 @@ FindAllAEMarkers <- function(object,
 #' @param min.pct.bind.feature Only test binding features that are detected in a minimum fraction of min.pct.bind.feature in either of the two populations. Meant to speed up the function by not testing genes that are very infrequenctly expressed in both groups. Default is 0.01.
 #' @param return.thresh Only return markers that have a p-value < return.thresh.
 #' @param node A node to find markers for and all its children; requires \code{\link{BuildClusterTree}} to have been run previously. Only can be used if test all groups.
-#' @param pesudo.group Aggregate single cells into pesudo groups, because DEXSeq is designed for bulk RNA-seq. At least 3 cells are required for each group. Default is 3.
+#' @param pseudo.group Aggregate single cells into pseudo groups, because DEXSeq is designed for bulk RNA-seq. At least 3 cells are required for each group. Default is 3.
 #' @param mode Test mode, default is 1. See online manual for the difference between modes. <https://shiquan.github.io/Yano.html>
 #' @param threads Threads passed to DEXSeq. Default is 1.
 #' @return Data frame containing p values and pct for test features and their binding features.
@@ -453,7 +455,7 @@ FindAllAEMarkers <- function(object,
 #' alt.exon <- RunDEXSeq(object = neuron_small, assay = "flatten", bind.assay = "RNA", bind.name = "gene_name")
 #' head(alt.exon)
 #' 
-RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, assay = NULL, bind.assay = NULL, features = NULL, bind.features = NULL, min.pct = 0.01, min.pct.bind.feature = 0.01, return.thresh = 1e-2, node = NULL, pesudo.group = 3, mode = 1, threads = 1)
+RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, assay = NULL, bind.assay = NULL, features = NULL, bind.features = NULL, min.pct = 0.01, min.pct.bind.feature = 0.01, return.thresh = 1e-2, node = NULL, pseudo.group = 3, mode = 1, threads = 1)
 {
   if (is.null(object)) {
     stop("No object specified.")
@@ -476,11 +478,11 @@ RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, id
     tb <- AlternativeExpressionTest(object, ident.1 = ident.1, ident.2 = ident.2, cells.1 = cells.1, cells.2 = cells.2, assay = assay, bind.assay = bind.assay,
                                     bind.name = bind.name, test.use = "DEXSeq", min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature, mode = mode,
                                     return.thresh = return.thresh,
-                                    pesudo.group = pesudo.group, threads = threads)
+                                    pseudo.group = pseudo.group, threads = threads)
   } else {
     tb <- FindAllAEMarkers(object, assay = assay, bind.assay = bind.assay, bind.name = bind.name, test.use = "DEXSeq", node = node, features = features,
                            return.thresh = return.thresh,
-                           min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature, mode = mode, pesudo.group = pesudo.group, threads = threads)
+                           min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature, mode = mode, pseudo.group = pseudo.group, threads = threads)
   }
   
   tb
