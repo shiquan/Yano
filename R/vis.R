@@ -1,20 +1,20 @@
-  fbt_theme <- function() {
-    theme(
-      legend.text = element_text(face = "italic",color = "black",family = "Helvetica",size = rel(1.5)),
-      axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
-      axis.title.x = element_text(color = "black", family = "Helvetica",size = rel(1.5)),
-      axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
-      axis.line = element_blank(),
-      axis.ticks = element_line(size = rel(1), color = "black"),
-      panel.border = element_rect(color = "black", fill = NA, size= rel(2), linetype = "solid"),
-      panel.grid.major = element_blank(),
-      panel.grid.minor = element_blank(),
-      panel.background = element_rect(fill = "whitesmoke"),
-      legend.key = element_rect(fill = "whitesmoke"),
-      legend.title = element_text(size = rel(1.5),family = "Helvetica"),
-      plot.title = element_text(color = "black",face = "bold",size = rel(1.7),family = "Helvetica")
-    )
-  }
+fbt_theme <- function() {
+  theme(
+    legend.text = element_text(face = "italic",color = "black",family = "Helvetica",size = rel(1.5)),
+    axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
+    axis.title.x = element_text(color = "black", family = "Helvetica",size = rel(1.5)),
+    axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
+    axis.line = element_blank(),
+    axis.ticks = element_line(size = rel(1), color = "black"),
+    panel.border = element_rect(color = "black", fill = NA, size= rel(2), linetype = "solid"),
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    panel.background = element_rect(fill = "whitesmoke"),
+    legend.key = element_rect(fill = "whitesmoke"),
+    legend.title = element_text(size = rel(1.5),family = "Helvetica"),
+    plot.title = element_text(color = "black",face = "bold",size = rel(1.7),family = "Helvetica")
+  )
+}
 
 #'@importFrom gtools mixedsort
 #'@importFrom ggrepel geom_label_repel
@@ -134,7 +134,34 @@ FbtPlot0 <- function(tab = NULL,
   }
   p
 }
-
+#' @title FbtPlot
+#' @description Generate Manhatten plot for log10 scaled p value for spatial dissimilarity test. X axis is the location of features. The function use ggplot2 as backend.
+#' @param object Seurat object.
+#' @param val Specify the name of p value. The name usually be format like bind-name.pval and bind-name.padj (BH adjusted p value). For example, if you use gene as binding feature, the name should be gene_name.pval or gene_name.padj.
+#' @param assay Work assay.
+#' @param chr.name The title of chromosome name in the meta table. Default is "chr".
+#' @param start.name The title of start position name in the meta table. Default is "start".
+#' @param end.name The title of end position name in the meta table. Default is "end".
+#' @param col.by Color points by specify the title of values in meta table. Can be discrete or continous.
+#' @param cols Manually specify the colors. Used with col.by.
+#' @param sel.chrs Vector of selected chromosome names to plot. Change the order by set the level of chr names.
+#' @param xlab Label for x axis. Default is "Chromosome".
+#' @param ylab Label for y axis. Default is "-log10p".
+#' @param subset Rule for subsetting the meta table before plot.
+#' @param point.label Vector of points to plot their labels.
+#' @param label.size Size of label. Default is 3.
+#' @param shape.by Shape points by specify the title of values in meta table. Can only be discrete.
+#' @param chr Choromsome to zoom in. Default is NULL, no zoom in. The zoom in mode can be enabled by setting chr or gene/gtf.
+#' @param start Start position to zoom in.
+#' @param end End position to zoom in.
+#' @param gtf GTF database. Load by \code{\link{gtf2db}}. Default is NULL. If specified transcirpt tracks will be plotted.
+#' @param gene Gene name to zoom in. Should used with gtf database specified.
+#' @param upstream Flank zoom in region with upstream. Default is 1000. Only works when zoom in mode enabled.
+#' @param downstream Flank zoom in region with downstream. Default is 1000. Only works when zoom in mode enabled.
+#' @param print.genes Print the gene names in the transcript tracks. Default will print all or randomly 20 genes if more than 20 genes in this region.
+#' @param layout.heights Specify the layouts for Manhatten plot and gene tracks. Default is c(3,2).
+#' @param ... Parameters pass to geom_point().
+#' 
 #'@export
 FbtPlot <- function(object = NULL,
                     val = NULL,
@@ -142,10 +169,9 @@ FbtPlot <- function(object = NULL,
                     chr.name = "chr", start.name = "start", end.name = "end",
                     col.by = NULL, cols = NULL, sel.chrs = NULL,
                     xlab = "Chromosome", ylab = expression(-log[10](p)),
-                    types = NULL,
+                    subset = NULL,
                     point.label = NULL,
                     label.size=3,
-                    idents = NULL,
                     shape.by= NULL,
                     chr = NULL, start = NULL, end = NULL,
                     gtf = NULL, gene = NULL, upstream=1000, downstream=1000,
@@ -198,7 +224,7 @@ FbtPlot <- function(object = NULL,
     if (zoom.in) {
       tab0 %>% filter(chr %in% chr1 & start >= start1) -> tab0
       if (end1 > 0) {
-        tab0 <- subset(tab0, start <=end1)
+        tab0 <- base::subset(tab0, start <=end1)
       }
     }
 
@@ -207,10 +233,14 @@ FbtPlot <- function(object = NULL,
       levels(tab0[[chr.name]]) <- levels(sel.chrs)
     }
     
-    if (!is.null(types)) {
-      if ("type" %ni% colnames(tab0)) stop("No type found.")
-      tab0 <- subset(tab0, type %in% types)
-      if (nrow(tab0) == 0) stop("Empty records.")
+    ## if (!is.null(types)) {
+    ##   if ("type" %ni% colnames(tab0)) stop("No type found.")
+    ##   tab0 <- subset(tab0, type %in% types)
+    ##   if (nrow(tab0) == 0) stop("Empty records.")
+    ## }
+    if (!is.null(subset)) {
+      tab0 <- base::subset(tab0, subset = subset)
+      if (nrow(tab0) == 0) stop("Empty records after subset.")
     }
     if (is.null(levels(tab0[[chr.name]]))) {
       lv <- mixedsort(unique(tab0[[chr.name]]))
@@ -243,7 +273,7 @@ FbtPlot <- function(object = NULL,
     
     tab[['assay']] <- assay0
     
-    tab <- subset(tab, !is.na(qval))
+    tab <- base::subset(tab, !is.na(qval))
 
     tab
   })
@@ -282,8 +312,9 @@ theme_cov <- function(...) {
     ...
   )
 }
+
 #'@export
-plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes = NULL, label=TRUE, highlights=NULL, print.genes = NULL, max.genes = 20, ...)
+plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes = NULL, label=TRUE, highlights=NULL, print.genes = NULL, max.genes = 20)
 {
   if (is.null(gtf)) stop("No database specified.")
   if (!isGTF(gtf)) stop("Not like a GTF database, use gtf2db to read GTF first.")
@@ -365,14 +396,14 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   p
 }
 #'@export
-plot.bed <- function(start = NULL, end = NULL, peaks = NULL, type.col = NULL, group.title.size=rel(2), highlights=NULL)
+plot.bed <- function(start = NULL, end = NULL, peaks = NULL, col.by = NULL, group.title.size=rel(2), highlights=NULL)
 {
   tab <- subset(peaks, start >= start, end <= end)
   p <- ggplot()
-  if ("type" %in% colnames(tab) & !is.null(type.col)) {
+  if ("type" %in% colnames(tab) & !is.null(col.by)) {
     p <- p + geom_rect(data = tab,inherit.aes = F,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=type), size = 1)
     #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=type), size = 3)
-    p <- p + scale_fill_manual(values = type.col)
+    p <- p + scale_fill_manual(values = col.by)
   } else {
     p <- p + geom_rect(data = tab, inherit.aes = F,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=strand), size = 1)
     #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
@@ -518,21 +549,46 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
   return(p1)
 }
 
+#' @title plotTracks
+#' @description Plot read/UMI coverage and transcript tracks.
+#' @param bamfile A path to bam file or a list to bam files.
+#' @param chr Chromosome name.
+#' @param start Start position.
+#' @param end End position.
+#' @param strand Plot reads on strand. Default is bot strands. Can be one of c("both", "forward", "reverse", "ignore"). When set to ignore, read strand information will be discarded.
+#' @param split.bc Split coverage by barcode. Default is FALSE, bulk mode.
+#' @param bin Divide plot region into bins. Save plot time. Default is 1000.
+#' @param cell.tag Tag for cell barcode in the BAM. Default is "CB".
+#' @param umi.tag Tag for UMI in the BAM. Default is "UB".
+#' @param gtf GTF database, load by gtf2db.
+#' @param max.depth Max depth capped to plot. Default is 0, no capping.
+#' @param group.title.size Font size for track group titles. Default is rel(2).
+#' @param cell.group Vector or list of cell group IDs. Name for the ID is the cell name. If bamfile is a list, the cell.group can also be a list with the same length of bamfile list, and binding cell.group to bam file by the name or order in both lists. See manual online for real cases. <https://shiquan.github.io/Yano.html>
+#' @param display.genes Vector of genes to plot in the target region. Other genes in this region will not print in transcript track plot.
+#' @param meta.features Meta table for features. If set the regions will be also plot on top of track plot. Meta table can be accessed by object[[assay]][[]].
+#' @param log.scaled Log scaled the coverage depth per group. Only used if the depth is super high. Disabled in default.
+#' @param upstream Flank the target region with upstream to plot. Default is 1000.
+#' @param downstream Flank the target region with downstream to plot. Default is 1000.
+#' @param fragfile Fragment file for ATAC data.
+#' @param atac.log.scaled Log scaled the coverage depth per group for ATAC tracks.
+#' @param atac.max.depth Capped depth to plot for ATAC tracks.
+#' @param col.by Color bed regions by value. The specified name should be a colname in meta table. Only support discrete value.
+#' @param layout.heights Layout for track plots. Default is c(10,2) or c(1,10,2) if meta.features specified or c(1,10,10,2) if fragment file also specified.
+#' @param highlights A region of a list of regions to hightlight. The region is format as c(start,end).
+#' @param junc Also plot the junction reads.
 #' @import patchwork
 #' @export
 plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
-                        strand = "both",
+                        strand = c("both", "forward", "reverse", "ignore"),
                         split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
                         gtf = NULL, max.depth = 0, group.title.size = rel(2),
-                        cell.group=NULL, display.genes = NULL, toUCSC=FALSE, meta.features =NULL,
+                        cell.group=NULL, display.genes = NULL,  meta.features =NULL,
                         log.scaled = FALSE, upstream = 1000, downstream = 1000,
                         fragfile = NULL,
                         atac.log.scaled = FALSE,
                         atac.max.depth = 0,
-                        anno.col = "blue", type.col = NULL, layout.heights =c(1,10,2),
-                        highlights = NULL, junc = FALSE,
-                        ...)
-                        
+                        col.by = NULL, layout.heights =c(1,10,2),
+                        highlights = NULL, junc = FALSE)
 {
   if (!is.null(gene)) {
     if (is.null(gtf)) stop("gtf is not specified.")
@@ -551,6 +607,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
   message(paste0("Chromosome ", chr, ", start ", start, ", end ", end))
   if (is.null(bamfile)) stop("No bam file specified.")
 
+  strand <- match.arg(strand)
   df <- NULL
   if (!is.null(highlights)) {
     if (is.list(highlights)) {
@@ -575,7 +632,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
       stop("No chr/start/end/strand/type column found in meta.features")
 
     tab <- subset(meta.features, start > 0 & end > 0)
-    p0 <- plot.bed(start = start, end = end, peaks = tab, type.col=type.col, highlights = df)
+    p0 <- plot.bed(start = start, end = end, peaks = tab, col.by = col.by, highlights = df)
   } 
 
   p3 <- NULL
@@ -587,7 +644,7 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
     p3 <- p3 + theme(strip.text = element_text(size = group.title.size))
   }
   
-  p2 <- plot.genes(chr = chr, start = start, end = end, gtf=gtf, genes=display.genes, collapse=collapse, highlights=df, ...)
+  p2 <- plot.genes(chr = chr, start = start, end = end, gtf=gtf, genes=display.genes, highlights=df)
   
   if (!is.null(p0)) {
     if (!is.null(p3)) {

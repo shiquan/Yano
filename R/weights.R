@@ -1,36 +1,14 @@
-## #' Build cell-cell weight matrix on cell lineage.
-## #' @param order.cells Predefined cell ranks, used for cell lineage analysis.
-## #' @param k.nn k-nearest neighbors.
-## #' @param self.weight Diagnoal value in the weight matrix.
-## #' @param scale Scale the weight values by row.
-## #' @returns A sprase weight matrix.
-## #' @importFrom Matrix sparseMatrix
-## #' @export
-## WeightLineage <- function(order.cells = NULL, k.nn = 9, self.weight = 0, scale = FALSE) {
-##   if (is.null(order.cells)) stop("No order.cells specified.")
-  
-##   n <- length(order.cells)
-##   i <- .Call("build_weight_i", n, k.nn)
-
-##   W <- sparseMatrix(i = i + 1, j = rep(1:n, each =k.nn), x=1, dims =c(n,n))
-
-##   W@x[W@x > 1] <- 1
-##   diag(W) <- self.weight
-
-##   if (scale) W <- W/rowSums(W)
-
-##   colnames(W) <- order.cells
-##   rownames(W) <- order.cells
-##   W
-## }
-
-#' Calcualte cell-cell weight matrix by one of shared nearest neighbour matrix, spatial locations, cell embedding and linear trajectory.
-#' @param snn Shared nearest neighbour matrix, usually can found at object[["RNA_snn"]]
-#' @param spatial Tissue coordinates.
+#' @title GetWeights
+#' @description Calcualte cell-cell weight matrix by one of shared nearest neighbour matrix, spatial locations, cell embedding and linear trajectory.
+#' @param snn Shared nearest neighbour graph, usually can found at object[["RNA_snn"]]. This graph can be calculate by Seurat::FindNeighbors().
+#' @param pos Tissue coordinates matrix.
 #' @param order.cells Predefined cell ranks, used for cell lineage analysis.
-#' @param emb Cell dimesional space (PCA/ICA/harmony) 
-#' @param k.nn k-nearest neighbors, for emb only.
+#' @param emb Cell dimesional space (PCA/ICA/harmony).
+#' @param k.nn K-nearest neighbors, for calculating weight matrix with emb.
+#' @param prune.distance Sets the cutoff for cell distance on lineage trajectory (ranked cells) or spatial cooridates (bin distance) when computing the neighborhood overlap for the weight matrix construction. Any edges with values greater than this will be set to 0 and removed from the weight matrix graph. Default is 20, means only calculate weight edges for nearby 20 cells for each cell.
+#' @param prune.snn Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/15.
 #' @param diag.value Diagnoal value in the weight matrix.
+#' @param cells Cell list. Default use all cells.
 #' @returns A sparse weight matrix.
 #' @importFrom Matrix rowSums
 #' @export
@@ -40,7 +18,7 @@ GetWeights <- function(snn = NULL,
                        emb = NULL,
                        k.nn = 20,
                        prune.distance = 20,
-                       prune.snn = 1/10,
+                       prune.snn = 1/15,
                        diag.value = 0,
                        cells = NULL)
 {
@@ -105,8 +83,6 @@ GetWeights <- function(snn = NULL,
   }
 }
 
-#'
-#' @export
 GetWeightsFromSNN <- function(object = NULL, name = "RNA_snn", prune.snn = 1/15, cells = NULL)
 {
   if (name %ni% names(object)) {
@@ -117,8 +93,6 @@ GetWeightsFromSNN <- function(object = NULL, name = "RNA_snn", prune.snn = 1/15,
   W <- GetWeights(snn=snn, prune.snn = prune.snn, cells = cells)
   return(W)
 }
-
-#' @export
 GetWeightsFromSpatial <- function(object = NULL, diag.value = 0, prune.distance = 20, ...) {
   cells <- colnames(object)
   emb <- GetTissueCoordinates(object = object, ...)
