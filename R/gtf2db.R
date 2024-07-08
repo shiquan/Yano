@@ -1,4 +1,9 @@
-#'@export
+#' @title gtf2db
+#' @description Generate GTF object from gtf file.
+#' @param filename Path to gtf file.
+#' @param use_utr Load CDS records or not. Default is FALSE.
+#' @return A point to GTF struct.
+#' @export
 gtf2db <- function(filename = NULL, use_utr = FALSE) {
   if (is.null(filename)) stop("No gtf file.")
   db <- .Call("gtf2db", normalizePath(filename), use_utr)
@@ -7,11 +12,11 @@ gtf2db <- function(filename = NULL, use_utr = FALSE) {
 }
 
 #'@export
-isGTF <- function(db = NULL) {
-  return("GTF" %in% class(db))
+isGTF <- function(gtf = NULL) {
+  return("GTF" %in% class(gtf))
 }
 
 #'@export
-notGTF <- function(db = NULL) {
-  return("GTF" %ni% class(db))
+notGTF <- function(gtf = NULL) {
+  return("GTF" %ni% class(gtf))
 }

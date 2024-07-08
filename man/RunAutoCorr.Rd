@@ -2,7 +2,7 @@
 % Please edit documentation in R/moransi.R
 \name{RunAutoCorr}
 \alias{RunAutoCorr}
-\title{Calculate Moran's index for features in parallel.}
+\title{Calculate spatial autocorrelation (Moran's index) for features in parallel.}
 \usage{
 RunAutoCorr(
   object = NULL,
@@ -24,11 +24,34 @@ RunAutoCorr(
 )
 }
 \arguments{
-\item{prune.distance}{Sets cutoff for distance matrix. Any edges with distance
-greater than this value will be set to 0 and remove from the distance matrix.}
+\item{object}{Seurat object}
 
-\item{...}{parameters pass to}
+\item{assay}{Working assay}
+
+\item{layer}{Input data. For expression, log scaled data is highly recommended}
+
+\item{spatial}{Use spatial coordinate instead of SNN space and linear trajectory to calculate the cell-cell weight matrix.}
+
+\item{snn.name}{name of SNN space. If spatial=FALSE and order.cells = NULL, default snn.name will set to 'RNA_snn'. Use SNN space to calculate the cell-cell weight martix.}
+
+\item{order.cells}{For linear trajetory, input ordered cell names to calculate the cell-cell distance weight matrix. Conflict with sptaial=TRUE and snn.name != NULL.}
+
+\item{cells}{Cells used for calculate weight matrix. Used with snn graph. In default will use all cells.}
+
+\item{min.cells}{If a feature can be detect in few than min.cells, will skip to save time. Default is 10.}
+
+\item{features}{List of features to test. Default is all features with that coverage >= min.cells.}
+
+\item{weight.matrix.name}{Weight graph name in Seurat object. After this function, the graph can be visited by obj[[weight.matrix.name]]. Default name is "WeightMatrix", if you change the default name, you should specific the new name in \code{\link{{RunBlockCorr}}}.}
+
+\item{prefix}{Prefix for score and p value names. Default prefix is "moransi". If you change the default name, you should specific the new name in \code{{\link{SetAutoCorrFeatures}}}.}
+
+\item{threads}{Threads.}
+
+\item{verbose}{Print log message. Default is TRUE.}
+
+\item{...}{parameters pass to \code{\link{GetWeightFromSpatial}}, so it only works if spatial is TRUE.}
 }
 \description{
-Calculate Moran's index for features in parallel.
+Calculate spatial autocorrelation (Moran's index) for features in parallel.
 }

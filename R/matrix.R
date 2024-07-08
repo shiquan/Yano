@@ -14,7 +14,11 @@ MMerge0 <- function(x = NULL, y = NULL, ...) {
   }
   MMerge0(x, ...)
 }
- 
+#' @title mergeMatrix
+#' @description Merge multiple matrix files into one. At least two matrix files should be specified. Records with the same row name and column name will be summed up.
+#' @param x Matrix 1
+#' @param y Matrix 2
+#' @param ... More matrix files.
 #' @export
 setMethod(f = "mergeMatrix",
           signature = signature(x="SMatrix"),

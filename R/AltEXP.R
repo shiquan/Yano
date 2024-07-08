@@ -53,13 +53,17 @@ ValidateCellGroups <- function(
 
 PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode = 3, threads = 1, ...)
 {
+  stopifnot(identical(dim(x), dim(y)))
   x <- as(x, "dgCMatrix")
   y <- as(y, "dgCMatrix")
+
   cells <- colnames(x)
+  if (is.null(cells)) {
+    stop("Colnames of X is empty.")
+  }
+  
   idx.1 <- match(cells.1, cells)
   idx.2 <- match(cells.2, cells)
-
-  y <- y[rst$bind.feature, ]
   
   df <- .Call("alt_exp", x, y, idx.1, idx.2, mode, perm, threads, seed)
 
@@ -80,6 +84,8 @@ DEXSeqTest <- function(x, y, cells.1 = NULL, cells.2 = NULL, pseudo.group = 3, r
   if (!PackageCheck('DEXSeq', error = FALSE)) {
     stop("Install DEXSeq package first. BiocManager::install('DEXSeq')")
   }
+  
+  stopifnot(identical(dim(x), dim(y)))
 
   n1 <- length(cells.1)
   n2 <- length(cells.2)
@@ -108,8 +114,6 @@ DEXSeqTest <- function(x, y, cells.1 = NULL, cells.2 = NULL, pseudo.group = 3, r
     warning("No feature pass min.pct threshold; returning NULL.")
     return(NULL)
   }
-
-  stopifnot(identical(dim(x), dim(y)))
 
   if (mode == 2) {
     y <- y - x
@@ -161,9 +165,9 @@ AlternativeExpressionTest <- function(object,
                                       test.use = c("DEXSeq", "PSI"),
                                       features = NULL,
                                       bind.features = NULL,
-                                      min.pct = 0.01,
+                                      min.pct = 0.05,
                                       min.cells.group = 3,
-                                      min.pct.bind.feature = 0.01,
+                                      min.pct.bind.feature = 0.05,
                                       pseudo.group = 3,
                                       return.thresh = 1e-2,
                                       mode = 1,
@@ -257,6 +261,7 @@ AlternativeExpressionTest <- function(object,
     y <- y[, c(cells.1, cells.2)]
   } else {
     y <- GetAssayData1(object,assay = bind.assay, layer = layer)
+    y <- y[, c(cells.1, cells.2)]
     bind.features <- intersect(unique(bind.features), rownames(y))
     rst <- subset(rst, bind.feature %in% bind.features)
   }
@@ -290,7 +295,7 @@ AlternativeExpressionTest <- function(object,
   idx <- which(bind.pct1 >= min.pct.bind.feature & bind.pct2 >= min.pct.bind.feature)
   rst <- rst[idx,]
   
-  y <- y[rst$feature, c(cells.1, cells.2)]
+  y <- y[rst$feature,]
   x <- x[rst$feature,]
 
   rst$bind.feature.pct.1 <- bind.pct1[rst$feature]
@@ -315,9 +320,9 @@ FindAllAEMarkers <- function(object,
                              layer = "counts",
                              features = NULL,
                              node = NULL,
-                             min.pct = 0.01,
+                             min.pct = 0.05,
                              min.cells.group = 3,
-                             min.pct.bind.feature = 0.01,
+                             min.pct.bind.feature = 0.05,
                              pseudo.group = 3,
                              return.thresh = 1e-2,
                              mode = 1,
@@ -440,8 +445,8 @@ FindAllAEMarkers <- function(object,
 #' @param bind.assay Assay for binding features. If not set, test features in same goup (with same bind name) will be aggreated as binding feature
 #' @param features Candidate list to test. If not set, will use all.
 #' @param bind.features Candidate list for binding features. If not set, will use all.
-#' @param min.pct Only test features that are detected in a minimum fraction of min.pct cells in all cells.  Meant to speed up the function by not testing genes that are very infrequenctly expressed in all cells. Remember we are testing alternative epxression pattern here, so it is possible the test feature is not expressed in one group, therefore we are not going to check by groups. Note that min.pct is set for test feature here. But in \code{\link{RunPSI}}, the min.pct is set for binding feature. Default is 0.01.
-#' @param min.pct.bind.feature Only test binding features that are detected in a minimum fraction of min.pct.bind.feature in either of the two populations. Meant to speed up the function by not testing genes that are very infrequenctly expressed in both groups. Default is 0.01.
+#' @param min.pct Only test features that are detected in a minimum fraction of min.pct cells in all cells.  Meant to speed up the function by not testing genes that are very infrequenctly expressed in all cells. Remember we are testing alternative epxression pattern here, so it is possible the test feature is not expressed in one group, therefore we are not going to check by groups. Note that min.pct is set for test feature here. But in \code{\link{RunPSI}}, the min.pct is set for binding feature. Default is 0.05.
+#' @param min.pct.bind.feature Only test binding features that are detected in a minimum fraction of min.pct.bind.feature in either of the two populations. Meant to speed up the function by not testing genes that are very infrequenctly expressed in both groups. Default is 0.05.
 #' @param return.thresh Only return markers that have a p-value < return.thresh.
 #' @param node A node to find markers for and all its children; requires \code{\link{BuildClusterTree}} to have been run previously. Only can be used if test all groups.
 #' @param pseudo.group Aggregate single cells into pseudo groups, because DEXSeq is designed for bulk RNA-seq. At least 3 cells are required for each group. Default is 3.
@@ -455,7 +460,7 @@ FindAllAEMarkers <- function(object,
 #' alt.exon <- RunDEXSeq(object = neuron_small, assay = "flatten", bind.assay = "RNA", bind.name = "gene_name")
 #' head(alt.exon)
 #' 
-RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, assay = NULL, bind.assay = NULL, features = NULL, bind.features = NULL, min.pct = 0.01, min.pct.bind.feature = 0.01, return.thresh = 1e-2, node = NULL, pseudo.group = 3, mode = 1, threads = 1)
+RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, assay = NULL, bind.assay = NULL, features = NULL, bind.features = NULL, min.pct = 0.05, min.pct.bind.feature = 0.05, return.thresh = 1e-2, node = NULL, pseudo.group = 3, mode = 1, threads = 1)
 {
   if (is.null(object)) {
     stop("No object specified.")
@@ -484,13 +489,13 @@ RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, id
                            return.thresh = return.thresh,
                            min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature, mode = mode, pseudo.group = pseudo.group, threads = threads)
   }
-  
   tb
 }
 
 #' @name RunPSI
-#' @title Test for alternative expression with delta-PSI
-#' @description This will calculate the delta-PSI = PSI_a - PSI_b for group a and b. Then use the permutation method to randomize the cells in two groups 100 times to evalue the mean and sd of delta-PSI and calculate the p value with t test. PSI is short for Percent-Spliced In, calculated by PSI = EXON/(EXON+EXCL), EXON indicates reads overlapped this exon, EXCL indicates excluded reads, which are junction reads skip this exon.
+#' @title Test for alternative expression using Percent-Spliced In
+#' @description Using delta(Δ)-PSI and permutation method to simulate p value for each event.
+#' @details This function calculates the ΔPSI as PSI_a - PSI_b for groups a and b. It then employs a permutation method to randomize the cells in the two groups 100 times (by default) to evaluate the mean and standard deviation of delta-PSI. A p-value is calculated using a t-test. PSI stands for Percent-Spliced In and is calculated by the formula PSI = EXON/(EXON+EXCL), where EXON represents reads overlapping this exon, and EXCL represents excluded reads, which are junction reads that skip this exon.
 #' @param object A Seurat object.
 #' @param ident.1 Identify class to test, if not set will compare all groups one by one
 #' @param ident.2 A second class for comparsion. If NULL (default), use all other cells for comparison.
@@ -501,21 +506,21 @@ RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, id
 #' @param features Candidate list to test. If not set, will use all.
 #' @param genes Candidate list for genes to test. If not set, will test all covered.
 #' @param exon.name Exon name in the title of meta table for exon assay. Default is "exon_name"
-#' @param min.pct Excluded + exon reads that are detected in a minimum fraction of min.pct in either of the two populations. Meant to speed up the function by not testing genes that are very infrequenctly expressed in both groups. Note that the min.pct is for binding feature. Default is 0.01.
-#' @param min.pct.exon Only test features that are detected in a minimum fraction of min.pct.exon cells in all cells.  Meant to speed up the function by not testing genes that are very infrequenctly expressed in all cells. Remember we are testing alternative epxression pattern here, so it is possible the exon is not expressed in one group, therefore we are not going to check by groups. Default is 0.01.
+#' @param min.pct Excluded + exon reads that are detected in a minimum fraction of min.pct in either of the two populations. Meant to speed up the function by not testing genes that are very infrequenctly expressed in both groups. Note that the min.pct is for binding feature. Default is 0.05.
+#' @param min.pct.exon Only test features that are detected in a minimum fraction of min.pct.exon cells in all cells.  Meant to speed up the function by not testing genes that are very infrequenctly expressed in all cells. Remember we are testing alternative epxression pattern here, so it is possible the exon is not expressed in one group, therefore we are not going to check by groups. Default is 0.05.
 #' @param return.thresh Only return markers that have a p-value < return.thresh.
 #' @param node A node to find markers for and all its children; requires \code{\link{BuildClusterTree}} to have been run previously. Only can be used if test all groups.
-#' @param perm Permutation steps for calculate statistical of delta-PSI.
-#' @param threads Threads to run. Default is 1.
+#' @param perm Permutation steps for calculate statistical of delta-PSI. Default is 100.
+#' @param threads Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.
 #' @return Data frame containing p values and pct for exons and their genes.
 #' @export
 #'
 #' @examples
 #' data("neuron_small")
-#' alt.exon <- RunPSI(object = neuron_small, exon.assay = "exon", exclude.assay = "EXCL")"
+#' alt.exon <- RunPSI(object = neuron_small, exon.assay = "exon", exclude.assay = "EXCL")
 #' head(alt.exon)
 #' 
-RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, exon.assay = NULL, exclude.assay = NULL, features = NULL, genes = NULL, gene.name = "gene_name", exon.name = "exon_name", min.pct = 0.01, min.pct.exon = 0.01, return.thresh = 1e-2, node = NULL, perm = 100, seed = 999, threads = 1)
+RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, exon.assay = NULL, exclude.assay = NULL, features = NULL, genes = NULL, gene.name = "gene_name", exon.name = "exon_name", min.pct = 0.05, min.pct.exon = 0.05, return.thresh = 1e-2, node = NULL, perm = 100, seed = 999, threads = 0)
 {
   if (is.null(object)) {
     stop("No object specified.")
@@ -525,6 +530,10 @@ RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL
     stop("No exon-excluded assay specified.")
   }
 
+  if (exclude.assay %ni% names(object)) {
+    stop("No exclude assay found, make sure you use the right name. If you don't have this assay, please check the manual to generate excluded read counts.")
+  }
+  
   exon.assay <- exon.assay %||% DefaultAssay(object)
   old.assay <- DefaultAssay(object)
   DefaultAssay(object) <- exon.assay
@@ -550,9 +559,12 @@ RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL
 
   features <- df[['exon_name']]
 
+  threads <- getCores(threads)
   if (!is.null(ident.1) | !is.null(cells.1)) {
     tb <- AlternativeExpressionTest(object, ident.1 = ident.1, ident.2 = ident.2, cells.1 = cells.1, cells.2 = cells.2, assay = exon.assay, bind.assay = exclude.assay,
-                                    bind.name = "exon_name", test.use = "PSI", min.pct = min.pct.exon, min.pct.bind.feature = min.pct, mode = 3, perm = perm, seed = seed, threads = threads)
+                                    features = features, bind.name = "exon_name", test.use = "PSI",
+                                    min.pct = min.pct.exon, min.pct.bind.feature = min.pct, mode = 3, perm = perm, seed = seed, threads = threads)
+                                    
     tb[[gene.name]] = df[tb$feature, gene.name]
   } else {
     tb <- FindAllAEMarkers(object, assay = exon.assay, bind.assay = exclude.assay, bind.name = "exon_name", test.use = "PSI", node = node, features = features,
