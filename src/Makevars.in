@@ -1,0 +1,12 @@
+RHTSLIB_LIBS=$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript" -e 'Rhtslib::pkgconfig("PKG_LIBS")')
+RHTSLIB_CFLAGS=$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript" -e 'Rhtslib::pkgconfig("PKG_CPPFLAGS")')
+
+PKG_CFLAGS = @PKG_CFLAGS@ @openmp_cflags@ $(RHTSLIB_CFLAGS)
+PKG_LIBS = @PKG_LIBS@ @openmp_cflags@ $(RHTSLIB_LIBS)
+
+all: $(SHLIB)
+	@echo PKG_CFLAGS = $(PKG_CFLAGS)
+	@echo PKG_LIBS = $(PKG_LIBS)
+	if [ "$(SHLIB)" != "Yano$(SHLIB_EXT)" ]; then mv $(SHLIB) Yano$(SHLIB_EXT); fi
+	if [ "$(OS)" != "Windows_NT" ] && [ `uname -s` = 'Darwin' ]; then install_name_tool -id Yano$(SHLIB_EXT) Yano$(SHLIB_EXT); fi
+
