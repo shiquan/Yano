@@ -140,7 +140,6 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
             es[k] = (g11+1)/(g12+1) - (g21+1)/(g22+1);
             mean = mean + es[k];
         }
-
         R_Free(tmpa);
         R_Free(tmpb);
         

@@ -11,7 +11,8 @@
   nvar = 3000,
   resolution = 0.5,
   assay = NULL,
-  ndim = 20
+  ndim = 20,
+  verbose = TRUE
 )
 }
 \arguments{

@@ -549,7 +549,7 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
   return(p1)
 }
 
-#' @title plotTracks
+#' @title TracksPlot
 #' @description Plot read/UMI coverage and transcript tracks.
 #' @param bamfile A path to bam file or a list to bam files.
 #' @param chr Chromosome name.
@@ -578,7 +578,7 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
 #' @param junc Also plot the junction reads.
 #' @import patchwork
 #' @export
-plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
+TracksPlot <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
                         strand = c("both", "forward", "reverse", "ignore"),
                         split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
                         gtf = NULL, max.depth = 0, group.title.size = rel(2),
@@ -657,4 +657,357 @@ plotTracks <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
     return(p1 / p3/ p2 + plot_layout(heights=layout.heights[c(2,2,3)]))
   }
   return(p1 / p2 + plot_layout(heights=layout.heights[c(2,3)]))
+}
+
+#' This function is edited from Seurat::FeaturePlot, used to visulize the PSI score on cells.
+#' 
+#' @title PSIPlot
+#' @description Plot PSI score on reduction map.
+#' @param object Seurat object.
+#' @param exon.assay Exon assay name.
+#' @param exclude.assay Excluded exon assay name.
+#' @param features Features to plot.
+#' @param dims Dimensions to plot, must be a two-length numeric vector specifying x- and y-dimensions
+#' @param cells Vector of cells to plot (default is all cells)
+#' @param cols Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by \code{\link[RColorBrewer]{brewer.pal.info}}. I personal think Seurat default color is boring, therefore change the default cols to rev(brewer.pal(n = 11,name = "RdBu")). Set cols = c('lightgrey', 'blue') to get the 'classical' colors.
+#' @param pt.size Adjust point size for plotting
+#' @param reduction Which dimensionality reduction to use. If not specified, first searches for umap, then tsne, then pca
+#' @param group.by Name of one or more metadata columns to group (color) cells by (for example, orig.ident); pass 'ident' to group by identity class
+#' @param split.by A factor in object metadata to split the plot by, pass 'ident' to split by cell identity
+#' @param shape.by If NULL, all points are circles (default). You can specify any cell attribute (that can be pulled with FetchData) allowing for both different colors and different shapes on cells.  Only applicable if \code{raster = FALSE}.
+#' @param ncol Number of columns to combine multiple features plots to
+#' @param order Boolean determing whether to plot cells in order of PSI score.
+#' @param coord.fixed Plot cartesian coordinates with fixed aspect ratio
+#' @param by.col If splitting by a factor, plot the splits per column with the features as rows 
+#' @param combine Combine plots into a single \code{\link[patchwork]{patchwork}} ggplot object. If \code{FALSE}, return a list of ggplot objects.
+#' @return A \code{{\link{[patchwork]{patchwork}}}} ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
+#' @importFrom grDevices rgb
+#' @importFrom patchwork wrap_plots
+#' @importFrom cowplot theme_cowplot
+#' @importFrom SeuratObject FetchData
+#' @importFrom Seurat SingleDimPlot
+#' @importFrom rlang is_integerish
+#' @importFrom ggplot2 labs scale_x_continuous scale_y_continuous theme element_rect dup_axis guides element_blank element_text margin scale_color_brewer scale_color_gradientn scale_color_manual coord_fixed ggtitle
+#' @export
+#' @concept visualization
+PSIPlot <- function(object = NULL,
+                    exon.assay = NULL,
+                    exclude.assay = "EXCL",
+                    features = NULL,
+                    dims = c(1,2),
+                    cells = NULL,
+                    cols = rev(brewer.pal(n = 11,name = "RdBu")),
+                    pt.size = NULL,
+                    alpha = 1,
+                    order = FALSE,
+                    reduction = NULL,
+                    shape.by = NULL,
+                    ncol = NULL,
+                    split.by = NULL,
+                    by.col = TRUE,
+                    coord.fixed = FALSE,
+                    combine = TRUE,
+                    raster = NULL,
+                    raster.dpi = c(512,512),
+                    pesudo.num = 1
+                    )
+{
+  exon.assay <- exon.assay %||% DefaultAssay(object)
+  if (exon.assay %ni% Assays(object)) {
+    stop("Exon assay is not exist, check the exon.assay.")
+  }
+
+  if (exclude.assay %ni% Assays(object)) {
+    stop("Exclude exon assay is not exist, check the exclude.assay.")
+  }
+
+  message(paste0("Retrieve exon counts from assay ", exon.assay, ", exclude exon counts from assay ", exclude.assay))
+  
+  # Set a theme to remove right-hand Y axis lines
+  # Also sets right-hand Y axis text label formatting
+  no.right <- theme(
+    axis.line.y.right = element_blank(),
+    axis.ticks.y.right = element_blank(),
+    axis.text.y.right = element_blank(),
+    axis.title.y.right = element_text(
+      face = "bold",
+      size = 14,
+      margin = margin(r = 7)
+    )
+  )
+  
+  # Get the DimReduc to use
+  reduction <- reduction %||% DefaultDimReduc(object = object)
+  if (!is_integerish(x = dims, n = 2L, finite = TRUE) && !all(dims > 0L)) {
+    abort(message = "'dims' must be a two-length integer vector")
+  }
+  dims <- paste0(Key(object = object[[reduction]]), dims)
+  cells <- cells %||% Cells(x = object[[reduction]])
+  # Get plotting data
+  data <- FetchData(
+    object = object,
+    vars = c(dims, 'ident'),
+    cells = cells
+  )
+
+  # Check presence of dimensions
+  if (!all(dims %in% colnames(x = data))) {
+    abort(message = "The dimensions requested were not found")
+  }
+
+  old.assay <- DefaultAssay(object)
+  # exon data
+  DefaultAssay(obj) <- exon.assay
+  features <- intersect(features, rownames(object))
+  if (length(features) == 0) {
+    stop("No feature found at exon assay.")
+  }
+  
+  data.exon <- FetchData(object = object, cells = cells, vars = features, slot = "counts")
+  
+  # excluded exon data
+  DefaultAssay(obj) <- exclude.assay
+  features <- intersect(features, rownames(object))
+  if (length(features) == 0) {
+    stop("No feature found at exclude assay.")
+  }
+  
+  data.excl <- FetchData(object = object, cells = cells, vars = features, slot = "counts")
+
+  # Combine data  
+  features <- intersect(colnames(data.exon), colnames(data.excl))
+  
+  data.exon <- as.matrix(data.exon[,features])
+  data.excl <- as.matrix(data.excl[,features])
+
+  data0 <- data.exon/(data.exon+data.excl + pesudo.num)
+  colnames(data0) <- features
+  data <- cbind(data, as.data.frame(data0))
+  
+  # Figure out splits (FeatureHeatmap)
+  data$split <- if (is.null(x = split.by)) {
+    RandomName()
+  } else {
+    switch(
+      EXPR = split.by,
+      ident = Idents(object = object)[cells, drop = TRUE],
+      object[[split.by, drop = TRUE]][cells, drop = TRUE]
+    )
+  }
+  if (!is.factor(x = data$split)) {
+    data$split <- factor(x = data$split)
+  }
+  
+  # Set shaping variable
+  if (!is.null(x = shape.by)) {
+    data[, shape.by] <- object[[shape.by, drop = TRUE]]
+  }
+  
+  # Make list of plots
+  plots <- vector(
+    mode = "list",
+    length = length(x = features) * length(x = levels(x = data$split))  
+  )
+  # Apply common limits
+  xlims <- c(floor(x = min(data[, dims[1]])), ceiling(x = max(data[, dims[1]])))
+  ylims <- c(floor(min(data[, dims[2]])), ceiling(x = max(data[, dims[2]])))
+
+  # Make the plots
+  for (i in 1:length(x = levels(x = data$split))) {
+    # Figure out which split we're working with
+    ident <- levels(x = data$split)[i]
+    data.plot <- data[as.character(x = data$split) == ident, , drop = FALSE]
+    # Make per-feature plots
+    for (j in 1:length(x = features)) {
+      feature <- features[j]
+      cols.use <- NULL
+      data.single <- data.plot[, c(dims, 'ident', feature, shape.by)]
+      # Make the plot
+      plot <- SingleDimPlot(
+        data = data.single,
+        dims = dims,
+        col.by = feature,
+        order = order,
+        pt.size = pt.size,
+        alpha = alpha,
+        cols = cols.use,
+        shape.by = shape.by,
+        label = FALSE,
+        raster = raster,
+        raster.dpi = raster.dpi
+      ) +
+        scale_x_continuous(limits = xlims) +
+        scale_y_continuous(limits = ylims) +
+        theme_cowplot() +
+        CenterTitle()
+
+      # Make FeatureHeatmaps look nice(ish)
+      if (length(x = levels(x = data$split)) > 1) {
+        plot <- plot + theme(panel.border = element_rect(fill = NA, colour = 'black'))
+        # Add title
+        plot <- plot + if (i == 1) {
+          labs(title = feature, color = "PSI")
+        } else {
+          labs(title = NULL, color = "PSI")
+        }
+        # Add second axis
+        if (j == length(x = features)) {
+          suppressMessages(
+            expr = plot <- plot +
+              scale_y_continuous(
+                sec.axis = dup_axis(name = ident),
+                limits = ylims
+              ) +
+              no.right
+          )
+        }
+        # Remove left Y axis
+        if (j != 1) {
+          plot <- plot + theme(
+            axis.line.y = element_blank(),
+            axis.ticks.y = element_blank(),
+            axis.text.y = element_blank(),
+            axis.title.y.left = element_blank()
+          )
+        }
+        # Remove bottom X axis
+        if (i != length(x = levels(x = data$split))) {
+          plot <- plot + theme(
+            axis.line.x = element_blank(),
+            axis.ticks.x = element_blank(),
+            axis.text.x = element_blank(),
+            axis.title.x = element_blank()
+          )
+        }
+      } else {
+        plot <- plot + labs(title = feature, color = "PSI")
+      }
+      # Add colors scale for normal FeaturePlots
+      plot <- plot + guides(color = NULL)
+      cols.grad <- cols
+      if (length(x = cols) == 1) {
+        plot <- plot + scale_color_brewer(palette = cols)
+      } else if (length(x = cols) > 1) {
+        unique.feature.exp <- unique(data.plot[, feature])
+        if (length(unique.feature.exp) == 1) {
+          warn(message = paste0(
+            "All cells have the same value (",
+            unique.feature.exp,
+            ") of ",
+            dQuote(x = feature)
+          ))
+          if (unique.feature.exp == 0) {
+            cols.grad <- cols[1]
+          } else{
+            cols.grad <- cols
+          }
+        }
+        plot <- suppressMessages(
+          expr = plot + scale_color_gradientn(
+            colors = cols.grad,
+            guide = "colorbar"
+          )
+        )
+      }
+      # Add coord_fixed
+      if (coord.fixed) {
+        plot <- plot + coord_fixed()
+      }
+      # Place the plot
+      plots[[(length(x = features) * (i - 1)) + j]] <- plot
+    }
+  }
+  
+  # Remove NULL plots
+  plots <- Filter(f = Negate(f = is.null), x = plots)
+  # Combine the plots
+  if (is.null(x = ncol)) {
+    ncol <- 2
+    if (length(x = features) == 1) {
+      ncol <- 1
+    }
+    if (length(x = features) > 6) {
+      ncol <- 3
+    }
+    if (length(x = features) > 9) {
+      ncol <- 4
+    }
+  }
+  ncol <- ifelse(
+    test = is.null(x = split.by),
+    yes = ncol, 
+    no = length(x = features)
+  )
+  legend <- split.by %iff% 'none'
+
+  # Transpose the FeatureHeatmap matrix (not applicable for blended FeaturePlots)
+  if (isTRUE(x = combine)) {
+    if (by.col && !is.null(x = split.by)) {
+      plots <- lapply(
+        X = plots,
+        FUN = function(x) {
+          return(suppressMessages(
+            expr = x +
+              theme_cowplot() +
+              ggtitle("") +
+              scale_y_continuous(sec.axis = dup_axis(name = ""), limits = ylims) +
+              no.right
+          ))
+        }
+      )
+      nsplits <- length(x = levels(x = data$split))
+      idx <- 1
+      for (i in (length(x = features) * (nsplits - 1) + 1):(length(x = features) * nsplits)) {
+        plots[[i]] <- suppressMessages(
+          expr = plots[[i]] +
+            scale_y_continuous(
+              sec.axis = dup_axis(name = features[[idx]]),
+              limits = ylims
+            ) +
+            no.right
+        )
+        idx <- idx + 1
+      }
+      idx <- 1
+      for (i in which(x = 1:length(x = plots) %% length(x = features) == 1)) {
+        plots[[i]] <- plots[[i]] +
+          ggtitle(levels(x = data$split)[[idx]]) +
+          theme(plot.title = element_text(hjust = 0.5))
+        idx <- idx + 1
+      }
+      idx <- 1
+      if (length(x = features) == 1) {
+        for (i in 1:length(x = plots)) {
+          plots[[i]] <- plots[[i]] +
+            ggtitle(levels(x = data$split)[[idx]]) +
+            theme(plot.title = element_text(hjust = 0.5))
+          idx <- idx + 1
+        }
+        ncol <- 1
+        nrow <- nsplits
+      } else {
+        nrow <- split.by %iff% length(x = levels(x = data$split))
+      }
+      plots <- plots[c(do.call(
+        what = rbind,
+        args = split(
+          x = 1:length(x = plots),
+          f = ceiling(x = seq_along(along.with = 1:length(x = plots)) / length(x = features))
+        )
+      ))]
+      # Set ncol to number of splits (nrow) and nrow to number of features (ncol)
+      plots <- wrap_plots(plots, ncol = nrow, nrow = ncol)
+      if (!is.null(x = legend) && legend == 'none') {
+        plots <- plots & NoLegend()
+      }
+    } else {
+      plots <- wrap_plots(plots, ncol = ncol, nrow = split.by %iff% length(x = levels(x = data$split)))
+    }
+    if (!is.null(x = legend) && legend == 'none') {
+      plots <- plots & NoLegend()
+    }
+    plots <- suppressMessages(plots & scale_color_gradientn(colors = cols, limits = c(0,1)))
+  }
+  
+  return(plots)
 }

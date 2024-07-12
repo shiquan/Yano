@@ -96,6 +96,7 @@ DEXSeqTest <- function(x, y, cells.1 = NULL, cells.2 = NULL, pseudo.group = 3, r
   new.group <- c(new.group1,new.group2)
 
   features <- rownames(x)
+
   x <- x[, c(cells.1, cells.2)]
   x <- as(x,"TsparseMatrix")
   x <- Matrix::sparseMatrix(i=(x@i+1),j=new.group[x@j+1], x=x@x)
@@ -107,14 +108,9 @@ DEXSeqTest <- function(x, y, cells.1 = NULL, cells.2 = NULL, pseudo.group = 3, r
   colnames(y) <- paste0("group_",1:(pseudo.group*2))
 
   meta.tab <- data.frame(row.names=colnames(x),
-                         condition=c(rep("cluster1", pseudo.group),
-                                     rep("cluster2", pseudo.group)))
+                         condition=factor(c(rep("cluster1", pseudo.group),
+                                            rep("cluster2", pseudo.group))))
   
-  if (length(x = features) == 0) {
-    warning("No feature pass min.pct threshold; returning NULL.")
-    return(NULL)
-  }
-
   if (mode == 2) {
     y <- y - x
     y[y<0] <- 0
@@ -219,7 +215,7 @@ AlternativeExpressionTest <- function(object,
   ValidateCellGroups(object, cells.1, cells.2, min.cells.group)
 
   features <- features %||% rownames(object)
-  
+  features <- intersect(features, rownames(object))
   # filter features
   dat <- GetAssayData1(object, layer=layer)
   x <- dat[features, c(cells.1, cells.2)]
@@ -482,6 +478,7 @@ RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, id
   if (!is.null(ident.1) | !is.null(cells.1)) {
     tb <- AlternativeExpressionTest(object, ident.1 = ident.1, ident.2 = ident.2, cells.1 = cells.1, cells.2 = cells.2, assay = assay, bind.assay = bind.assay,
                                     bind.name = bind.name, test.use = "DEXSeq", min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature, mode = mode,
+                                    features = features,
                                     return.thresh = return.thresh,
                                     pseudo.group = pseudo.group, threads = threads)
   } else {
