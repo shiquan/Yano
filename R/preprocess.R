@@ -2,13 +2,19 @@
 setMethod(f = "QuickRecipe0",
           signature = signature(counts = "SMatrix"),
           definition = function(counts = NULL, min.cells = 20, min.features = 200,
-                                assay = NULL,
+                                assay = NULL, verbose = TRUE,
                                 ...
                                 ) {
 
             assay <- assay %||% "RNA"
+
+            if (isTRUE(verbose)) {
+              message(paste0("object <- CreateSeuratObject(counts = counts, min.cells = ", min.cells, ", min.features = ",min.features, ", assay = assay)"))
+            }
             counts <- CreateSeuratObject(counts = counts, min.cells = min.cells,
                                          min.features = min.features, assay = assay)
+
+            
             return(QuickRecipe0(counts, assay = assay, ...))
           })
 
@@ -16,28 +22,61 @@ setMethod(f = "QuickRecipe0",
 setMethod(f = "QuickRecipe0",
           signature = signature(counts = "Seurat"),
           definition = function(counts = NULL, scale.factor = 1e4,
-                                assay = NULL,
+                                assay = NULL, verbose = TRUE,
                                 ...
                                 ) {
             assay <- assay %||% DefaultAssay(counts)
             message(paste0("Set default assay to ", assay))
             DefaultAssay(counts) <- assay
+
+            if (isTRUE(verbose)) {
+              message(paste0("object <- NormalizeData(object, normalization.method = \"LogNormalize\", scale.factor = ", scale.factor, ")"))
+            } 
+            
             counts <- NormalizeData(counts, normalization.method = "LogNormalize",
                                     scale.factor = scale.factor)
             counts
           })
 
-ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, nvar= 3000, features = NULL)
+ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, nvar= 3000, features = NULL, verbose = TRUE)
 {
+
+  if (isTRUE(verbose)) {
+    message(paste0("object <- FindVariableFeatures(object, selection.method = \"vst\", nfeatures = ", nvar, ")"))
+  } 
+
   object <- FindVariableFeatures(object, selection.method = "vst", nfeatures = nvar)
   
   features <- features %||% VariableFeatures(object)
   features <- intersect(features,rownames(object))
-  
+
+  if (isTRUE(verbose)) {
+    message(paste0("object <- ScaleData(object, features =  @features)"))
+  } 
+
   object <- ScaleData(object, features = features)
+
+  if (isTRUE(verbose)) {
+    message(paste0("object <- RunPCA(object, features = @features"))
+  } 
+
   object <- RunPCA(object, features = features)
+
+  if (isTRUE(verbose)) {
+    message(paste0("object <- FindNeighbors(object, dims = 1:", ndim,")"))
+  } 
+
   object <- FindNeighbors(object, dims = 1:ndim)
+
+  if (isTRUE(verbose)) {
+    message(paste0("object <- FindClusters(object, resolution = ", resolution, ")"))
+  } 
   object <- FindClusters(object, resolution = resolution)
+
+  if (isTRUE(verbose)) {
+    message(paste0("object <- RunUMAP(object, dims = 1:", ndim, ")"))
+  } 
+
   object <- RunUMAP(object, dims = 1:ndim)
   object
 }
@@ -60,28 +99,28 @@ setMethod(f = "QuickRecipe",
           signature = signature(counts = "Seurat"),
           definition = function(counts = NULL, min.cells = 20, min.features = 200,
                                 nvar = 3000, resolution = 0.5, assay = NULL,
-                                ndim = 20
+                                ndim = 20, verbose = TRUE
                                 ) {
             
             object <- QuickRecipe0(counts=counts, 
                                    min.cells =min.cells, min.features = min.features,
-                                   assay = NULL)
+                                   assay = NULL, verbose = verbose)
 
-            ProcessDimReduc(object, ndim=ndim, resolution=resolution, nvar=nvar)
+            ProcessDimReduc(object, ndim=ndim, resolution=resolution, nvar=nvar, verbose = verbose)
           })
 
 setMethod(f = "QuickRecipe",
           signature = signature(counts = "SMatrix"),
           definition = function(counts = NULL, min.cells = 20, min.features = 200,
                                 nvar = 3000, resolution = 0.5, assay = NULL,
-                                ndim = 20, ...
+                                ndim = 20, verbose = TRUE, ...
                                 ) {
             
             object <- QuickRecipe0(counts=counts,
                                    min.cells =min.cells, min.features = min.features,
-                                   assay = assay, ...)
+                                   assay = assay, verbose = verbose, ...)
 
-            ProcessDimReduc(object, ndim=ndim, resolution=resolution, nvar=nvar)
+            ProcessDimReduc(object, ndim=ndim, resolution=resolution, nvar=nvar, verbose = verbose)
           })
 
 

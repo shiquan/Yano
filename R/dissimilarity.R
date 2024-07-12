@@ -23,7 +23,7 @@ DScore <- function(x = NULL, y = NULL, W = NULL)
 #' @param scale Scale expression of the test feature and binding feature when perfroming test.
 #' @param perm Permutations for evaluating mean and sd of D scores. Default is 100.
 #' @param seed Seed for generate random number. Default is 999.
-#' @param threads Threads. Default is 0, will check the CPU cores and set threads = number of CPU cores -1.
+#' @param threads Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.
 #' @param versbose Print log message. Default is TRUE.
 #' @importFrom Matrix sparseMatrix
 #' @export
