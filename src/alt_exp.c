@@ -11,15 +11,16 @@ static cholmod_common c;
 extern int *random_idx(const int n);
 extern void shuffle(double tmp[], int const idx[], const int n);
 
-SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEXP _threads, SEXP _seed)
+SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEXP _threads, SEXP _seed, SEXP _debug)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
 
     const int perm = asInteger(_perm);
-    const int n_thread = asInteger(_threads);
+    int n_thread = asInteger(_threads);
 
     const int seed = asInteger(_seed);
+    Rboolean debug = asLogical(_debug);
 
     srand(seed);
     
@@ -107,9 +108,13 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
 
         //if (g12 == 0) g12 = 0.001;
         //if (g22 == 0) g22 = 0.001;
-
-        double delta = (g11+1)/(g12+1) - (g21+1)/(g22+1);
         
+        double delta = g11/g12 - (g21/g22);
+
+        if (debug) {
+            Rprintf("g11, %f, g12, %f, g21, %f, g22, %f\n", g11, g12, g21, g22);
+            Rprintf("delta, %f\n", g11/g12 - (g21/g22));
+        }
         double mean = 0;
         double var = 0;
         
@@ -117,7 +122,10 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
         for (int k = 0; k < perm; ++k) {
             shuffle(tmpa, ris[k], n_cell);
             shuffle(tmpb, ris[k], n_cell);
-
+            g11 = 0;
+            g12 = 0;
+            g21 = 0;
+            g22 = 0;
             for (int j = 0; j < len_g1; ++j) {
                 int ii = INTEGER(idx1)[j]  -1;
                 g11 += tmpa[ii];
@@ -137,7 +145,7 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
                 g22 = g22 + g21;
             }
             
-            es[k] = (g11+1)/(g12+1) - (g21+1)/(g22+1);
+            es[k] = (g11/g12) - (g21/g22);
             mean = mean + es[k];
         }
         R_Free(tmpa);
@@ -151,6 +159,10 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
         var = sqrt(var/perm);
 
         double t = (delta - mean)/var;
+
+        if (debug) {
+            Rprintf("mean, %f, var, %f, t, %f\n", mean, var, t);
+        }
 
         R_Free(es);
         

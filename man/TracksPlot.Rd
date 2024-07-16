@@ -30,7 +30,8 @@ TracksPlot(
   col.by = NULL,
   layout.heights = c(1, 10, 2),
   highlights = NULL,
-  junc = FALSE
+  junc = FALSE,
+  junc.min.depth = 5
 )
 }
 \arguments{
@@ -83,6 +84,8 @@ TracksPlot(
 \item{highlights}{A region of a list of regions to hightlight. The region is format as c(start,end).}
 
 \item{junc}{Also plot the junction reads.}
+
+\item{junc.min.depth}{Filter out junctions if low than this cutoff. This parameter used to remove noise background. Default is 5.}
 }
 \description{
 Plot read/UMI coverage and transcript tracks.

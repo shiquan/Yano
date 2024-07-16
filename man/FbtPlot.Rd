@@ -14,6 +14,7 @@ FbtPlot(
   col.by = NULL,
   cols = NULL,
   sel.chrs = NULL,
+  pt.size = NULL,
   xlab = "Chromosome",
   ylab = expression(-log[10](p)),
   subset = NULL,
@@ -50,6 +51,8 @@ FbtPlot(
 \item{cols}{Manually specify the colors. Used with col.by.}
 
 \item{sel.chrs}{Vector of selected chromosome names to plot. Change the order by set the level of chr names.}
+
+\item{pt.size}{Point size.}
 
 \item{xlab}{Label for x axis. Default is "Chromosome".}
 

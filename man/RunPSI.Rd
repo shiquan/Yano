@@ -22,7 +22,8 @@ RunPSI(
   node = NULL,
   perm = 100,
   seed = 999,
-  threads = 0
+  threads = 0,
+  debug = FALSE
 )
 }
 \arguments{
@@ -38,7 +39,7 @@ RunPSI(
 
 \item{exon.assay}{Assay for exons. Default assay will be used if not set.}
 
-\item{exclude.assay}{Assay for exon exclude reads. This assay is mandantory to calculate PSI. The count matrix can be calculate with `PISA anno -exon -psi`.}
+\item{exclude.assay}{Assay for exon exclude reads. This assay is mandantory to calculate PSI. The count matrix can be calculated by `PISA anno -exon -psi in.bam`.}
 
 \item{features}{Candidate list to test. If not set, will use all.}
 
@@ -56,16 +57,18 @@ RunPSI(
 
 \item{perm}{Permutation steps for calculate statistical of delta-PSI. Default is 100.}
 
+\item{seed}{Seed for generate random number. Default is 999.}
+
 \item{threads}{Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.}
 }
 \value{
 Data frame containing p values and pct for exons and their genes.
 }
 \description{
-Using delta(Δ)-PSI and permutation method to simulate p value for each event.
+Using \eqn{\Delta PSI} and permutation method to simulate p value for each event.
 }
 \details{
-This function calculates the ΔPSI as PSI_a - PSI_b for groups a and b. It then employs a permutation method to randomize the cells in the two groups 100 times (by default) to evaluate the mean and standard deviation of delta-PSI. A p-value is calculated using a t-test. PSI stands for Percent-Spliced In and is calculated by the formula PSI = EXON/(EXON+EXCL), where EXON represents reads overlapping this exon, and EXCL represents excluded reads, which are junction reads that skip this exon.
+This function calculates the \eqn{\Delta PSI = PSI_a - PSI-b} for groups \eqn{a} and \eqn{b}. It then employs a permutation method to randomize the cells in the two groups 100 times (by default) to evaluate the mean and standard deviation of delta-PSI. A p-value is calculated using a t-test. PSI stands for Percent-Spliced In and is calculated by the formula \eqn{PSI = EXON/(EXON+EXCL)}, where EXON represents reads overlapping this exon, and EXCL represents excluded reads, which are junction reads that skip this exon.
 }
 \examples{
 data("neuron_small")

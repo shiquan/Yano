@@ -49,7 +49,8 @@ RunBlockCorr <- function(object = NULL,
                          block.name = NULL,
                          block.assay = NULL,
                          block.features = NULL,
-                         verbose = TRUE
+                         verbose = TRUE,
+                         debug = FALSE
                          )
 {
   if (!is.null(block.name)) {
@@ -144,6 +145,12 @@ RunBlockCorr <- function(object = NULL,
   tab <- subset(tab, tab[[bind.name]] %in% blocks)
   features <- intersect(features, rownames(tab))
 
+  x <- GetAssayData1(object, assay = assay, layer = "counts")
+  
+  cs <- library.size %||% colSums(x)
+
+  norm <- TRUE
+
   bind.assay <- bind.assay %||% "tmp.assay"
 
   if (bind.assay %ni% names(object)) {
@@ -158,9 +165,6 @@ RunBlockCorr <- function(object = NULL,
       features <- intersect(features, rownames(tab))
     }
 
-    x <- GetAssayData1(object, assay = assay, layer = "counts")
-    cs <- libray.size %||% colSums(x)
-    
     x <- x[,cells]
 
     rs <- Matrix::rowSums(x>0)
@@ -184,25 +188,16 @@ RunBlockCorr <- function(object = NULL,
     rm(x0)
     rownames(y) <- blocks
     colnames(y) <- cells
-
-    norm <- TRUE
   } else {
-    if (packageVersion("Seurat") >= numeric_version(as.character(5))) {
-      layer <- Layers(object = object0, search = "data")
-      if (is.null(layer)) {
-        abort("No layer found. Please run NormalizeData or RunTFIDF and retry..")
-      }
-    }
-
-    x <- GetAssayData1(object, assay = assay, layer = "data")
     x <- x[,cells]
     W <- W[cells,cells]
-
+    cs <- cs[cells]
+    
     rs <- Matrix::rowSums(x>0)
     idx <- which(rs >= min.cells)
     features1 <- rownames(object)[idx]
     features <- intersect(features, features1)
-    #tab <- tab[features,]
+
     blocks <- unique(tab[[bind.name]])
     if (isTRUE(verbose)) {
       message(paste0("Trying to retrieve data from assay ", bind.assay,".."))
@@ -210,14 +205,8 @@ RunBlockCorr <- function(object = NULL,
     old.assay <- DefaultAssay(object)
     DefaultAssay(object) <- bind.assay
     blocks <- intersect(blocks, rownames(object))
-    if (packageVersion("Seurat") >= numeric_version(as.character(5))) {
-      layer <- Layers(object = object[[bind.assay]], search = "data")
-      if (is.null(layer)) {
-        abort(paste0("No layer found. Please run NormalizeData or RunTFIDF for assay ", assay, " and retry.."))
-      }
-    }
 
-    y <- GetAssayData1(object, assay = bind.assay, slot = "data")
+    y <- GetAssayData1(object, assay = bind.assay, slot = "counts")
     y <- y[,cells]
 
     rs <- Matrix::rowSums(y>0)
@@ -227,8 +216,6 @@ RunBlockCorr <- function(object = NULL,
 
     tab <- subset(tab, tab[[bind.name]] %in% blocks)
     
-    cs <- NULL
-    norm <- FALSE
     DefaultAssay(object) <- old.assay
   }
 
@@ -240,7 +227,7 @@ RunBlockCorr <- function(object = NULL,
     message(paste0("Test dissimlarity of binding features with ", threads, " threads."))
   }
   gc()
-  ta <- .Call("D_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm, seed);
+  ta <- .Call("D_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm, seed, debug);
   if (length(ta) == 1) stop(ta[[1]])
 
   Lx <- ta[[1]]
@@ -288,3 +275,106 @@ cor_dist <- function(x = NULL, y = NULL, W = NULL, perm = 1000, thread = 1)
   ta <- .Call("D_distribution_test", x, y, W, perm, thread)
   ta
 }
+
+#' @export
+SDTdemo <- function(object = NULL, bind.name = NULL, bind.assay = NULL, assay = NULL, mode = c(1,2,3), perm = 100, feature = NULL) {
+  
+  if (is.null(object)) {
+    stop("No object.")
+  }
+
+  if (is.null(feature)) {
+    stop("No feature.")
+  }
+
+  if (is.null(bind.name)) {
+    stop("bind.name is not set.")
+  }
+  assay <- assay %||% DefaultAssay(object)
+  old.assay <- DefaultAssay(object)
+
+  DefaultAssay(object) <- assay
+  feature <- intersect(rownames(object), feature)
+
+  if (length(feature) == 0) {
+    stop("No feature found.")
+  }
+
+  df <- object[[assay]][[]]
+
+  if (!(bind.name %in% colnames(df))) {
+    stop("No bind.name found.")
+  }
+
+  bind.feature <- df[feature, bind.name]
+
+  if (is.na(bind.feature)) {
+    stop("bind.feature is NA.")
+  }
+
+  x <- GetAssayData(object, layer = "counts")
+  cs <- colSums(x)
+  
+  d1 <- x[feature,]
+
+  d1 <- as.matrix(d1)
+  DefaultAssay(object) <- bind.assay
+
+  bind.feature <- intersect(bind.feature, rownames(object))
+  if (length(bind.feature) == 0) {
+    stop("No bind.feature found.")
+  }
+
+  d2 <- GetAssayData(object, layer="counts")[bind.feature,]
+  d2 <- as.matrix(d2)
+  if (mode ==  2) {
+    d2 <- d2 - d1
+  }
+  if (mode == 3) {
+    d2 <- d1 + d2
+  }
+  
+  message(paste0("Orginal cor is ", cor(d1[,1], d2[,1])))
+
+  d1[,1] <- log(d1[,1]*1e4/cs+1)
+  d2[,1] <- log(d2[,1]*1e4/cs+1)
+  
+  message(paste0("Cor after normlise is ", cor(d1[,1], d2[,1])))
+  message(paste0("Mean a ", mean(d1[,1]), " mean b ", mean(d2[,1])))
+  
+  W <- object[['WeightMatrix']]
+  W <- as(W, "CsparseMatrix")
+
+  s1 <- (d1[,1] %*% W)[1,]
+  s2 <- (d2[,1] %*% W)[1,]
+  
+  message(paste0("Cor after smooth is ", cor(s1, s2)))
+  message(paste0("Mean smooth a ", mean(s1), " mean smooth b ", mean(s2)))
+  d1 <- d1[,1]
+  sm <- mean(d1)
+  
+  Lx <- sum((s1-sm)^2)/sum((d1-sm)^2)
+  
+  D <- sqrt(Lx)*(1-cor(s1,s2))
+
+  mn <- lapply(1:perm, function(i) {
+    d11 <- sample(d1)
+    s11 <- (d11 %*% W)[1,]
+    Lx1 <- sum((s11-sm)^2)/sum((d11-sm)^2)
+    sqrt(Lx1)*(1-cor(s11,s2))    
+  })
+
+  mn <- unlist(mn)
+  hist(mn)
+  m <- mean(mn)
+  var <- sqrt(sum((mn - m)^2)/perm)
+  t <- (D-m)/var
+  
+  p <- pt(t, df = perm-1, lower.tail = FALSE)
+  message(paste0("Lx is ", Lx, ", D score is ", D))
+  message(paste0("Mean is ", m, ", var is ", var))
+  message(paste0("t value is ", t, ";\np value is ", p))
+
+  DefaultAssay(object) <- old.assay
+}
+

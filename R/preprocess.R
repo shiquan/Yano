@@ -9,7 +9,7 @@ setMethod(f = "QuickRecipe0",
             assay <- assay %||% "RNA"
 
             if (isTRUE(verbose)) {
-              message(paste0("object <- CreateSeuratObject(counts = counts, min.cells = ", min.cells, ", min.features = ",min.features, ", assay = assay)"))
+              message(paste0("object <- CreateSeuratObject(counts = counts, min.cells = ", min.cells, ", min.features = ",min.features, ", assay = \"", assay, "\")"))
             }
             counts <- CreateSeuratObject(counts = counts, min.cells = min.cells,
                                          min.features = min.features, assay = assay)

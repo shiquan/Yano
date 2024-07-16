@@ -27,7 +27,8 @@ RunBlockCorr(
   block.name = NULL,
   block.assay = NULL,
   block.features = NULL,
-  verbose = TRUE
+  verbose = TRUE,
+  debug = FALSE
 )
 }
 \arguments{
@@ -65,7 +66,7 @@ RunBlockCorr(
 
 \item{seed}{Seed for generate random number. Default is 999.}
 
-\item{threads}{Threads. Default is 0, will check the CPU cores and set threads = number of CPU cores -1.}
+\item{threads}{Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.}
 
 \item{versbose}{Print log message. Default is TRUE.}
 }
