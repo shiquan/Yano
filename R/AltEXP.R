@@ -51,7 +51,7 @@ ValidateCellGroups <- function(
   }
 }
 
-PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode = 3, threads = 1, ...)
+PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode = 3, threads = 1, debug = FALSE, ...)
 {
   stopifnot(identical(dim(x), dim(y)))
   x <- as(x, "dgCMatrix")
@@ -65,7 +65,7 @@ PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode =
   idx.1 <- match(cells.1, cells)
   idx.2 <- match(cells.2, cells)
   
-  df <- .Call("alt_exp", x, y, idx.1, idx.2, mode, perm, threads, seed)
+  df <- .Call("alt_exp", x, y, idx.1, idx.2, mode, perm, threads, seed, debug)
 
   if (length(df) == 1) {
     stop(df)
@@ -170,6 +170,7 @@ AlternativeExpressionTest <- function(object,
                                       threads = 1,
                                       perm = 100,
                                       seed = 999,
+                                      debug = FALSE,
                           ...)
 {
   if (is.null(bind.name)) {
@@ -301,7 +302,7 @@ AlternativeExpressionTest <- function(object,
   if (method == "DEXSeq") {
     rst <- DEXSeqTest(x, y, cells.1, cells.2, pseudo.group = pseudo.group, rst = rst, mode = 1, threads = threads, ...)
   } else if (method == "PSI") {
-    rst <- PermTest(x, y, cells.1, cells.2, rst, perm = perm, seed = seed, mode = 1, threads = threads, ...)
+    rst <- PermTest(x, y, cells.1, cells.2, rst, perm = perm, seed = seed, mode = 1, threads = threads, debug = debug, ...)
   }
   
   if (!is.null(return.thresh)) {
@@ -326,6 +327,7 @@ FindAllAEMarkers <- function(object,
                              threads = 1,
                              perm = 100,
                              seed = 999,
+                             debug = debug,
                              ...)
 
 {
@@ -393,6 +395,7 @@ FindAllAEMarkers <- function(object,
           pseudo.group = pseudo.group,
           perm = perm,
           seed = seed,
+          debug = debug,
           ...
         )
       },
@@ -456,7 +459,7 @@ FindAllAEMarkers <- function(object,
 #' alt.exon <- RunDEXSeq(object = neuron_small, assay = "flatten", bind.assay = "RNA", bind.name = "gene_name")
 #' head(alt.exon)
 #' 
-RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, assay = NULL, bind.assay = NULL, features = NULL, bind.features = NULL, min.pct = 0.05, min.pct.bind.feature = 0.05, return.thresh = 1e-2, node = NULL, pseudo.group = 3, mode = 1, threads = 1)
+RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, assay = NULL, bind.assay = NULL, features = NULL, bind.features = NULL, min.pct = 0.05, min.pct.bind.feature = 0.05, return.thresh = 1e-2, node = NULL, pseudo.group = 3, mode = 1, threads = 1, debug = FALSE)
 {
   if (is.null(object)) {
     stop("No object specified.")
@@ -480,26 +483,27 @@ RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, id
                                     bind.name = bind.name, test.use = "DEXSeq", min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature, mode = mode,
                                     features = features,
                                     return.thresh = return.thresh,
-                                    pseudo.group = pseudo.group, threads = threads)
+                                    pseudo.group = pseudo.group, threads = threads,
+                                    debug = debug)
   } else {
     tb <- FindAllAEMarkers(object, assay = assay, bind.assay = bind.assay, bind.name = bind.name, test.use = "DEXSeq", node = node, features = features,
                            return.thresh = return.thresh,
-                           min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature, mode = mode, pseudo.group = pseudo.group, threads = threads)
+                           min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature, mode = mode, pseudo.group = pseudo.group, threads = threads, debug = debug)
   }
   tb
 }
 
 #' @name RunPSI
 #' @title Test for alternative expression using Percent-Spliced In
-#' @description Using delta(Δ)-PSI and permutation method to simulate p value for each event.
-#' @details This function calculates the ΔPSI as PSI_a - PSI_b for groups a and b. It then employs a permutation method to randomize the cells in the two groups 100 times (by default) to evaluate the mean and standard deviation of delta-PSI. A p-value is calculated using a t-test. PSI stands for Percent-Spliced In and is calculated by the formula PSI = EXON/(EXON+EXCL), where EXON represents reads overlapping this exon, and EXCL represents excluded reads, which are junction reads that skip this exon.
+#' @description Using \eqn{\Delta PSI} and permutation method to simulate p value for each event.
+#' @details This function calculates the \eqn{\Delta PSI = PSI_a - PSI-b} for groups \eqn{a} and \eqn{b}. It then employs a permutation method to randomize the cells in the two groups 100 times (by default) to evaluate the mean and standard deviation of delta-PSI. A p-value is calculated using a t-test. PSI stands for Percent-Spliced In and is calculated by the formula \eqn{PSI = EXON/(EXON+EXCL)}, where EXON represents reads overlapping this exon, and EXCL represents excluded reads, which are junction reads that skip this exon.
 #' @param object A Seurat object.
 #' @param ident.1 Identify class to test, if not set will compare all groups one by one
 #' @param ident.2 A second class for comparsion. If NULL (default), use all other cells for comparison.
 #' @param cells.1 Vector of cell names belong to group 1. Conflict with ident.1
 #' @param cells.2 Vector of cell names for comparsion. Conflict with ident.2
 #' @param exon.assay Assay for exons. Default assay will be used if not set.
-#' @param exclude.assay Assay for exon exclude reads. This assay is mandantory to calculate PSI. The count matrix can be calculate with `PISA anno -exon -psi`.
+#' @param exclude.assay Assay for exon exclude reads. This assay is mandantory to calculate PSI. The count matrix can be calculated by `PISA anno -exon -psi in.bam`.
 #' @param features Candidate list to test. If not set, will use all.
 #' @param genes Candidate list for genes to test. If not set, will test all covered.
 #' @param exon.name Exon name in the title of meta table for exon assay. Default is "exon_name"
@@ -508,6 +512,7 @@ RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, id
 #' @param return.thresh Only return markers that have a p-value < return.thresh.
 #' @param node A node to find markers for and all its children; requires \code{\link{BuildClusterTree}} to have been run previously. Only can be used if test all groups.
 #' @param perm Permutation steps for calculate statistical of delta-PSI. Default is 100.
+#' @param seed Seed for generate random number. Default is 999.
 #' @param threads Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.
 #' @return Data frame containing p values and pct for exons and their genes.
 #' @export
@@ -517,7 +522,7 @@ RunDEXSeq <- function(object = NULL, bind.name = "bind_name", ident.1 = NULL, id
 #' alt.exon <- RunPSI(object = neuron_small, exon.assay = "exon", exclude.assay = "EXCL")
 #' head(alt.exon)
 #' 
-RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, exon.assay = NULL, exclude.assay = NULL, features = NULL, genes = NULL, gene.name = "gene_name", exon.name = "exon_name", min.pct = 0.05, min.pct.exon = 0.05, return.thresh = 1e-2, node = NULL, perm = 100, seed = 999, threads = 0)
+RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL, exon.assay = NULL, exclude.assay = NULL, features = NULL, genes = NULL, gene.name = "gene_name", exon.name = "exon_name", min.pct = 0.05, min.pct.exon = 0.05, return.thresh = 1e-2, node = NULL, perm = 100, seed = 999, threads = 0, debug = FALSE)
 {
   if (is.null(object)) {
     stop("No object specified.")
@@ -554,19 +559,19 @@ RunPSI <- function(object = NULL, ident.1 = NULL, ident.2 = NULL, cells.1 = NULL
 
   df <- df[which(df[[gene.name]] %in% genes),]
 
-  features <- df[['exon_name']]
-
+  features <- features %||% df[['exon_name']]
+  features <- intersect(features, df[['exon_name']])
   threads <- getCores(threads)
   if (!is.null(ident.1) | !is.null(cells.1)) {
     tb <- AlternativeExpressionTest(object, ident.1 = ident.1, ident.2 = ident.2, cells.1 = cells.1, cells.2 = cells.2, assay = exon.assay, bind.assay = exclude.assay,
                                     features = features, bind.name = "exon_name", test.use = "PSI",
-                                    min.pct = min.pct.exon, min.pct.bind.feature = min.pct, mode = 3, perm = perm, seed = seed, threads = threads)
+                                    min.pct = min.pct.exon, min.pct.bind.feature = min.pct, mode = 3, perm = perm, seed = seed, threads = threads, debug = debug)
                                     
     tb[[gene.name]] = df[tb$feature, gene.name]
   } else {
     tb <- FindAllAEMarkers(object, assay = exon.assay, bind.assay = exclude.assay, bind.name = "exon_name", test.use = "PSI", node = node, features = features,
                            return.thresh = return.thresh,
-                           min.pct = min.pct.exon, min.pct.bind.feature = min.pct, mode = 3, perm = perm, seed = seed, threads = threads)
+                           min.pct = min.pct.exon, min.pct.bind.feature = min.pct, mode = 3, perm = perm, seed = seed, threads = threads, debug = debug)
     tb[[gene.name]] = df[tb$feature, gene.name]
   }
   DefaultAssay(object) <- old.assay

@@ -505,7 +505,7 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             SEXP _threads,
             SEXP idx, SEXP bidx,
             SEXP cs, SEXP _factor,
-            SEXP _mode, SEXP _scale, SEXP _norm, SEXP _seed)
+            SEXP _mode, SEXP _scale, SEXP _norm, SEXP _seed, SEXP _debug)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
@@ -518,19 +518,22 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     int freeB = 0;
     
     const int perm = asInteger(_permut);
-    const int n_thread = asInteger(_threads);
+    int n_thread = asInteger(_threads);
     const int scale_factor = asInteger(_factor);
     Rboolean scale = asLogical(_scale);
     Rboolean norm = asLogical(_norm);
-
+    Rboolean debug = asLogical(_debug);
+    
     const int seed = asInteger(_seed);
 
     srand(seed);
     
     int mode = asInteger(_mode);
     if (mode != 1 && mode != 2 && mode != 3) return mkString("Unknown supported mode!");
-    //if (A->stype) return mkString("A cannot be symmetric");
-    //if (B->stype) return mkString("B cannot be symmetric");
+
+    if (debug) {
+        Rprintf("mode %d\n", mode);
+    }
     if (W->stype) return mkString("W cannot be symmetric");
 
     if (A->stype) {
@@ -563,6 +566,10 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
     const int n_cell = A->nrow;
     const int N_feature = length(idx);
 
+    if (debug) {
+        Rprintf("n_cell, %d, n_feature, %d\n", n_cell, N_feature);
+        n_thread = 1; // disable multithreads
+    }
     assert (length(bidx) == N_feature);
     
     SEXP LXval = PROTECT(allocVector(REALSXP, N_feature));
@@ -593,7 +600,6 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < N_feature; ++i) {
-        // todo: bidx
         int ii = INTEGER(idx)[i]  -1;
         int ij = INTEGER(bidx)[i] -1;
         if (ap[ii] == ap[ii+1] || bp[ij] == bp[ij+1]) {
@@ -615,32 +621,33 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         for (j = ap[ii]; j < ap[ii+1]; ++j) {
             if (ISNAN(ax[j])) continue;
             int cid = ai[j];
-            //cid = INTEGER(cidx)[cid]-1;
             tmpa[cid] = ax[j];
         }
-        
+
         for (j = bp[ij]; j < bp[ij+1]; ++j) {
             if (ISNAN(bx[j])) continue;
             int cid = bi[j];
-            //cid = INTEGER(cidx)[cid]-1;
             tmpb[cid] = bx[j];
+        }
+
+        for (j = 0; j < n_cell; ++j) {
             if (mode == 2) {
-                tmpb[cid] = tmpb[cid] - tmpa[cid];
-                if (tmpb[cid] < 0) tmpb[cid] = 0;
+                tmpb[j] = tmpb[j] - tmpa[j];
+                if (tmpb[j] < 0) tmpb[j] = 0;
             } else if (mode == 3) {
-                tmpb[cid] = tmpb[cid] + tmpa[cid];
+                tmpb[j] = tmpb[j] + tmpa[j];
             }
+
             if (norm) {
-                tmpb[cid] = log(tmpb[cid]/REAL(cs)[cid]*scale_factor + 1);
+                tmpb[j] = log(tmpb[j]/REAL(cs)[j]*scale_factor + 1);
             }
-            mnb += tmpb[cid];
+            mnb += tmpb[j];
         }
         mnb = mnb/n_cell;
 
         for (j = ap[ii]; j < ap[ii+1]; ++j) {
             if (ISNAN(ax[j])) continue;            
-            int cid = ai[j];
-            //cid = INTEGER(cidx)[cid]-1;
+            int cid = ai[j];            
             if (norm) {
                 tmpa[cid] = log(ax[j]/REAL(cs)[cid]*scale_factor + 1);
             }
@@ -648,6 +655,9 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         }
         mna = mna/n_cell;
 
+        if (debug) {
+            Rprintf("mean_a, %f, mean_b, %f\n", mna, mnb);
+        }
         if (scale) {
             double sd1 = 0;
             double sd2 = 0;
@@ -680,6 +690,10 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         mna_s = mna_s/(double)n_cell;
         mnb_s = mnb_s/(double)n_cell;
 
+        if (debug) {
+            Rprintf("smooth mean_a, %f, smooth mean_b, %f\n", mna_s, mnb_s);
+        }
+
         double Lx1 = 0,
             Lx2 = 0,
             //Ly1 = 0,
@@ -709,6 +723,10 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
         //double Ly = Ly1/Ly2;
         double r = ra/(rb1*rb2);
         double e = sqrt(Lx) * (1-r);
+        if (debug) {
+            Rprintf("Lx, %f, D, %f, r, %f\n", Lx, e, r);
+        }
+
 #pragma omp critical
         {
             REAL(LXval)[i] = Lx;
@@ -749,6 +767,11 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             r = ra/(rb1*rb2);
             es[k] = sqrt(Lx) *(1-r);
             mean += es[k];
+
+            /* if (debug) { */
+            /*     Rprintf("perm, %d, mean_a, %f, D, %f, Lx, %f, r, %f \n", k, mna_s, es[k], Lx, r); */
+            /* } */
+    
         }
         mean = mean/perm;
 
@@ -771,8 +794,14 @@ SEXP D_test(SEXP _A, SEXP _B, SEXP _W,
             REAL(Mval)[i]  = mean;
             REAL(Vval)[i]  = var;
         }
+
+        if (debug) {
+            Rprintf("t, %f, mean, %f, var, %f \n", t, mean, var);
+        }
+
     }
-    
+
+
     for (int pi = 0; pi < perm; ++pi) R_Free(ris[pi]);
     R_Free(ris);
 

@@ -21,7 +21,8 @@ RunDEXSeq(
   node = NULL,
   pseudo.group = 3,
   mode = 1,
-  threads = 1
+  threads = 1,
+  debug = FALSE
 )
 }
 \arguments{

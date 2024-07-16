@@ -1,6 +1,5 @@
-#'@importFrom reshape2 melt
+#' @importFrom reshape2 melt
 #' @useDynLib Yano depth2matrix
-#'@export
 bamcov0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, bin=1000, cell.tag = "CB", umi.tag = "UB")
 {
   if (is.null(bamfile)) stop("No BAM.")
@@ -88,7 +87,6 @@ bamcov0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "
 
   return(tab)
 }
-#' @export
 bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, bin=1000, cell.tag = "CB", umi.tag = "UB")
 {
   if (is.null(bamfile)) stop("No BAM.")
@@ -134,7 +132,6 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
 }
 
 #'@useDynLib Yano depth2matrix
-#'@export
 bamjunc0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, cell.tag = "CB", umi.tag = "UB")
 {
   if (is.null(bamfile)) stop("No BAM.")
@@ -176,7 +173,6 @@ bamjunc0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = 
   
   return(tab)
 }
-#' @export
 bamjunc <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, cell.tag = "CB", umi.tag = "UB")
 {
   if (is.null(bamfile)) stop("No BAM.")
@@ -218,9 +214,6 @@ bamjunc <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "
 
   return(juncs)
 }
-
-#'@useDynLib Yano depth2matrix
-#'@export
 fragcov0 <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc = FALSE, cell.group = NULL, bin=1000)
 {
   if (is.null(fragfile)) stop("No fragment file.")
@@ -277,7 +270,6 @@ fragcov0 <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc
   return(tab)
 }
 
-#' @export
 fragcov <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc = FALSE, cell.group = NULL, bin=1000)
 {
   if (is.null(fragfile)) stop("No fragment file.")

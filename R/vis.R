@@ -21,13 +21,14 @@ fbt_theme <- function() {
 #'@importFrom viridis scale_color_viridis scale_fill_viridis
 #'@import ggrepel
 #'@importFrom scales label_comma
-#' 
+#'@importFrom Seurat AutoPointSize
 FbtPlot0 <- function(tab = NULL,
                      col.by = NULL,
                      cols = NULL,
                      shape.by = NULL,
                      xlab = NULL, ylab = NULL,
-                     point.label = NULL,  label.size=3,                     
+                     point.label = NULL,  label.size=3,
+                     pt.size = NULL,
                      zoom.in = FALSE,
                      gtf = NULL,
                      print.genes = NULL,
@@ -79,7 +80,8 @@ FbtPlot0 <- function(tab = NULL,
 
   qval.min <- min(data$qval) - 1
   qval.max <- max(data$qval) + 1
-  
+
+  pt.size <- pt.size %||% AutoPointSize(data = data, raster=FALSE)
   p <- ggplot(data) 
   if  (isFALSE(zoom.in)) {
     xi <- data_cum$bp_add
@@ -88,14 +90,14 @@ FbtPlot0 <- function(tab = NULL,
   }
   if (!is.null(col.by)) {
     if (is.null(shape.by)) {
-      p <- p + geom_point(aes(x=bp_cum, y=qval, fill=.data[[col.by]]), shape=21, ...)
+      p <- p + geom_point(aes(x=bp_cum, y=qval, fill=.data[[col.by]]), shape=21, size = pt.size)
       if (is.numeric(data[[col.by]])) {
         p <- p + scale_fill_viridis()
       } else {
         p <- p + scale_fill_manual(values = cols)
       }
     } else {
-      p <- p + geom_point(aes(x=bp_cum, y=qval, fill=.data[[col.by]], shape=.data[[shape.by]]), ...)
+      p <- p + geom_point(aes(x=bp_cum, y=qval, fill=.data[[col.by]], shape=.data[[shape.by]]), size = pt.size)
       p <- p + scale_shape_manual(values = c(21, 24, 22, 23, 25)) 
       if (is.numeric(data[[col.by]])) {
         p <- p + scale_fill_viridis()
@@ -105,9 +107,9 @@ FbtPlot0 <- function(tab = NULL,
     }
   } else {
     if (is.null(shape.by)) {
-      p <- p + geom_point(aes(x=bp_cum, y=qval),  ...)
+      p <- p + geom_point(aes(x=bp_cum, y=qval),  size = pt.size)
     } else {
-      p <- p + geom_point(aes(x=bp_cum, y=qval, shape = .data[[shape.by]]),  ...)
+      p <- p + geom_point(aes(x=bp_cum, y=qval, shape = .data[[shape.by]]),  size = pt.size)
     }
   }
   if (isFALSE(zoom.in)) {
@@ -145,6 +147,7 @@ FbtPlot0 <- function(tab = NULL,
 #' @param col.by Color points by specify the title of values in meta table. Can be discrete or continous.
 #' @param cols Manually specify the colors. Used with col.by.
 #' @param sel.chrs Vector of selected chromosome names to plot. Change the order by set the level of chr names.
+#' @param pt.size Point size.
 #' @param xlab Label for x axis. Default is "Chromosome".
 #' @param ylab Label for y axis. Default is "-log10p".
 #' @param subset Rule for subsetting the meta table before plot.
@@ -168,6 +171,7 @@ FbtPlot <- function(object = NULL,
                     assay = NULL,
                     chr.name = "chr", start.name = "start", end.name = "end",
                     col.by = NULL, cols = NULL, sel.chrs = NULL,
+                    pt.size = NULL,
                     xlab = "Chromosome", ylab = expression(-log[10](p)),
                     subset = NULL,
                     point.label = NULL,
@@ -289,12 +293,9 @@ FbtPlot <- function(object = NULL,
     }
   }
   if (n == 1) {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout.heights = layout.heights, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout.heights = layout.heights, pt.size = pt.size, ...)
   } else {
-    ## if (is.null(shape.by)) {
-    ##   shape.by <- "assay"
-    ## }
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout.heights = layout.heights, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout.heights = layout.heights, pt.size = pt.size, ...)
   }
   p
 }
@@ -312,8 +313,6 @@ theme_cov <- function(...) {
     ...
   )
 }
-
-#'@export
 plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes = NULL, label=TRUE, highlights=NULL, print.genes = NULL, max.genes = 20)
 {
   if (is.null(gtf)) stop("No database specified.")
@@ -356,6 +355,9 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   }
 
   mi <- as.integer(max(tracks$idx)/3 *4)
+  if (mi < max(tracks$idx)+1) {
+    mi <-  max(tracks$idx)+1
+  }
   tracks %>%
     filter(type == 1) %>%
     group_by(gene) %>%
@@ -395,7 +397,6 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   p <- p + fbt_theme()
   p
 }
-#'@export
 plot.bed <- function(start = NULL, end = NULL, peaks = NULL, col.by = NULL, group.title.size=rel(2), highlights=NULL)
 {
   tab <- subset(peaks, start >= start, end <= end)
@@ -428,7 +429,6 @@ plot.bed <- function(start = NULL, end = NULL, peaks = NULL, col.by = NULL, grou
   return(p)
 }
 
-#' @import patchwork
 #' @importFrom scales pretty_breaks
 plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
                      strand = c("both", "forward", "reverse", "ignore"),
@@ -436,7 +436,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
                      split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
                      cell.group=NULL, log.scaled = log.scaled, #start0 = -1, end0 = -1,
                      highlights=NULL,
-                     junc=FALSE, junc.min.depth = 10)
+                     junc=FALSE, junc.min.depth = 0)
 {
   if (is.null(chr) || start == -1 || end == -1) stop("Require a genomic region.")
   
@@ -474,27 +474,32 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   p1 <- ggplot() + geom_area(data=bc, aes(x=pos,y=depth,fill=strand), stat = "identity")
   
   if (junc) {
+
     juncs <- subset(juncs, depth >= junc.min.depth)
-        
-    if (!is.null(cell.group)) {
-      juncs$depth <- juncs$depth / as.vector(ss[as.character(juncs$label)])
+    if (nrow(juncs) > 0) {
+      if (!is.null(cell.group)) {
+        juncs$depth <- juncs$depth / as.vector(ss[as.character(juncs$label)])
+      }
+      
+      if (isTRUE(log.scaled)) {
+        juncs$depth <- log1p(juncs$depth)
+      }
+      
+      ymax0 <- max(abs(bc$depth))
+      juncs$depth <- juncs$depth/ymax0
+      juncs$depth[which(juncs$depth>1)] <- 1
+
+      juncs[["y"]] <- 0
+      
+      juncs <- subset(juncs, end > start)
+      juncs <- subset(juncs, depth > 0)
+
+      idx <- which (juncs$strand == "-")
+      
+      juncs["depth"][idx,] <- juncs["depth"][idx,] * -1
+      
+      p1 <- p1 + geom_splice(data=juncs, aes(x=start, xend = end, y = y, height = depth))
     }
-
-    if (isTRUE(log.scaled)) {
-      juncs$depth <- log1p(juncs$depth)
-    }
-
-    ymax0 <- max(abs(bc$depth))
-    juncs$depth <- juncs$depth/ymax0
-    juncs$depth[which(juncs$depth>1)] <- 1
-    juncs[["y"]] <- 0
-
-    juncs <- subset(juncs, end > start)
-    idx <- which (juncs$strand == "-")
-    
-    juncs["depth"][idx,] <- juncs["depth"][idx,] * -1
-    
-    p1 <- p1 + geom_splice(data=juncs, aes(x=start, xend = end, y = y, height = depth))
   }
   
   if (!is.null(highlights)) {
@@ -515,7 +520,6 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   return(p1)
 }
 
-#' @import patchwork
 #' @import dplyr
 plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
                       max.depth = 0,
@@ -576,7 +580,7 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
 #' @param layout.heights Layout for track plots. Default is c(10,2) or c(1,10,2) if meta.features specified or c(1,10,10,2) if fragment file also specified.
 #' @param highlights A region of a list of regions to hightlight. The region is format as c(start,end).
 #' @param junc Also plot the junction reads.
-#' @import patchwork
+#' @param junc.min.depth Filter out junctions if low than this cutoff. This parameter used to remove noise background. Default is 5.
 #' @export
 TracksPlot <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
                         strand = c("both", "forward", "reverse", "ignore"),
@@ -588,7 +592,8 @@ TracksPlot <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
                         atac.log.scaled = FALSE,
                         atac.max.depth = 0,
                         col.by = NULL, layout.heights =c(1,10,2),
-                        highlights = NULL, junc = FALSE)
+                        highlights = NULL,
+                        junc = FALSE, junc.min.depth = 5)
 {
   if (!is.null(gene)) {
     if (is.null(gtf)) stop("gtf is not specified.")
@@ -623,7 +628,7 @@ TracksPlot <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
   
   p1 <- plot.cov(bamfile=bamfile, chr=chr, start=start, end=end, strand=strand, split.bc=split.bc,
                  bin=bin, cell.tag=cell.tag, umi.tag=umi.tag, cell.group=cell.group,
-                 log.scaled=log.scaled, max.depth = max.depth, highlights=df, junc=junc)
+                 log.scaled=log.scaled, max.depth = max.depth, highlights=df, junc=junc, junc.min.depth = junc.min.depth)
   p1 <- p1 + theme(strip.text = element_text(size = group.title.size))
   
   p0 <- NULL
@@ -658,29 +663,6 @@ TracksPlot <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
   }
   return(p1 / p2 + plot_layout(heights=layout.heights[c(2,3)]))
 }
-
-#' This function is edited from Seurat::FeaturePlot, used to visulize the PSI score on cells.
-#' 
-#' @title PSIPlot
-#' @description Plot PSI score on reduction map.
-#' @param object Seurat object.
-#' @param exon.assay Exon assay name.
-#' @param exclude.assay Excluded exon assay name.
-#' @param features Features to plot.
-#' @param dims Dimensions to plot, must be a two-length numeric vector specifying x- and y-dimensions
-#' @param cells Vector of cells to plot (default is all cells)
-#' @param cols Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by \code{\link[RColorBrewer]{brewer.pal.info}}. I personal think Seurat default color is boring, therefore change the default cols to rev(brewer.pal(n = 11,name = "RdBu")). Set cols = c('lightgrey', 'blue') to get the 'classical' colors.
-#' @param pt.size Adjust point size for plotting
-#' @param reduction Which dimensionality reduction to use. If not specified, first searches for umap, then tsne, then pca
-#' @param group.by Name of one or more metadata columns to group (color) cells by (for example, orig.ident); pass 'ident' to group by identity class
-#' @param split.by A factor in object metadata to split the plot by, pass 'ident' to split by cell identity
-#' @param shape.by If NULL, all points are circles (default). You can specify any cell attribute (that can be pulled with FetchData) allowing for both different colors and different shapes on cells.  Only applicable if \code{raster = FALSE}.
-#' @param ncol Number of columns to combine multiple features plots to
-#' @param order Boolean determing whether to plot cells in order of PSI score.
-#' @param coord.fixed Plot cartesian coordinates with fixed aspect ratio
-#' @param by.col If splitting by a factor, plot the splits per column with the features as rows 
-#' @param combine Combine plots into a single \code{\link[patchwork]{patchwork}} ggplot object. If \code{FALSE}, return a list of ggplot objects.
-#' @return A \code{{\link{[patchwork]{patchwork}}}} ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
 #' @importFrom grDevices rgb
 #' @importFrom patchwork wrap_plots
 #' @importFrom cowplot theme_cowplot
@@ -688,41 +670,32 @@ TracksPlot <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL
 #' @importFrom Seurat SingleDimPlot
 #' @importFrom rlang is_integerish
 #' @importFrom ggplot2 labs scale_x_continuous scale_y_continuous theme element_rect dup_axis guides element_blank element_text margin scale_color_brewer scale_color_gradientn scale_color_manual coord_fixed ggtitle
-#' @export
-#' @concept visualization
-PSIPlot <- function(object = NULL,
-                    exon.assay = NULL,
-                    exclude.assay = "EXCL",
-                    features = NULL,
-                    dims = c(1,2),
-                    cells = NULL,
-                    cols = rev(brewer.pal(n = 11,name = "RdBu")),
-                    pt.size = NULL,
-                    alpha = 1,
-                    order = FALSE,
-                    reduction = NULL,
-                    shape.by = NULL,
-                    ncol = NULL,
-                    split.by = NULL,
-                    by.col = TRUE,
-                    coord.fixed = FALSE,
-                    combine = TRUE,
-                    raster = NULL,
-                    raster.dpi = c(512,512),
-                    pesudo.num = 1
-                    )
+RatioPlot0 <- function(object = NULL,
+                       assay = NULL,
+                       bind.assay = NULL,
+                       bind.name = NULL,
+                       features = NULL,
+                       cells = NULL,
+                       dims = c(1,2),
+                       cols = c("lightgrey", "red"),
+                       pt.size = NULL,
+                       alpha = 1,
+                       order = TRUE,
+                       min.cutoff = NA,
+                       max.cutoff = NA,
+                       mode = c(1,2,3),
+                       reduction = NULL,
+                       shape.by = NULL,
+                       ncol = NULL,
+                       split.by = NULL,
+                       by.col = TRUE,
+                       coord.fixed = FALSE,
+                       combine = TRUE,
+                       raster = NULL,
+                       raster.dpi = c(512,512),
+                       legend.title = NULL
+                       )
 {
-  exon.assay <- exon.assay %||% DefaultAssay(object)
-  if (exon.assay %ni% Assays(object)) {
-    stop("Exon assay is not exist, check the exon.assay.")
-  }
-
-  if (exclude.assay %ni% Assays(object)) {
-    stop("Exclude exon assay is not exist, check the exclude.assay.")
-  }
-
-  message(paste0("Retrieve exon counts from assay ", exon.assay, ", exclude exon counts from assay ", exclude.assay))
-  
   # Set a theme to remove right-hand Y axis lines
   # Also sets right-hand Y axis text label formatting
   no.right <- theme(
@@ -756,34 +729,86 @@ PSIPlot <- function(object = NULL,
   }
 
   old.assay <- DefaultAssay(object)
-  # exon data
-  DefaultAssay(obj) <- exon.assay
+  # assay
+  DefaultAssay(object) <- assay
   features <- intersect(features, rownames(object))
   if (length(features) == 0) {
-    stop("No feature found at exon assay.")
+    stop("No feature found at assay.")
   }
   
-  data.exon <- FetchData(object = object, cells = cells, vars = features, slot = "counts")
-  
-  # excluded exon data
-  DefaultAssay(obj) <- exclude.assay
-  features <- intersect(features, rownames(object))
-  if (length(features) == 0) {
-    stop("No feature found at exclude assay.")
-  }
-  
-  data.excl <- FetchData(object = object, cells = cells, vars = features, slot = "counts")
+  data1 <- FetchData(object = object, cells = cells, vars = features, slot = "counts")
 
+  # binding assay
+  if (!is.null(bind.name)) {
+    df <- object[[assay]][[]]
+    if (bind.name %ni% colnames(df)) {
+      stop("No bind.name found in the meta table. Make sure you set the right assay and bind.name.")
+    }
+
+    df <- df[features, ]
+    features0 <- unique(df[[bind.name]])
+    DefaultAssay(object) <- bind.assay
+    features0 <- intersect(features0, rownames(object))
+    if (length(features0) == 0) {
+      stop("No feature found at binding assay.")
+    }
+    
+    data2 <- FetchData(object = object, cells = cells, vars = features0, slot = "counts")
+    data2 <- as.matrix(data2)
+    rownames(data2) <- cells
+    colnames(data2) <- features0
+    df <- df[which(df[[bind.name]] %in% features0),]
+    data2 <- as.matrix(data2[, df[[bind.name]]])
+    colnames(data2) <- rownames(df)
+  } else {
+    DefaultAssay(object) <- bind.assay
+    features <- intersect(features, rownames(object))
+    if (length(features) == 0) {
+      stop("No feature found at binding assay.")
+    }
+    data2 <- FetchData(object = object, cells = cells, vars = features, slot = "counts")
+  }
   # Combine data  
-  features <- intersect(colnames(data.exon), colnames(data.excl))
+  features <- intersect(colnames(data1), colnames(data2))
   
-  data.exon <- as.matrix(data.exon[,features])
-  data.excl <- as.matrix(data.excl[,features])
+  data1 <- as.matrix(data1[,features])
+  data2 <- as.matrix(data2[,features])
 
-  data0 <- data.exon/(data.exon+data.excl + pesudo.num)
+  if (mode == 2) {
+    data2 <- data2-data1
+  } else if (mode == 3) {
+    data2 <- data2+data1
+  }
+  data0 <- data1/data2
   colnames(data0) <- features
   data <- cbind(data, as.data.frame(data0))
-  
+  DefaultAssay(object) <- old.assay
+
+  min.cutoff <- mapply(
+    FUN = function(cutoff, feature) {
+      return(ifelse(
+        test = is.na(x = cutoff),
+        yes = min(data[, feature]),
+        no = cutoff
+      ))
+    },
+    cutoff = min.cutoff,
+    feature = features
+  )
+  max.cutoff <- mapply(
+    FUN = function(cutoff, feature) {
+      return(ifelse(
+        test = is.na(x = cutoff),
+        yes = max(data[, feature]),
+        no = cutoff
+      ))
+    },
+    cutoff = max.cutoff,
+    feature = features
+  )
+
+  min.cutoff <- min(min.cutoff)
+  max.cutoff <- max(max.cutoff)
   # Figure out splits (FeatureHeatmap)
   data$split <- if (is.null(x = split.by)) {
     RandomName()
@@ -846,9 +871,17 @@ PSIPlot <- function(object = NULL,
         plot <- plot + theme(panel.border = element_rect(fill = NA, colour = 'black'))
         # Add title
         plot <- plot + if (i == 1) {
-          labs(title = feature, color = "PSI")
+          if (is.null(legend.title)) {
+            labs(title = feature)
+          } else {
+            labs(title = feature, color = legend.title)
+          }
         } else {
-          labs(title = NULL, color = "PSI")
+          if (is.null(legend.title)) {
+            labs(title = feature)
+          } else {
+            labs(title = NULL, color = legend.title)
+          }
         }
         # Add second axis
         if (j == length(x = features)) {
@@ -880,7 +913,11 @@ PSIPlot <- function(object = NULL,
           )
         }
       } else {
-        plot <- plot + labs(title = feature, color = "PSI")
+        if (is.null(legend.title)) {
+          plot <- plot + labs(title = feature)
+        } else {
+          plot <- plot + labs(title = feature, color = legend.title)
+        }
       }
       # Add colors scale for normal FeaturePlots
       plot <- plot + guides(color = NULL)
@@ -1006,8 +1043,193 @@ PSIPlot <- function(object = NULL,
     if (!is.null(x = legend) && legend == 'none') {
       plots <- plots & NoLegend()
     }
-    plots <- suppressMessages(plots & scale_color_gradientn(colors = cols, limits = c(0,1)))
+    plots <- suppressMessages(plots & scale_color_gradientn(colors = cols, limits = c(min.cutoff,max.cutoff)))
   }
+  return(plots)
+}
+
+#' This function is edited from Seurat::FeaturePlot, used to visulize the PSI score on cells.
+#'
+#' @title RatioPlot
+#' @description Plot PSI score on reduction map.
+#' @param object Seurat object.
+#' @param assay Test assay name.
+#' @param bind.assay Binding assay name.
+#' @param features Features to plot.
+#' @param dims Dimensions to plot, must be a two-length numeric vector specifying x- and y-dimensions
+#' @param cells Vector of cells to plot (default is all cells)
+#' @param cols Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by \code{\link[RColorBrewer]{brewer.pal.info}}. The default cols is c('lightgrey', 'red'). Set cols = c('lightgrey', 'blue') to get the Seurat 'classical' colors.
+#' @param pt.size Adjust point size for plotting
+#' @param alpha Alpha value for points
+#' @param order Boolean determing whether to plot cells in order of PSI score.
+#' @param min.cutoff,max.cutoff Vector of minimum and maximum cutoff values for each feature
+#' @param mode Test mode. For mode 1, X (test feature) vs Y (binding feature). For mode 2, X vs (Y-X). For mode 3, X vs (Y+X). Please note, when set to mode 2 or 3, will use raw counts to update expression value of binding features. Then normalise the counts before testing. For mode 1, will use Layer 'data'. Default is mode 1.
+#' @param reduction Which dimensionality reduction to use. If not specified, first searches for umap, then tsne, then pca
+#' @param group.by Name of one or more metadata columns to group (color) cells by (for example, orig.ident); pass 'ident' to group by identity class
+#' @param split.by A factor in object metadata to split the plot by, pass 'ident' to split by cell identity
+#' @param shape.by If NULL, all points are circles (default). You can specify any cell attribute (that can be pulled with FetchData) allowing for both different colors and different shapes on cells.  Only applicable if \code{raster = FALSE}.
+#' @param ncol Number of columns to combine multiple features plots to
+#' @param coord.fixed Plot cartesian coordinates with fixed aspect ratio
+#' @param by.col If splitting by a factor, plot the splits per column with the features as rows 
+#' @param combine Combine plots into a single \code{\link[patchwork]{patchwork}} ggplot object. If \code{FALSE}, return a list of ggplot objects.
+# @param raster If true, plot with geom_raster, else use geom_tile. geom_raster may look blurry on some viewing applications such as Preview due to how the raster is interpolated. Set this to FALSE if you are encountering that issue (note that plots may take longer to produce/render).
+#' @param raster.dpi Pixel resolution for rasterized plots, passed to geom_scattermore(). Default is c(512, 512).
+#' @return A \code{{\link{[patchwork]{patchwork}}}} ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
+#' @export
+#' @concept visualization
+RatioPlot <- function(object = NULL,
+                      assay = NULL,
+                      bind.assay = NULL,
+                      bind.name = NULL,
+                      features = NULL,
+                      cells = NULL,
+                      dims = c(1,2),
+                      cols = c('lightgrey', 'red'),
+                      pt.size = NULL,
+                      alpha = 1,
+                      order = TRUE,
+                      min.cutoff = NA,
+                      max.cutoff = NA,
+                      mode = c(1,2,3),
+                      reduction = NULL,
+                      shape.by = NULL,
+                      ncol = NULL,
+                      split.by = NULL,
+                      by.col = TRUE,
+                      coord.fixed = FALSE,
+                      combine = TRUE,
+                      raster = NULL,
+                      raster.dpi = c(512,512),
+                      legend.title = "Ratio"
+                      )
+{
+  assay <- assay %||% DefaultAssay(object)
+  if (assay %ni% Assays(object)) {
+    stop(paste0("Assay ", assay, " is not exist."))
+  }
+
+  if (is.null(bind.assay)) {
+    stop("bind.assay is not set.")
+  }
+  if (bind.assay %ni% Assays(object)) {
+    stop("bind.assay is not exist, check the binding assay.")
+  }
+
+  if (is.null(bind.name)) {
+    stop("bind.name is not set.")
+  }
+
+  message(paste0("Retrieve counts from assay ", assay, ", and counts from binding assay ", assay))
+  plots <- RatioPlot0(object = object,
+                      assay = assay,
+                      bind.assay = bind.assay,
+                      bind.name = bind.name,
+                      features = features,
+                      cells = cells,
+                      dims = dims,
+                      cols = cols,
+                      pt.size = pt.size,
+                      alpha = alpha,
+                      order = order,
+                      min.cutoff = min.cutoff,
+                      max.cutoff = max.cutoff,
+                      mode = 3,
+                      reduction = reduction,
+                      shape.by = shape.by,
+                      ncol = ncol,
+                      split.by = split.by,
+                      by.col = by.col,
+                      coord.fixed = coord.fixed,
+                      combine = combine,
+                      raster = raster,
+                      raster.dpi = raster.dpi,
+                      legend.title = legend.title)
   
+  return(plots)
+  
+}
+#' @title PSIPlot
+#' @description Plot PSI score on reduction map.
+#' @param object Seurat object.
+#' @param exon.assay Exon assay name.
+#' @param exclude.assay Excluded exon assay name.
+#' @param features Features to plot.
+#' @param dims Dimensions to plot, must be a two-length numeric vector specifying x- and y-dimensions
+#' @param cells Vector of cells to plot (default is all cells)
+#' @param cols Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by \code{\link[RColorBrewer]{brewer.pal.info}}. 
+#' @param pt.size Adjust point size for plotting
+#' @param alpha Alpha value for points
+#' @param order Boolean determing whether to plot cells in order of PSI score.
+#' @param min.cutoff,max.cutoff Vector of minimum and maximum cutoff values for each feature
+#' @param mode Test mode. For mode 1, X (test feature) vs Y (binding feature). For mode 2, X vs (Y-X). For mode 3, X vs (Y+X). Please note, when set to mode 2 or 3, will use raw counts to update expression value of binding features. Then normalise the counts before testing. For mode 1, will use Layer 'data'. Default is mode 1.
+#' @param reduction Which dimensionality reduction to use. If not specified, first searches for umap, then tsne, then pca
+#' @param group.by Name of one or more metadata columns to group (color) cells by (for example, orig.ident); pass 'ident' to group by identity class
+#' @param split.by A factor in object metadata to split the plot by, pass 'ident' to split by cell identity
+#' @param shape.by If NULL, all points are circles (default). You can specify any cell attribute (that can be pulled with FetchData) allowing for both different colors and different shapes on cells.  Only applicable if \code{raster = FALSE}.
+#' @param ncol Number of columns to combine multiple features plots to
+#' @param coord.fixed Plot cartesian coordinates with fixed aspect ratio
+#' @param by.col If splitting by a factor, plot the splits per column with the features as rows 
+#' @param combine Combine plots into a single \code{\link[patchwork]{patchwork}} ggplot object. If \code{FALSE}, return a list of ggplot objects.
+# @param raster If true, plot with geom_raster, else use geom_tile. geom_raster may look blurry on some viewing applications such as Preview due to how the raster is interpolated. Set this to FALSE if you are encountering that issue (note that plots may take longer to produce/render).
+#' @param raster.dpi Pixel resolution for rasterized plots, passed to geom_scattermore(). Default is c(512, 512).
+#' @return A \code{{\link{[patchwork]{patchwork}}}} ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
+#' @export
+#' @concept visualization
+PSIPlot <- function(object = NULL,
+                    exon.assay = NULL,
+                    exclude.assay = "EXCL",
+                    features = NULL,
+                    dims = c(1,2),
+                    cells = NULL,
+                    cols = c('lightgrey', 'red'),
+                    pt.size = NULL,
+                    alpha = 1,
+                    order = TRUE,
+                    reduction = NULL,
+                    shape.by = NULL,
+                    ncol = NULL,
+                    split.by = NULL,
+                    by.col = TRUE,
+                    coord.fixed = FALSE,
+                    combine = TRUE,
+                    raster = NULL,
+                    raster.dpi = c(512,512)                    
+                    )
+{
+  exon.assay <- exon.assay %||% DefaultAssay(object)
+  if (exon.assay %ni% Assays(object)) {
+    stop(paste0("Exon assay ", exon.assay, " is not exist."))
+  }
+
+  if (is.null(exclude.assay)) {
+    stop("exclude.assay is not set.")
+  }
+  if (exclude.assay %ni% Assays(object)) {
+    stop("exclude.assay is not exist, check the exclude assay.")
+  }
+
+  plots <- RatioPlot0(object = object,
+                     assay = exon.assay,
+                     bind.assay = exclude.assay,
+                     features = features,
+                     cells = cells,
+                     dims = dims,
+                     cols = cols,
+                     pt.size = pt.size,
+                     alpha = alpha,
+                     order = order,
+                     min.cutoff = 0,
+                     max.cutoff = 1,
+                     mode = 3,
+                     reduction = reduction,
+                     shape.by = shape.by,
+                     ncol = ncol,
+                     split.by = split.by,
+                     by.col = by.col,
+                     coord.fixed = coord.fixed,
+                     combine = combine,
+                     raster = raster,
+                     raster.dpi = raster.dpi,
+                     legend.title = "PSI")
   return(plots)
 }
