@@ -581,6 +581,7 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
 #' @param highlights A region of a list of regions to hightlight. The region is format as c(start,end).
 #' @param junc Also plot the junction reads.
 #' @param junc.min.depth Filter out junctions if low than this cutoff. This parameter used to remove noise background. Default is 5.
+#' @importFrom patchwork plot_layout
 #' @export
 TracksPlot <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
                         strand = c("both", "forward", "reverse", "ignore"),

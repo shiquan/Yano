@@ -48,6 +48,8 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
     SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Mval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Vval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP PSI1val  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP PSI2val  = PROTECT(allocVector(REALSXP, N_feature));
 
     const int * ap = (int*)A->p;
     const int * ai = (int*)A->i;
@@ -108,8 +110,10 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
 
         //if (g12 == 0) g12 = 0.001;
         //if (g22 == 0) g22 = 0.001;
-        
-        double delta = g11/g12 - (g21/g22);
+
+        double psi1 = g11/g12;
+        double psi2 = g21/g22;
+        double delta = psi1 - psi2;
 
         if (debug) {
             Rprintf("g11, %f, g12, %f, g21, %f, g22, %f\n", g11, g12, g21, g22);
@@ -172,6 +176,8 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
             REAL(Tval)[i] = t;
             REAL(Mval)[i] = mean;
             REAL(Vval)[i] = var;
+            REAL(PSI1val)[i] = psi1;
+            REAL(PSI2val)[i] = psi2;
         }
     }
 
@@ -181,13 +187,15 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
     M_cholmod_free_sparse(&A, &c);
     M_cholmod_free_sparse(&B, &c);
     
-    SEXP ta = PROTECT(allocVector(VECSXP, 4));
+    SEXP ta = PROTECT(allocVector(VECSXP, 6));
     SET_VECTOR_ELT(ta, 0, Dval);
     SET_VECTOR_ELT(ta, 1, Tval);
     SET_VECTOR_ELT(ta, 2, Mval);
     SET_VECTOR_ELT(ta, 3, Vval);
 
-    UNPROTECT(5);
+    SET_VECTOR_ELT(ta, 4, PSI1val);
+    SET_VECTOR_ELT(ta, 5, PSI2val);
+    UNPROTECT(7);
     return ta;
 
 }
