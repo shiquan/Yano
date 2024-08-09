@@ -81,6 +81,7 @@ RunBlockCorr <- function(object = NULL,
   }
 
   method <- match.arg(method)
+  mode <- match.arg(mode)
   tt <- Sys.time()
 
   assay <- assay %||% DefaultAssay(object)
