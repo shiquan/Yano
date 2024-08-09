@@ -74,7 +74,8 @@ PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode =
   rst$tval <- df[[2]]
   rst$mean <- df[[3]]
   rst$var <- df[[4]]
-
+  rst$g1.val <- df[[5]]
+  rst$g2.val <- df[[6]]
   rst$pval <- pt(rst$tval, df = perm - 1, lower.tail = FALSE)
   rst$padj <- p.adjust(rst$pval, method = "BH")
   return (rst)
