@@ -172,6 +172,7 @@ SetAutoCorrFeatures <- function(object = NULL,
 
   all <- object0[["autocorr.variable"]][[1]]
   all[idx] <- TRUE
+  names(all) <- rownames(object0)
   object0[["autocorr.variable"]] <- all
   object[[assay]] <- object0
   

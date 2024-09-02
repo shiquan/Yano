@@ -17,7 +17,7 @@ RunDEXSeq(
   bind.features = NULL,
   min.pct = 0.05,
   min.pct.bind.feature = 0.05,
-  return.thresh = 0.01,
+  return.thresh = NULL,
   node = NULL,
   pseudo.group = 3,
   mode = 1,
