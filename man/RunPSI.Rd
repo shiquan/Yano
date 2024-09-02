@@ -18,7 +18,7 @@ RunPSI(
   exon.name = "exon_name",
   min.pct = 0.05,
   min.pct.exon = 0.05,
-  return.thresh = 0.01,
+  return.thresh = NULL,
   node = NULL,
   perm = 100,
   seed = 999,
@@ -45,13 +45,15 @@ RunPSI(
 
 \item{genes}{Candidate list for genes to test. If not set, will test all covered.}
 
-\item{exon.name}{Exon name in the title of meta table for exon assay. Default is "exon_name"}
+\item{gene.name}{Gene name in the title of meta table for exon assay. Default is "gene_name". Used if genes list is set.}
+
+\item{exon.name}{Exon name in the title of meta table for exon assay. Default is "exon_name". The exon name should be the same in both exon and exclude assay. If not the exon.name need be predefined in the meta table.}
 
 \item{min.pct}{Excluded + exon reads that are detected in a minimum fraction of min.pct in either of the two populations. Meant to speed up the function by not testing genes that are very infrequenctly expressed in both groups. Note that the min.pct is for binding feature. Default is 0.05.}
 
-\item{min.pct.exon}{Only test features that are detected in a minimum fraction of min.pct.exon cells in all cells.  Meant to speed up the function by not testing genes that are very infrequenctly expressed in all cells. Remember we are testing alternative epxression pattern here, so it is possible the exon is not expressed in one group, therefore we are not going to check by groups. Default is 0.05.}
+\item{min.pct.exon}{Only test features that are detected in a minimum fraction of min.pct.exon cells in all cells. Meant to speed up the function by not testing genes that are very infrequenctly expressed in all cells. Because we are testing alternative epxression pattern here, so it is possible the exon is not expressed in one group, therefore we are not going to check by groups. Default is 0.05.}
 
-\item{return.thresh}{Only return markers that have a p-value < return.thresh.}
+\item{return.thresh}{Only return markers that have a p-value < return.thresh. Default is NULL.}
 
 \item{node}{A node to find markers for and all its children; requires \code{\link{BuildClusterTree}} to have been run previously. Only can be used if test all groups.}
 
@@ -65,14 +67,14 @@ RunPSI(
 Data frame containing p values and pct for exons and their genes.
 }
 \description{
-Using \eqn{\Delta PSI} and permutation method to simulate p value for each event.
+Using \eqn{Delta PSI} and permutation method to simulate p value for each event.
 }
 \details{
-This function calculates the \eqn{\Delta PSI = PSI_a - PSI-b} for groups \eqn{a} and \eqn{b}. It then employs a permutation method to randomize the cells in the two groups 100 times (by default) to evaluate the mean and standard deviation of delta-PSI. A p-value is calculated using a t-test. PSI stands for Percent-Spliced In and is calculated by the formula \eqn{PSI = EXON/(EXON+EXCL)}, where EXON represents reads overlapping this exon, and EXCL represents excluded reads, which are junction reads that skip this exon.
+This function calculates the \eqn{Delta PSI = PSI_a - PSI-b} for groups \eqn{a} and \eqn{b}. It then employs a permutation method to randomize the cells in the two groups 100 times (by default) to evaluate the mean and standard deviation of delta-PSI. A p-value is calculated using a t-test. PSI stands for Percent-Spliced In and is calculated by the formula \eqn{PSI = EXON/(EXON+EXCL)}, where EXON represents reads overlapping this exon, and EXCL represents excluded reads, which are junction reads that skip this exon.
 }
 \examples{
 data("neuron_small")
-alt.exon <- RunPSI(object = neuron_small, exon.assay = "exon", exclude.assay = "EXCL")
+alt.exon <- RunPSI(object = neuron_small, exon.assay = "exon", exclude.assay = "excl")
 head(alt.exon)
 
 }

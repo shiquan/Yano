@@ -2105,9 +2105,9 @@ SEXP Lee_test(SEXP _A, SEXP _B, SEXP _W,
         double Lx = Lx1/Lx2;
         double Ly = Ly1/Ly2;
         double r = ra/(rb1*rb2);
-        double e = sqrt(Lx) * sqrt(Ly) *r ;
+        double L = sqrt(Lx) * sqrt(Ly) *r ;
         if (debug) {
-            Rprintf("Lx, %f, D, %f, r, %f\n", Lx, e, r);
+            Rprintf("Lx, %f, D, %f, r, %f\n", Lx, L, r);
         }
 
 #pragma omp critical
@@ -2115,7 +2115,7 @@ SEXP Lee_test(SEXP _A, SEXP _B, SEXP _W,
             REAL(LXval)[i] = Lx;
             REAL(LYval)[i] = Ly;
             REAL(Rval)[i]  = r;
-            REAL(Dval)[i]  = e;
+            REAL(Dval)[i]  = L;
         }
 
         // mean, var
@@ -2172,7 +2172,7 @@ SEXP Lee_test(SEXP _A, SEXP _B, SEXP _W,
         }
         var = sqrt(var/perm);
 
-        double t = (e - mean)/var;
+        double t = (L - mean)/var;
         
         R_Free(es);
         R_Free(tmpa_s);
