@@ -40,6 +40,7 @@ GetWeights <- function(snn = NULL,
     }
     snn@x[snn@x <= prune.snn] <- 0
     snn <- snn/(rowSums(snn)+0.0001)
+    snn <- t(snn)
     return(snn)
   }
 
@@ -50,6 +51,7 @@ GetWeights <- function(snn = NULL,
     W@x <- 1/W@x^2
     diag(x = W) <- diag.value
     W <- W/rowSums(W)
+    W <- t(W)
     cells <- rownames(pos)
 
     if (!is.null(cells)) {
@@ -77,6 +79,7 @@ GetWeights <- function(snn = NULL,
     W@x <- 1/W@x
     diag(x = W) <- diag.value
     W <- W/rowSums(W)
+    W <- t(W)
     colnames(W) <- order.cells
     rownames(W) <- order.cells
     return(W)

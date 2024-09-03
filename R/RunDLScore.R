@@ -1,5 +1,5 @@
-#' @name RunLeeScore
-#' @title Perform Lee score test for features and test features in parallel. This function used to select co-expressed features on single cell space.
+#' @name RunDLScore
+#' @title Perform dissimilarity test (D score) and Lee score test for features and test features in parallel. This function used to select co-expressed features on single cell space.
 #' @param object Seurat object.
 #' @param features Vector of features to calculate.
 #' @param assay Name of assay for features. If features not found in default assay, will automatically check other assays.
@@ -10,13 +10,13 @@
 #' @param perm Permutations for evaluating mean and sd of L score. Default is 100.
 #' @param threads Threads. Default is 0, will auto check the CPU cores and set threads = number of CPU cores -1.
 #' @export
-RunLeeScore <- function(object = NULL, features = NULL, assay = NULL,
-                        test.features = NULL,
-                        test.assay = NULL,                        
-                        layer = "data",
-                        weight.matrix.name = "WeightMatrix",
-                        perm = 100, threads = 0,
-                        seed.use = 999)
+RunDLScore <- function(object = NULL, features = NULL, assay = NULL,
+                       test.features = NULL,
+                       test.assay = NULL,                        
+                       layer = "data",
+                       weight.matrix.name = "WeightMatrix",
+                       perm = 100, threads = 0,
+                       seed.use = 999)
 {  
   if (is.null(features)) {
     stop("No features specified.")
@@ -38,7 +38,7 @@ RunLeeScore <- function(object = NULL, features = NULL, assay = NULL,
   W <- object[[weight.matrix.name]]
 
   dat <- FetchData(object, layer = layer, vars = features)
-  dat <- t(as.sparse(dat))
+  dat <- as.sparse(dat)
   
   DefaultAssay(object) <- test.assay
   test.features <- test.features %||% AutoCorrFeatures(object, assay = test.assay)
@@ -49,18 +49,30 @@ RunLeeScore <- function(object = NULL, features = NULL, assay = NULL,
 
   test.features <- intersect(test.features, rownames(object))
   dat1 <- FetchData(object, layer = layer, vars = test.features)
-  dat1 <- t(as.sparse(dat1))
+  dat1 <- as.sparse(dat1)
   
   threads <- getCores(threads)
 
-  df <- .Call("lee_score", dat, dat1, W, perm, threads, seed.use)
+  df <- .Call("dl_score", dat, dat1, W, perm, threads, seed.use)
   DefaultAssay(object) <- old.assay
 
-  df <- data.frame(feature = rownames(dat)[df[[1]]],
-                   test.feature = rownames(dat1)[df[[2]]],
+  df <- data.frame(feature = colnames(dat)[df[[1]]],
+                   test.feature = colnames(dat1)[df[[2]]],
+                   Pearson.r = df[[5]],
                    L.score = df[[3]],
-                   t = df[[4]])
+                   L.t = df[[4]])
 
-  # feature, test.feature, L, p, p_adj
+  df$L.pval <- pt(df$L.t, df = perm - 1, lower.tail = FALSE)
+  if (nrow(df) > 100) {
+    df$L.padj <- p.adjust(df$L.pval, method = "BH")
+  }
+
+  df$D.score = df[[6]]
+  df$D.t = df[[7]]
+  df$D.pval <- pt(df$D.t, df = perm - 1, lower.tail = FALSE)
+  if (nrow(df) > 100) {
+    df$D.padj <- p.adjust(df$D.pval, method = "BH")
+  }
+
   df
 }
