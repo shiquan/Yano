@@ -313,6 +313,7 @@ theme_cov <- function(...) {
     ...
   )
 }
+#' @export
 plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes = NULL, label=TRUE, highlights=NULL, print.genes = NULL, max.genes = 20)
 {
   if (is.null(gtf)) stop("No database specified.")
@@ -397,6 +398,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   p <- p + fbt_theme()
   p
 }
+#' @export
 plot.bed <- function(start = NULL, end = NULL, peaks = NULL, col.by = NULL, group.title.size=rel(2), highlights=NULL)
 {
   tab <- subset(peaks, start >= start, end <= end)
@@ -553,7 +555,7 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
   return(p1)
 }
 
-#' @title TracksPlot
+#' @title TrackPlot
 #' @description Plot read/UMI coverage and transcript tracks.
 #' @param bamfile A path to bam file or a list to bam files.
 #' @param chr Chromosome name.
@@ -583,7 +585,7 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
 #' @param junc.min.depth Filter out junctions if low than this cutoff. This parameter used to remove noise background. Default is 5.
 #' @importFrom patchwork plot_layout
 #' @export
-TracksPlot <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
+TrackPlot <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
                         strand = c("both", "forward", "reverse", "ignore"),
                         split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
                         gtf = NULL, max.depth = 0, group.title.size = rel(2),
