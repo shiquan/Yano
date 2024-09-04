@@ -131,10 +131,17 @@ RunAutoCorr <- function(object = NULL,
   rm(moransi.vals)
   gc()
 
+  ## trim logs
+  cells <- head(cells)
+  features <- head(features)
+  
+  object <- LogSeuratCommand(object)
+  
   tt <- Sys.time()-tt
   if (isTRUE(verbose)) {
     message(paste0("Runtime : ",format(tt)));
   }
+  
   object
 }
 
@@ -175,6 +182,8 @@ SetAutoCorrFeatures <- function(object = NULL,
   names(all) <- rownames(object0)
   object0[["autocorr.variable"]] <- all
   object[[assay]] <- object0
+
+  object <- LogSeuratCommand(object)
   
   object
 }

@@ -189,6 +189,8 @@ ParseExonName <- function(object = NULL, assay = NULL)
   DefaultAssay(object) <- assay
   object[[assay]] <- ParseExonName.Assay(object[[assay]])
   DefaultAssay(object) <- old.assay
+
+  object <- LogSeuratCommand(object)
   return(object)
 }
 
@@ -231,6 +233,7 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
 
   DefaultAssay(object) <- old.assay
 
+  object <- LogSeuratCommand(object)
   object
 }
 #' @title ParseVAR
@@ -279,6 +282,7 @@ ParseVAR <- function(object = NULL, assay = NULL)
   object[[assay]] <- object0
   DefaultAssay(object) <- old.assay
 
+  object <- LogSeuratCommand(object)
   object
 }
 #' @title ParseBED
@@ -321,6 +325,7 @@ ParseBED <- function(object = NULL, assay = NULL)
   object[[assay]] <- object0
   DefaultAssay(object) <- old.assay
 
+  object <- LogSeuratCommand(object)
   object
 }
 
