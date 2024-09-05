@@ -142,7 +142,7 @@ SEXP parse_exon_names(SEXP name)
     SEXP sl = PROTECT(allocVector(VECSXP, 5));
     SEXP chr = PROTECT(allocVector(STRSXP, l));
     SEXP start = PROTECT(allocVector(INTSXP, l));
-    SEXP end = PROTECT(allocVector(STRSXP, l));
+    SEXP end = PROTECT(allocVector(INTSXP, l));
     SEXP gene = PROTECT(allocVector(STRSXP, l));
     SEXP strand = PROTECT(allocVector(STRSXP, l));
     
