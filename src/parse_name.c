@@ -115,7 +115,7 @@ SEXP parse_var_names(SEXP name)
         
         if (check_stranded == 0) {
             SET_STRING_ELT(alt, i, mkChar(tmp.s));
-            SET_STRING_ELT(strand, i, R_NilValue);
+            SET_STRING_ELT(strand, i, NA_STRING);
         }
     }
 
@@ -241,7 +241,7 @@ SEXP parse_exon_names(SEXP name)
                 SET_STRING_ELT(strand, i, mkChar("."));
                 j+=2;
             } else {
-                SET_STRING_ELT(strand, i, R_NilValue);
+                SET_STRING_ELT(strand, i, NA_STRING);
             }
         } else {
             Rprintf("Not an exon name, %s", str.s);
@@ -379,7 +379,7 @@ SEXP parse_bed_names(SEXP name)
                 return R_NilValue;
             }
         } else {
-            SET_STRING_ELT(strand, i, R_NilValue);
+            SET_STRING_ELT(strand, i, NA_STRING);
         }
     }
 
