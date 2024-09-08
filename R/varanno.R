@@ -74,5 +74,7 @@ annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
     object[[assay]][["type"]] <- df0[[2]]
   }
   DefaultAssay(object) <- old.assay
+
+  object <- LogSeuratCommand(object)
   object
 }

@@ -1,9 +1,9 @@
-#'@export
-DScore <- function(x = NULL, y = NULL, W = NULL)
-{
-  d <- .Call("D_score_lite", x, y, W)
-  d
-}
+#DScore <- function(x = NULL, y = NULL, W = NULL)
+#{
+#  d <- .Call("D_score_lite", x, y, W)
+#  d
+#}
+
 #' @name RunBlockCorr
 #' @title Run spatial dissimilarity test for features and their binding features in parallel.
 #' @param object Seurat object
@@ -40,8 +40,8 @@ RunBlockCorr <- function(object = NULL,
                          subset = NULL,
                          min.features.per.block = 1,
                          scale.factor = 1e4,
-                         mode = c("1","2","3"),
-                         method = c("D1", "D2", "L"),
+                         mode = c(1,2,3),
+                         method = c("D", "D2", "L"),
                          library.size = NULL,
                          scale = FALSE,
                          weight.matrix.name = "WeightMatrix",
@@ -81,7 +81,8 @@ RunBlockCorr <- function(object = NULL,
   }
 
   method <- match.arg(method)
-  mode <- match.arg(mode)
+  #mode <- match.arg(mode)
+  mode <- mode[1L]
   tt <- Sys.time()
 
   assay <- assay %||% DefaultAssay(object)
@@ -233,31 +234,19 @@ RunBlockCorr <- function(object = NULL,
   gc()
 
   if (isTRUE(verbose)) {
-    message(paste0("Use method \"", method, "\" with mode \"", mode, "\"."))
+    message(paste0("Use method \"", method, "\" with mode ", mode))
   }
-
-  if (method == "D1") {
-    ta <- .Call("D1_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm, seed, debug);
-  } else if (method == "D2") {
-    ta <- .Call("D2_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm, seed, debug);
-  } else if (methd == "L") {
-    ta <- .Call("Lee_test", x, y, W, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm, seed, debug);
-  }
+  method <- switch(method, "D" = 1, "D2" = 2, "L" == 3)
+  ta <- .Call("D_test", x, y, W, method, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm, seed, debug);
   
   if (length(ta) == 1) stop(ta[[1]])
 
-  Lx <- ta[[1]]
-  Ly <- ta[[2]]
-  r <- ta[[3]]
-  e <- ta[[4]]
-  tval <- ta[[5]]
-  mval <- ta[[6]]
-  vval <- ta[[7]]
+  r <- ta[[1]]
+  e <- ta[[2]]
+  tval <- ta[[3]]
+  mval <- ta[[4]]
+  vval <- ta[[5]]
   
-  names(Lx) <- features
-  if (!is.null(Ly)) {
-    names(Ly) <- features
-  }
   names(r) <- features
   names(e) <- features
   names(mval) <- features
@@ -266,12 +255,18 @@ RunBlockCorr <- function(object = NULL,
   pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
   names(pval) <- features
   tab <- object[[assay]][[]]
-  tab[[paste0(prefix, ".D")]] <- e[rownames(object)]
+  if (method == 1) {
+    prefix <- paste0(prefix, ".D")
+  } else if (method == 2) {
+    prefix <- paste0(prefix, ".D2")
+  } else if (method == 3) {
+    prefix <- paste0(prefix, ".L")
+  }
+  tab[[prefix]] <- e[rownames(object)]
   tab[[paste0(prefix, ".r")]] <- r[rownames(object)]
   tab[[paste0(prefix, ".pval")]] <- pval[rownames(object)]
   tab[[paste0(prefix, ".mean")]] <- mval[rownames(object)]
   tab[[paste0(prefix, ".var")]] <- vval[rownames(object)]
-
   tab[[paste0(prefix, ".padj")]] <- p.adjust(pval[rownames(object)], method = "BH")
   object0[[colnames(tab)]] <- tab
 
@@ -280,6 +275,9 @@ RunBlockCorr <- function(object = NULL,
   rm(ta)
   gc()
 
+  features <- head(features)
+  object <- LogSeuratCommand(object)
+  
   tt <- Sys.time()-tt
   if (isTRUE(verbose)) {
     message(paste0("Runtime : ",format(tt)));
@@ -287,7 +285,6 @@ RunBlockCorr <- function(object = NULL,
   object
 }
 
-#' @export
 cor_dist <- function(x = NULL, y = NULL, W = NULL, perm = 1000, thread = 1)
 {
   ta <- .Call("D_distribution_test", x, y, W, perm, thread)
