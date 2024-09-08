@@ -126,7 +126,8 @@ setMethod(f = "QuickRecipe",
 
 "%ni%" <- Negate("%in%")
 
-#'@importFrom parallel detectCores
+#' @importFrom parallel detectCores
+#' @export
 getCores <- function(threads = 0)
 {
   check <- .Call("openmp_support")
