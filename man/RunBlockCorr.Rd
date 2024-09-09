@@ -17,7 +17,7 @@ RunBlockCorr(
   subset = NULL,
   min.features.per.block = 1,
   scale.factor = 10000,
-  mode = c("1", "2", "3"),
+  mode = c(1, 2, 3),
   method = c("D", "D2", "L"),
   library.size = NULL,
   scale = FALSE,
