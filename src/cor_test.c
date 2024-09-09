@@ -615,11 +615,11 @@ SEXP D_test(SEXP _A,
         int ii = INTEGER(idx)[i]  -1;
         int ij = INTEGER(bidx)[i] -1;
         if (ap[ii] == ap[ii+1] || bp[ij] == bp[ij+1]) {
-            // REAL(LXval)[i] = 0;
-            // REAL(LYval)[i] = 0;
-            REAL(Rval)[i]  = 0;
-            REAL(Dval)[i]  = 0;
-            REAL(Tval)[i]  = 0;
+            REAL(Rval)[i]  = NA_REAL;
+            REAL(Dval)[i]  = NA_REAL;
+            REAL(Tval)[i]  = NA_REAL;
+            REAL(Mval)[i]  = NA_REAL;
+            REAL(Vval)[i]  = NA_REAL;
             continue;
         }
         

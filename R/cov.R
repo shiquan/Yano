@@ -1,5 +1,5 @@
 #' @importFrom reshape2 melt
-#' @useDynLib Yano depth2matrix
+## #' @useDynLib Yano depth2matrix
 bamcov0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, bin=1000, cell.tag = "CB", umi.tag = "UB")
 {
   if (is.null(bamfile)) stop("No BAM.")
@@ -131,7 +131,7 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
   return(bc)
 }
 
-#'@useDynLib Yano depth2matrix
+## #'@useDynLib Yano depth2matrix
 bamjunc0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, cell.tag = "CB", umi.tag = "UB")
 {
   if (is.null(bamfile)) stop("No BAM.")

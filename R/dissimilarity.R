@@ -140,8 +140,7 @@ RunBlockCorr <- function(object = NULL,
     stop("No features found.")
   }
   
-  idx <- match(features, rownames(tab))
-  tab0 <- tab[idx,]
+  tab0 <- tab[features,]
   blocks <- intersect(unique(tab0[[bind.name]]), blocks)
 
   if (isTRUE(verbose)) {
@@ -150,12 +149,9 @@ RunBlockCorr <- function(object = NULL,
   tab <- subset(tab, tab[[bind.name]] %in% blocks)
   features <- intersect(features, rownames(tab))
 
-  x <- GetAssayData1(object, assay = assay, layer = "counts")
-  
+  x <- GetAssayData1(object, assay = assay, layer = "counts")  
   cs <- library.size %||% colSums(x)
-
-  norm <- TRUE
-
+  
   bind.assay <- bind.assay %||% "tmp.assay"
 
   if (bind.assay %ni% names(object)) {
@@ -237,7 +233,7 @@ RunBlockCorr <- function(object = NULL,
     message(paste0("Use method \"", method, "\" with mode ", mode))
   }
   method <- switch(method, "D" = 1, "D2" = 2, "L" == 3)
-  ta <- .Call("D_test", x, y, W, method, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm, seed, debug);
+  ta <- .Call("D_test", x, y, W, method, perm, threads, idx, bidx, cs, scale.factor, mode, scale, TRUE, seed, debug);
   
   if (length(ta) == 1) stop(ta[[1]])
 
