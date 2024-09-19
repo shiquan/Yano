@@ -12,7 +12,7 @@ RunAutoCorr(
   snn.name = NULL,
   order.cells = NULL,
   prune.distance = 20,
-  prune.snn = 1/10,
+  prune.SNN = 1/10,
   cells = NULL,
   min.cells = 10,
   features = NULL,

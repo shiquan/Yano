@@ -11,7 +11,7 @@ GetWeights(
   emb = NULL,
   k.nn = 20,
   prune.distance = 20,
-  prune.snn = 1/15,
+  prune.SNN = 1/15,
   diag.value = 0,
   cells = NULL
 )
@@ -29,7 +29,7 @@ GetWeights(
 
 \item{prune.distance}{Sets the cutoff for cell distance on lineage trajectory (ranked cells) or spatial cooridates (bin distance) when computing the neighborhood overlap for the weight matrix construction. Any edges with values greater than this will be set to 0 and removed from the weight matrix graph. Default is 20, means only calculate weight edges for nearby 20 cells for each cell.}
 
-\item{prune.snn}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/15.}
+\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/15.}
 
 \item{diag.value}{Diagnoal value in the weight matrix.}
 
