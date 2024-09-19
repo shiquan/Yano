@@ -574,7 +574,6 @@ SEXP D_test(SEXP _A,
     A = A2;
     B = B2;
     
-    R_CheckStack();
     const int n_cell = A->nrow;
     const int N_feature = length(idx);
 
@@ -622,11 +621,17 @@ SEXP D_test(SEXP _A,
             REAL(Vval)[i]  = NA_REAL;
             continue;
         }
+
+        double *tmpa = R_Calloc(n_cell,double);
+        double *tmpb = R_Calloc(n_cell,double);
         
-        double *tmpa = R_Calloc(n_cell, double);
-        double *tmpb = R_Calloc(n_cell, double);
+        // double *tmpa = alloca(n_cell *sizeof(double));
+        // double *tmpb = alloca(n_cell *sizeof(double));
+        // R_CheckStack();
+        
         memset(tmpa, 0, sizeof(double)*n_cell);
         memset(tmpb, 0, sizeof(double)*n_cell);
+        
         double mna = 0, mnb = 0;
         for (int j = ap[ii]; j < ap[ii+1]; ++j) {
             if (ISNAN(ax[j])) continue;
@@ -689,6 +694,8 @@ SEXP D_test(SEXP _A,
         
         double *tmpa_s = R_Calloc(n_cell, double);
         double *tmpb_s = R_Calloc(n_cell, double);
+        // double *tmpa_s = alloca(n_cell *sizeof(double));
+        // double *tmpb_s = alloca(n_cell *sizeof(double));
         smooth_W(tmpa, tmpa_s, n_cell, W);
         smooth_W(tmpb, tmpb_s, n_cell, W);
         double mna_s = 0;
@@ -754,6 +761,9 @@ SEXP D_test(SEXP _A,
         // mean, var
         double mean = 0, var = 0;
         double *es = R_Calloc(perm, double);
+        // double *es = alloca(perm *sizeof(double));
+        // R_CheckStack();
+        
         for (int k = 0; k < perm; ++k) {
             shuffle(tmpa, ris[k], n_cell);
             smooth_W(tmpa, tmpa_s, n_cell, W);

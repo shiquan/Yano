@@ -21,7 +21,7 @@ fbt_theme <- function() {
 #'@importFrom viridis scale_color_viridis scale_fill_viridis
 #'@import ggrepel
 #'@importFrom scales label_comma
-#'@importFrom Seurat AutoPointSize
+## @importFrom Seurat AutoPointSize
 FbtPlot0 <- function(tab = NULL,
                      col.by = NULL,
                      cols = NULL,
@@ -81,7 +81,7 @@ FbtPlot0 <- function(tab = NULL,
   qval.min <- min(data$qval) - 1
   qval.max <- max(data$qval) + 1
 
-  pt.size <- pt.size %||% AutoPointSize(data = data, raster=FALSE)
+  pt.size <- pt.size %||% 1
   p <- ggplot(data) 
   if  (isFALSE(zoom.in)) {
     xi <- data_cum$bp_add
