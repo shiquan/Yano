@@ -29,8 +29,7 @@ FbtPlot(
   upstream = 1000,
   downstream = 1000,
   print.genes = NULL,
-  layout.heights = c(3, 2),
-  ...
+  layout.heights = c(3, 2)
 )
 }
 \arguments{
@@ -83,8 +82,6 @@ FbtPlot(
 \item{print.genes}{Print the gene names in the transcript tracks. Default will print all or randomly 20 genes if more than 20 genes in this region.}
 
 \item{layout.heights}{Specify the layouts for Manhatten plot and gene tracks. Default is c(3,2).}
-
-\item{...}{Parameters pass to geom_point().}
 }
 \description{
 Generate Manhatten plot for log10 scaled p value for spatial dissimilarity test. X axis is the location of features. The function use ggplot2 as backend.

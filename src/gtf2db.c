@@ -27,4 +27,30 @@ SEXP gtf2db(SEXP filename, SEXP utr)
     UNPROTECT(1);
     return ext;
 }
+#if 0
+SEXP genes(SEXP ext)
+{
+    struct gtf_spec *G = (struct gtf_spec*)R_ExternalPtrAddr(ext);
 
+    int l = dict_size(G->gene_name);
+    SEXP ta = PROTECT(allocVector(VECSXP, 6));
+    SEXP Vname = PROTECT(allocVector(STRSXP, l));
+    SEXP Vid = PROTECT(allocVector(STRSXP, l));
+    SEXP Vchr = PROTECT(allocVector(STRSXP, l));
+    SEXP Vstart = PROTECT(allocVector(INTSXP, l));
+    SEXP Vend = PROTECT(allocVector(INTSXP, l));
+    SEXP Vstrand = PROTECT(allocVector(STRSXP, l));
+    
+    int i;
+    for (i = 0; i < dict_size(G->gene_name); ++i) {
+        struct gtf *gtf = dict_query_value(G->gene_name, i);
+        char *gene_name;
+        char *gene_id;
+        char *chr_name;
+        int start;
+        int end;
+
+    }
+}
+
+#endif

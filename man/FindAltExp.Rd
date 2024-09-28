@@ -22,7 +22,7 @@ FindAltExp(
   threads = 0,
   perm = 100,
   seed = 999,
-  pesudo.group = 3,
+  pseudo.group = 3,
   debug = FALSE
 )
 }
@@ -59,9 +59,9 @@ FindAltExp(
 
 \item{seed}{Seed for generate random number. Default is 999.}
 
-\item{pesudo.group}{Aggregate counts into groups for each clusters.}
-
 \item{debug}{Print debug logs. Will auto set thread to 1. Default is FALSE.}
+
+\item{pesudo.group}{Aggregate counts into groups for each clusters.}
 }
 \description{
 Using delta-ratio and permutation method to simulate p value for each event.
