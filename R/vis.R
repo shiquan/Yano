@@ -163,7 +163,7 @@ FbtPlot0 <- function(tab = NULL,
 #' @param downstream Flank zoom in region with downstream. Default is 1000. Only works when zoom in mode enabled.
 #' @param print.genes Print the gene names in the transcript tracks. Default will print all or randomly 20 genes if more than 20 genes in this region.
 #' @param layout.heights Specify the layouts for Manhatten plot and gene tracks. Default is c(3,2).
-#' @param ... Parameters pass to geom_point().
+# #' @param ... Parameters pass to geom_point().
 #' 
 #'@export
 FbtPlot <- function(object = NULL,
@@ -180,8 +180,7 @@ FbtPlot <- function(object = NULL,
                     chr = NULL, start = NULL, end = NULL,
                     gtf = NULL, gene = NULL, upstream=1000, downstream=1000,
                     print.genes = NULL,
-                    layout.heights = c(3,2),
-                    ...)
+                    layout.heights = c(3,2))
 {
   if (is.null(val)) stop("No value name specified.")  
   cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
@@ -233,8 +232,10 @@ FbtPlot <- function(object = NULL,
     }
 
     if (!is.null(sel.chrs)) {
+      tab0$chr <- as.character(tab0$chr)
+      sel.chrs <- as.character(sel.chrs)
       tab0 <- tab0 %>% filter (chr %in% sel.chrs)
-      levels(tab0[[chr.name]]) <- levels(sel.chrs)
+      levels(tab0[[chr.name]]) <- sel.chrs
     }
     
     ## if (!is.null(types)) {
@@ -293,9 +294,9 @@ FbtPlot <- function(object = NULL,
     }
   }
   if (n == 1) {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout.heights = layout.heights, pt.size = pt.size, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout.heights = layout.heights, pt.size = pt.size)
   } else {
-    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout.heights = layout.heights, pt.size = pt.size, ...)
+    p <- FbtPlot0(tab=tab, col.by=col.by, cols = cols, shape.by = shape.by, xlab=xlab, ylab = ylab, point.label=point.label, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout.heights = layout.heights, pt.size = pt.size)
   }
   p
 }

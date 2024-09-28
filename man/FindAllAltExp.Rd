@@ -18,7 +18,7 @@ FindAllAltExp(
   threads = 0,
   perm = 100,
   seed = 999,
-  pesudo.group = 3,
+  pseudo.group = 3,
   debug = FALSE
 )
 }
@@ -48,8 +48,6 @@ FindAllAltExp(
 \item{perm}{Permutation steps for calculate statistical of delta-ratio. Default is 100.}
 
 \item{seed}{Seed for generate random number. Default is 999.}
-
-\item{pesudo.group}{Aggregate counts into groups for each clusters.}
 
 \item{debug}{Print debug logs. Will auto set thread to 1. Default is FALSE.}
 }
