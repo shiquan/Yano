@@ -465,7 +465,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   if (max.depth > 0) {
     bc$depth[bc$depth > max.depth] <- max.depth
   }
-
+  ymax0 <- max(bc$depth)
   bc$depth <- bc$depth * ifelse(bc$strand=='+',1,-1)
 
   ymax <- max(bc$depth)
@@ -489,7 +489,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
       }
       
       #ymax0 <- max(abs(bc$depth))
-      juncs$depth <- juncs$depth/ymax
+      juncs$depth <- juncs$depth/ymax0
       juncs$depth[which(juncs$depth>0.99)] <- 0.99
 
       juncs[["y"]] <- 0
