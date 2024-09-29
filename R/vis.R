@@ -456,6 +456,9 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   if (!is.null(cell.group)) {
     ss <- table(unlist(cell.group))
     bc$depth <- bc$depth/as.vector(ss[as.character(bc$label)])
+    if (junc) {
+      juncs$depth <- juncs$depth/as.vector(ss[as.character(juncs$label)])
+    }
   }
   
   if (isTRUE(log.scaled)) {
