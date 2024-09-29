@@ -4,7 +4,7 @@ geom_splice <- function(mapping = NULL,
                         stat = "identity", 
                         position = "identity", 
                         ..., 
-                        spline_shape = -0.5,
+                        spline_shape = c(0,1,0),
                         lineend = "butt", 
                         na.rm = FALSE, 
                         show.legend = NA,
@@ -34,7 +34,7 @@ GeomSplice <- ggproto("GeomSplice", Geom,
                                             panel_params,
                                             coord,
                                             lineend = "butt",
-                                            spline_shape = -0.5,
+                                            spline_shape = c(0,1,0),
                                             na.rm = FALSE) {
                         
                         data <- remove_missing(
@@ -95,7 +95,7 @@ create_splice <- function(x, y, xend, height = 0, spline_shape = c(0,1,0)) {
 #' @export
 spliceGrob <- function(data,
                        #default.units = "native",
-                       spline_shape = -0.5,
+                       spline_shape = c(0,1,0),
                        name = NULL,
                        gp = gpar(), 
                        vp = NULL) {
