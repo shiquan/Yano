@@ -75,7 +75,8 @@ GeomSplice <- ggproto("GeomSplice", Geom,
                       )
 #' @importFrom graphics xspline
 #' @export
-create_splice <- function(x, y, xend, height = 0, spline_shape = -0.5) {
+create_splice <- function(x, y, xend, height = 0, spline_shape = c(0,1,0)) {
+#create_splice <- function(x, y, xend, height = 0, spline_shape = -0.5) {
   if (height == 0) {
     rlang::abort("`height` must be greater than zero.")
   }
