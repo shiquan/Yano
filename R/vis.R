@@ -465,7 +465,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   if (max.depth > 0) {
     bc$depth[bc$depth > max.depth] <- max.depth
   }
-  
+
   bc$depth <- bc$depth * ifelse(bc$strand=='+',1,-1)
 
   ymax <- max(bc$depth)
@@ -488,9 +488,9 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
         juncs$depth <- log1p(juncs$depth)
       }
       
-      ymax0 <- max(abs(bc$depth))
-      juncs$depth <- juncs$depth/ymax0
-      juncs$depth[which(juncs$depth>1)] <- 1
+      #ymax0 <- max(abs(bc$depth))
+      juncs$depth <- juncs$depth/ymax
+      juncs$depth[which(juncs$depth>0.99)] <- 0.99
 
       juncs[["y"]] <- 0
       
@@ -586,18 +586,18 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
 #' @param junc.min.depth Filter out junctions if low than this cutoff. This parameter used to remove noise background. Default is 5.
 #' @importFrom patchwork plot_layout
 #' @export
-TrackPlot <-  function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
-                        strand = c("both", "forward", "reverse", "ignore"),
-                        split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
-                        gtf = NULL, max.depth = 0, group.title.size = rel(2),
-                        cell.group=NULL, display.genes = NULL,  meta.features =NULL,
-                        log.scaled = FALSE, upstream = 1000, downstream = 1000,
-                        fragfile = NULL,
-                        atac.log.scaled = FALSE,
-                        atac.max.depth = 0,
-                        col.by = NULL, layout.heights =c(1,10,2),
-                        highlights = NULL,
-                        junc = FALSE, junc.min.depth = 5)
+TrackPlot <- function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
+                      strand = c("both", "forward", "reverse", "ignore"),
+                      split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
+                      gtf = NULL, max.depth = 0, group.title.size = rel(2),
+                      cell.group=NULL, display.genes = NULL,  meta.features =NULL,
+                      log.scaled = FALSE, upstream = 1000, downstream = 1000,
+                      fragfile = NULL,
+                      atac.log.scaled = FALSE,
+                      atac.max.depth = 0,
+                      col.by = NULL, layout.heights =c(1,10,2),
+                      highlights = NULL,
+                      junc = FALSE, junc.min.depth = 5)
 {
   if (!is.null(gene)) {
     if (is.null(gtf)) stop("gtf is not specified.")
