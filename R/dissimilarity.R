@@ -178,7 +178,9 @@ RunBlockCorr <- function(object = NULL,
   features <- intersect(features, features1)
 
   bind.assay <- bind.assay %||% "tmp.assay"
-
+  cells0 <- cells %||% colnames(object)
+  cells0 <- intersect(cells0, colnames(object))
+  
   if (bind.assay %ni% names(object)) {
 
     if (min.features.per.block == 1) {
@@ -194,13 +196,13 @@ RunBlockCorr <- function(object = NULL,
     if (isTRUE(verbose)) {
       message("Aggregate counts.")
     }
-    x0 <- x[rownames(tab), ]
+    x0 <- x[rownames(tab), cells0]
     x0 <- as(x0, "TsparseMatrix")
     
     # Aggregate features in the same block
     y <- sparseMatrix(i = match(tab[[bind.name]][x0@i+1], blocks),
                       j = x0@j+1,
-                      x = x0@x, dims=c(length(blocks), length(cells)))
+                      x = x0@x, dims=c(length(blocks), length(cells0)))
 
     rm(x0)
     rownames(y) <- blocks
@@ -273,7 +275,8 @@ RunBlockCorr <- function(object = NULL,
       idents <- (tree$Nnode + 2):max(tree$edge)
     }
 
-    cellnames.use <- colnames(x = object0)
+    #cellnames.use <- colnames(x = object0)
+    cellnames.use <- cells0
 
     messages <- list()    
     for (i in 1:length(idents)) {
