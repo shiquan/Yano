@@ -7,7 +7,7 @@
 PSIPlot(
   object = NULL,
   exon.assay = NULL,
-  exclude.assay = "EXCL",
+  exclude.assay = "exclude",
   features = NULL,
   dims = c(1, 2),
   cells = NULL,

@@ -36,6 +36,10 @@ RunAutoCorr(
 
 \item{order.cells}{For linear trajetory, input ordered cell names to calculate the cell-cell distance weight matrix. Conflict with sptaial=TRUE and snn.name != NULL.}
 
+\item{prune.distance}{Set the cutoff for neighbors for order cells and spatial coordinates.}
+
+\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/15.}
+
 \item{cells}{Cells used for calculate weight matrix. Used with snn graph. In default will use all cells.}
 
 \item{min.cells}{If a feature can be detect in few than min.cells, will skip to save time. Default is 10.}

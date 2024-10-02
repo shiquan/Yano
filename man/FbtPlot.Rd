@@ -29,6 +29,7 @@ FbtPlot(
   upstream = 1000,
   downstream = 1000,
   print.genes = NULL,
+  remove.chr = FALSE,
   layout.heights = c(3, 2)
 )
 }
@@ -80,6 +81,8 @@ FbtPlot(
 \item{downstream}{Flank zoom in region with downstream. Default is 1000. Only works when zoom in mode enabled.}
 
 \item{print.genes}{Print the gene names in the transcript tracks. Default will print all or randomly 20 genes if more than 20 genes in this region.}
+
+\item{remove.chr}{Remove 'chr' in the chromosome names.}
 
 \item{layout.heights}{Specify the layouts for Manhatten plot and gene tracks. Default is c(3,2).}
 }
