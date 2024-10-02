@@ -35,7 +35,7 @@ FbtPlot0 <- function(tab = NULL,
                      start = NULL,
                      end = NULL,
                      max.genes = 20,
-                     layout.heights = c(3,2),
+                     layout.heights = c(3,2),                     
                      ...)
 {
   if (isTRUE(zoom.in)) {
@@ -162,6 +162,7 @@ FbtPlot0 <- function(tab = NULL,
 #' @param upstream Flank zoom in region with upstream. Default is 1000. Only works when zoom in mode enabled.
 #' @param downstream Flank zoom in region with downstream. Default is 1000. Only works when zoom in mode enabled.
 #' @param print.genes Print the gene names in the transcript tracks. Default will print all or randomly 20 genes if more than 20 genes in this region.
+#' @param remove.chr Remove 'chr' in the chromosome names.
 #' @param layout.heights Specify the layouts for Manhatten plot and gene tracks. Default is c(3,2).
 # #' @param ... Parameters pass to geom_point().
 #' 
@@ -180,6 +181,7 @@ FbtPlot <- function(object = NULL,
                     chr = NULL, start = NULL, end = NULL,
                     gtf = NULL, gene = NULL, upstream=1000, downstream=1000,
                     print.genes = NULL,
+                    remove.chr = FALSE,
                     layout.heights = c(3,2))
 {
   if (is.null(val)) stop("No value name specified.")  
@@ -231,6 +233,12 @@ FbtPlot <- function(object = NULL,
       }
     }
 
+    if (remove.chr) {
+      tab0$chr <- gsub("^chr", "", as.character(tab0$chr))
+      if (sel.chrs) {
+        sel.chrs <- gsub("^chr", "", as.character(sel.chrs))
+      }
+    }
     if (!is.null(sel.chrs)) {
       tab0$chr <- as.character(tab0$chr)
       sel.chrs <- as.character(sel.chrs)
@@ -1181,7 +1189,7 @@ RatioPlot <- function(object = NULL,
 #' @concept visualization
 PSIPlot <- function(object = NULL,
                     exon.assay = NULL,
-                    exclude.assay = "EXCL",
+                    exclude.assay = "exclude",
                     features = NULL,
                     dims = c(1,2),
                     cells = NULL,
