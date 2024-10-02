@@ -6,6 +6,8 @@
 #' @param spatial Use spatial coordinate instead of SNN space and linear trajectory to calculate the cell-cell weight matrix.
 #' @param snn.name name of SNN space. If spatial=FALSE and order.cells = NULL, default snn.name will set to 'RNA_snn'. Use SNN space to calculate the cell-cell weight martix.
 #' @param order.cells For linear trajetory, input ordered cell names to calculate the cell-cell distance weight matrix. Conflict with sptaial=TRUE and snn.name != NULL.
+#' @param prune.distance
+#' @param prune.SNN 
 #' @param cells Cells used for calculate weight matrix. Used with snn graph. In default will use all cells.
 #' @param min.cells If a feature can be detect in few than min.cells, will skip to save time. Default is 10.
 #' @param features List of features to test. Default is all features with that coverage >= min.cells.
