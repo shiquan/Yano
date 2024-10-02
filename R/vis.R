@@ -226,14 +226,14 @@ FbtPlot <- function(object = NULL,
     if (start.name %ni% colnames(tab0)) stop("No start name found.")
     if (val %ni% colnames(tab0)) stop("No val name found.")
 
-    if (zoom.in) {
+    if (isTRUE(zoom.in)) {
       tab0 %>% filter(chr %in% chr1 & start >= start1) -> tab0
       if (end1 > 0) {
         tab0 <- base::subset(tab0, start <=end1)
       }
     }
 
-    if (remove.chr) {
+    if (isTRUE(remove.chr)) {
       tab0$chr <- gsub("^chr", "", as.character(tab0$chr))
       if (sel.chrs) {
         sel.chrs <- gsub("^chr", "", as.character(sel.chrs))
