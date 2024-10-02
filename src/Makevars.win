@@ -1,8 +1,7 @@
-RHTSLIB_LIBS=$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript" -e 'Rhtslib::pkgconfig("PKG_LIBS")')
-RHTSLIB_CFLAGS=$(shell "${R_HOME}/bin${R_ARCH_BIN}/Rscript" -e 'Rhtslib::pkgconfig("PKG_CPPFLAGS")')
+include Makevars.common
 
-PKG_CFLAGS = $(SHLIB_OPENMP_CFLAGS) $(RHTSLIB_CFLAGS)
-PKG_LIBS = $(SHLIB_OPENMP_CFLAGS) $(RHTSLIB_LIBS)
+PKG_CFLAGS = $(SHLIB_OPENMP_CFLAGS)
+PKG_LIBS = $(SHLIB_OPENMP_CFLAGS)
 
 all: $(SHLIB)
 	mv $(SHLIB) Yano$(SHLIB_EXT)
