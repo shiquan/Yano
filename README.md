@@ -10,14 +10,12 @@ Yano is seamlessly integrated with Seurat, building upon the Seurat object's fra
 # INSTALL
 
 ```
-# install all dependencies in R; Or skip these steps if you have already installed them
-install.packages(c("BiocManager", "Seurat", "R.utils", "viridis", "devtools"), repos = "https://cloud.r-project.org")
-
-BiocManager::install(c("Rhtslib"))
+# Dependencies
+install.packages("Seurat", "R.utils", "viridis", "devtools"), repos = "https://cloud.r-project.org")
 ```
 
 ```
-# install Yano 
+# Install Yano 
 devtools::install_github("shiquan/Yano")
 ```
 
