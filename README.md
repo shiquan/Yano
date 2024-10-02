@@ -11,7 +11,7 @@ Yano is seamlessly integrated with Seurat, building upon the Seurat object's fra
 
 ```
 # Dependencies
-install.packages("Seurat", "R.utils", "viridis", "devtools"), repos = "https://cloud.r-project.org")
+install.packages(c("Seurat", "R.utils", "viridis", "devtools"), repos = "https://cloud.r-project.org")
 ```
 
 ```
