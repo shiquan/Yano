@@ -1,7 +1,0 @@
-include Makevars.common
-
-PKG_CFLAGS = $(SHLIB_OPENMP_CFLAGS)
-PKG_LIBS = $(SHLIB_OPENMP_CFLAGS)
-
-all: $(SHLIB)
-	mv $(SHLIB) Yano$(SHLIB_EXT)

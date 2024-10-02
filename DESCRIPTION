@@ -1,6 +1,6 @@
 Package: Yano
 Title: Yet ANother package for single cell Omics data analysis
-Version: 0.0.0.9999
+Version: 1.0
 Author: Quan Shi
 Maintainer: Quan Shi <shiquan.biomed@icloud.com>
 Description: Spatial dissimilarity analysis for single cell transcriptomics
@@ -8,8 +8,7 @@ License: MIT
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.2
-LinkingTo: Rhtslib, Matrix
-biocViews: Rhtslib
+LinkingTo: Matrix
 Depends:
     R (>= 4.0.0)
 Imports:
