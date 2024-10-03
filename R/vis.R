@@ -235,7 +235,7 @@ FbtPlot <- function(object = NULL,
 
     if (isTRUE(remove.chr)) {
       tab0$chr <- gsub("^chr", "", as.character(tab0$chr))
-      if (sel.chrs) {
+      if (!is.null(sel.chrs)) {
         sel.chrs <- gsub("^chr", "", as.character(sel.chrs))
       }
     }
