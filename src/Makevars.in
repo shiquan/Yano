@@ -8,5 +8,5 @@ PKG_LIBS = @PKG_LIBS@ @openmp_cflags@ $(HTSDIR)/libhts.a -lcurl
 all: HTS
 
 HTS:
-	cd $(HTSDIR) && rm config.h && make clean && make lib-static && cd -
+	cd $(HTSDIR) && rm -f config.h && make clean && make lib-static && cd -
 
