@@ -94,6 +94,8 @@ FbtPlot0 <- function(tab = NULL,
       if (is.numeric(data[[col.by]])) {
         p <- p + scale_fill_viridis()
       } else {
+        n <- length(unique(data[[col.by]]))
+        cols <- cols %||% sample(colours(distinct = TRUE),n)
         p <- p + scale_fill_manual(values = cols)
       }
     } else {
@@ -102,6 +104,9 @@ FbtPlot0 <- function(tab = NULL,
       if (is.numeric(data[[col.by]])) {
         p <- p + scale_fill_viridis()
       } else {
+        n <- length(unique(data[[col.by]]))
+        cols <- cols %||% sample(colours(distinct = TRUE),n)
+
         p <- p + scale_fill_manual(values = cols)
       }
     }
@@ -185,7 +190,7 @@ FbtPlot <- function(object = NULL,
                     layout.heights = c(3,2))
 {
   if (is.null(val)) stop("No value name specified.")  
-  cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
+  # cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
   assay <- assay %||% DefaultAssay(object)
 
   n <- length(assay)
@@ -496,9 +501,9 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
         juncs$depth <- log1p(juncs$depth)
       }
       
-      #ymax0 <- max(abs(bc$depth))
-      juncs$depth <- juncs$depth/ymax0
-      juncs$depth[which(juncs$depth>0.99)] <- 0.99
+      # ymax0 <- max(abs(bc$depth))
+      # juncs$depth <- juncs$depth/ymax0
+      # juncs$depth[which(juncs$depth>0.99)] <- 0.99
 
       juncs[["y"]] <- 0
       
