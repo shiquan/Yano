@@ -7,7 +7,7 @@
 #' @param snn.name name of SNN space. If spatial=FALSE and order.cells = NULL, default snn.name will set to 'RNA_snn'. Use SNN space to calculate the cell-cell weight martix.
 #' @param order.cells For linear trajetory, input ordered cell names to calculate the cell-cell distance weight matrix. Conflict with sptaial=TRUE and snn.name != NULL.
 #' @param prune.distance Set the cutoff for neighbors for order cells and spatial coordinates.
-#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/15.
+#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.
 #' @param cells Cells used for calculate weight matrix. Used with snn graph. In default will use all cells.
 #' @param min.cells If a feature can be detect in few than min.cells, will skip to save time. Default is 10.
 #' @param features List of features to test. Default is all features with that coverage >= min.cells.
@@ -25,7 +25,7 @@ RunAutoCorr <- function(object = NULL,
                         snn.name = NULL,
                         order.cells = NULL,
                         prune.distance = 20,
-                        prune.SNN = 1/10,
+                        prune.SNN = 1/50,
                         cells = NULL,
                         min.cells = 10,
                         features = NULL,

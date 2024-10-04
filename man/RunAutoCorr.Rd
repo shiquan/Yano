@@ -12,7 +12,7 @@ RunAutoCorr(
   snn.name = NULL,
   order.cells = NULL,
   prune.distance = 20,
-  prune.SNN = 1/10,
+  prune.SNN = 1/50,
   cells = NULL,
   min.cells = 10,
   features = NULL,
@@ -38,7 +38,7 @@ RunAutoCorr(
 
 \item{prune.distance}{Set the cutoff for neighbors for order cells and spatial coordinates.}
 
-\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/15.}
+\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
 
 \item{cells}{Cells used for calculate weight matrix. Used with snn graph. In default will use all cells.}
 

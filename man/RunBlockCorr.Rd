@@ -26,7 +26,7 @@ RunBlockCorr(
   reduction = "pca",
   dims = 1:10,
   k.param = 20,
-  prune.SNN = 1/15,
+  prune.SNN = 1/50,
   n.trees = 50,
   nn.eps = 0,
   nn.method = "annoy",
@@ -79,7 +79,7 @@ RunBlockCorr(
 
 \item{k.param}{Defines k for the k-nearest neighbor algorithm.}
 
-\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/15.}
+\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
 
 \item{n.trees}{More trees gives higher precision when using annoy approximate nearest neighbor search. Default is 50.}
 
