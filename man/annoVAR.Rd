@@ -10,7 +10,8 @@ annoVAR(
   gtf = NULL,
   vcf = NULL,
   tags = NULL,
-  check.alt.only = FALSE
+  check.alt.only = FALSE,
+  chr.name = "chr"
 )
 }
 \arguments{
@@ -25,6 +26,8 @@ annoVAR(
 \item{tags}{Vector of tags to annotate. Require VCF database specified, and tags should be well formated in the VCF header.}
 
 \item{check.alt.only}{Only annotate records for alternative allele (non-ref allele). Default is FASLE.}
+
+\item{chr.name}{Colname name for chromsome, default is "chr".}
 }
 \value{
 Annotated Seurat object.

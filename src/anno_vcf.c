@@ -337,6 +337,7 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
                 tmpk.l = 0;
                 SEXP v = PROTECT(allocVector(STRSXP, l));
                 for (int j = 0; j < l; ++j) {
+                    SET_STRING_ELT(v, j, NA_STRING);
                     if (val->v[j].c != NULL) {
                         SET_STRING_ELT(v, j, mkChar((const char*)val->v[j].c));
                         free(val->v[j].c);
@@ -344,7 +345,7 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
                 }
                 SET_VECTOR_ELT(sl, i, v);
             } else {
-                SEXP v = PROTECT(allocVector(INTSXP, l));
+                SEXP v = PROTECT(allocVector(INTSXP, l));                
                 for (int j = 0; j < l; ++j) {
                     if (val->v[j].a.f == bcf_float_missing) {
                         INTEGER(v)[j] = NA_INTEGER;
@@ -358,6 +359,7 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
             if (val->convert2str) {
                 SEXP v = PROTECT(allocVector(STRSXP, l));
                 for (int j = 0; j < l; ++j) {
+                    SET_STRING_ELT(v, j, NA_STRING);
                     if (val->v[j].c != NULL) {
                         SET_STRING_ELT(v, j, mkChar((const char*)val->v[j].c));
                         free(val->v[j].c);
@@ -378,6 +380,7 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
         } else if (val->type == BCF_HT_STR) {
             SEXP v = PROTECT(allocVector(STRSXP, l));
             for (int j = 0; j < l; ++j) {
+                SET_STRING_ELT(v, j, NA_STRING);
                 if (val->v[j].c == NULL) {
                     tmpk.l = 0;
                     if (val->v[j].a.f != bcf_float_missing) {
