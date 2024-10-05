@@ -19,7 +19,7 @@ data("neuron_small")
 DefaultAssay(neuron_small) <- "EPT"
 # Check the meta table of features before parsing
 head(neuron_small[['EPT']][[]])
-neuron_small <- ParseVAR(neuron_small)
+neuron_small <- ParseVarName(neuron_small)
 
 # Now see the meta table after parsing
 head(neuron_small[['EPT']][[]])

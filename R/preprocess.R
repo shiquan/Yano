@@ -244,7 +244,7 @@ LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRU
 #' DefaultAssay(neuron_small) <- "var"
 #' # Check the meta table of features before parsing
 #' head(neuron_small[['var']][[]])
-#' neuron_small <- ParseVAR(neuron_small)
+#' neuron_small <- ParseVarName(neuron_small)
 #'
 #' # Now see the meta table after parsing
 #' head(neuron_small[['var']][[]])
@@ -303,7 +303,7 @@ ParseVarName <- function(object = NULL, assay = NULL)
 #' DefaultAssay(neuron_small) <- "EPT"
 #' # Check the meta table of features before parsing
 #' head(neuron_small[['EPT']][[]])
-#' neuron_small <- ParseVAR(neuron_small)
+#' neuron_small <- ParseVarName(neuron_small)
 #'
 #' # Now see the meta table after parsing
 #' head(neuron_small[['EPT']][[]])
