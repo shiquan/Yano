@@ -45,10 +45,10 @@ anno_gene <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NU
 #' @param vcf VCF database. Should be indexed with `bcftools index` at first.
 #' @param tags Vector of tags to annotate. Require VCF database specified, and tags should be well formated in the VCF header.
 #' @param check.alt.only Only annotate records for alternative allele (non-ref allele). Default is FASLE.
-#' @param chr.name Colname name for chromsome, default is "chr".
+#' @param chr Colname name for chromsome, default is "chr".
 #' @return Annotated Seurat object.
 #' @export
-annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE, chr.name = "chr")
+annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE, chr = "chr")
 {
   assay <- assay %||% DefaultAssay(object)
   old.assay <- DefaultAssay(object)
@@ -62,11 +62,11 @@ annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
     df <- object[[assay]][[]]
   }
 
-  if (chr.name %ni% colnames(df)) {
-    stop("No chr.name found at feature meta table.")
+  if (chr %ni% colnames(df)) {
+    stop("No chr found at feature meta table.")
   }
   if (!is.null(tags) & !is.null(vcf)) {
-    df0 <- varanno(chr=df[[chr.name]], start=as.integer(df$start), ref=df$ref, alt=df$alt, vcf = vcf, tags = tags, check.alt.only = check.alt.only)
+    df0 <- varanno(chr=df[[chr]], start=as.integer(df$start), ref=df$ref, alt=df$alt, vcf = vcf, tags = tags, check.alt.only = check.alt.only)
     for (tag in tags) {
       object[[assay]][[tag]] <- df0[[tag]]
     }

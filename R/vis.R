@@ -678,6 +678,9 @@ TrackPlot <- function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
   if (!is.null(p3)) {
     return(p1 / p3/ p2 + plot_layout(heights=layout.heights[c(2,2,3)]))
   }
+  if (length(layout.heights) == 2) {
+    return(p1 / p2 + plot_layout(heights=layout.heights))
+  } 
   return(p1 / p2 + plot_layout(heights=layout.heights[c(2,3)]))
 }
 #' @importFrom grDevices rgb
