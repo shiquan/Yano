@@ -11,7 +11,7 @@ annoVAR(
   vcf = NULL,
   tags = NULL,
   check.alt.only = FALSE,
-  chr.name = "chr"
+  chr = "chr"
 )
 }
 \arguments{
@@ -27,7 +27,7 @@ annoVAR(
 
 \item{check.alt.only}{Only annotate records for alternative allele (non-ref allele). Default is FASLE.}
 
-\item{chr.name}{Colname name for chromsome, default is "chr".}
+\item{chr}{Colname name for chromsome, default is "chr".}
 }
 \value{
 Annotated Seurat object.
