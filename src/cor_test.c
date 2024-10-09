@@ -582,9 +582,7 @@ SEXP D_test(SEXP _A,
         n_thread = 1; // disable multithreads
     }
     assert (length(bidx) == N_feature);
-    
-    // SEXP LXval = PROTECT(allocVector(REALSXP, N_feature));
-    // SEXP LYval = PROTECT(allocVector(REALSXP, N_feature));
+
     SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Dval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
@@ -624,10 +622,6 @@ SEXP D_test(SEXP _A,
 
         double *tmpa = R_Calloc(n_cell,double);
         double *tmpb = R_Calloc(n_cell,double);
-        
-        // double *tmpa = alloca(n_cell *sizeof(double));
-        // double *tmpb = alloca(n_cell *sizeof(double));
-        // R_CheckStack();
         
         memset(tmpa, 0, sizeof(double)*n_cell);
         memset(tmpb, 0, sizeof(double)*n_cell);
