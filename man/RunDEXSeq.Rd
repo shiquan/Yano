@@ -6,7 +6,7 @@
 \usage{
 RunDEXSeq(
   object = NULL,
-  bind.name = "bind_name",
+  bind.name = "gene_name",
   ident.1 = NULL,
   ident.2 = NULL,
   cells.1 = NULL,
@@ -67,8 +67,8 @@ Data frame containing p values and pct for test features and their binding featu
 This will test the test features and binding features are different expressed between groups with a generalised linear model. See DEXSeq and DESeq2 paper for details.
 }
 \examples{
-data("neuron_small")
-alt.exon <- RunDEXSeq(object = neuron_small, assay = "flatten", bind.assay = "RNA", bind.name = "gene_name")
+data("glbt_small")
+alt.exon <- RunDEXSeq(object = glbt_small, assay = "exon", bind.assay = "RNA", bind.name = "gene_name")
 head(alt.exon)
 
 }
