@@ -1,11 +1,5 @@
 # Yano
-Yano represents an R/C toolkit designed for conducting spatial dissimilarity analysis on single-cell RNA sequencing data. This method revolves around the core concept of examining the distinct expression patterns of a given feature (e.g. exon, EPT or EAT) in relation to its associated binding feature (typically a gene or genomic locus) within the context of cell lineage (1D), spatial position (2D), or the multi-dimensional PCA space. The discernible differences in feature expression patterns and their binding features provide insights into a range of biological phenomena, including alternative splicing, cis-antisense RNA regulation, allele-specific gene expression, and more.
-
-Given the inherent sparsity and heterogeneity of single-cell RNA data, a precise and informative measure of dissimilarity between two features becomes essential. In many cases, the spatial autocorrelation is a notable feature of non-random expression patterns across cell lineage, spatial location, and UMAP projections. To address this, Yano introduces a novel statistical metric known as the "D score" which combines the spatial autocorrelation of feature X with the dissimilarity between feature X and its associated binding feature Y. The resulting D score follows a normal distribution, allowing for the calculation of a p-value for each X-Y pair with a permutation method (see manuscript for details). 
-
-Yano is seamlessly integrated with Seurat, building upon the Seurat object's framework. Users can perform conventional cell clustering analyses using the state-of-the-art Seurat pipeline and then incorporate exon, EPT, or EAT counts as new "assays" within the Seurat objects. Subsequently, Yano facilitates the assessment of spatial dissimilarity between these two assays. The whole pipeline list below.
-
-![pipeline](https://github.com/shiquan/Yano-doc/blob/master/figs/pipeline.png?raw=true)
+Yano represents an R/C toolkit designed for conducting spatial dissimilarity analysis on single-cell RNA sequencing data. This method revolves around the core concept of examining the distinct expression patterns of a given feature (e.g. exon, junction or genetic variants) in relation to its associated binding feature (typically a gene or genomic locus) within the context of cell lineage (1D), spatial position (2D), or the multi-dimensional PCA space. The discernible differences in feature expression patterns and their binding features provide insights into a range of biological phenomena, including alternative splicing, cis-antisense RNA regulation, allele-specific gene expression, and more.
 
 # INSTALL
 
@@ -20,8 +14,35 @@ devtools::install_github("shiquan/Yano")
 ```
 
 # Quick start
+```{r}
+require(Yano)
+data("glbt_small")
+DefaultAssay(glbt_small) <- "RNA"
+glbt_small <- NormalizeData(glbt_small) %>% FindNeighbors() %>% RunUMAP(dim = 1:20)
 
-# Real cases
+DimPlot(glbt_small, label = TRUE, label.size = 5)
+
+DefaultAssay(glbt_small) <- "exon"
+glbt_small <- NormalizeData(glbt_small)
+glbt_small <- ParseExonName(glbt_small)
+glbt_small <- RunAutoCorr(glbt_small)
+glbt_small <- SetAutoCorrFeatures(glbt_small)
+glbt_small <- RunBlockCorr(glbt_small, bind.name = "gene_name", bind.assay = "RNA")
+
+FbtPlot(glbt_small, val = "gene_name.padj")
+
+glbt_small[['exon']][[]] %>% filter(gene_name.padj <1e-10)
+
+FeaturePlot(glbt_small, features = c("chr19:16095264-16095454/+/TPM4", "TPM4"), order=TRUE)
+
+db <- gtf2db("./gencode.v44.annotation.gtf.gz")
+TrackPlot(bamfile="./Parent_SC3v3_Human_Glioblastoma_possorted_genome_bam.bam", gtf =db, gene = "TPM4", junc = TRUE, cell.group = Idents(glbt_small), highlights = c(16095264,16095454))
+```
+# Short cases
+
+- [Alternative splicing analysis for scRNA-seq](https://shiquan.github.io/Yano_AS.html)
+- [Allele-specific gene expression analysis for scRNA-seq](https://shiquan.github.io/Yano_ASE.html)
+- [Annotating and prioritizing genetic variants for scRNA-seq](https://shiquan.github.io/Yano_anno.html)
 
 # Issues report
 

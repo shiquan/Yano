@@ -58,9 +58,9 @@ Data frame containing p values.
 Test alternative expression for all cell groups
 }
 \examples{
-data("neuron_small")
-DefaultAssay(neuron_small) <- "exon"
-alt.exon <- RunAllAltExp(object = neuron_small, bind.assay = "RNA")
+data("glbt_small")
+DefaultAssay(glbt_small) <- "exon"
+alt.exon <- RunAllAltExp(object = glbt_small, bind.assay = "RNA", bind.name = "gene_name")
 head(alt.exon)
 
 }

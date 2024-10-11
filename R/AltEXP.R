@@ -145,11 +145,11 @@ DEXSeqTest <- function(x, y, cells.1 = NULL, cells.2 = NULL, pseudo.group = 3, r
 #' @export
 #'
 #' @examples
-#' data("neuron_small")
-#' alt.exon <- RunDEXSeq(object = neuron_small, assay = "flatten", bind.assay = "RNA", bind.name = "gene_name")
+#' data("glbt_small")
+#' alt.exon <- RunDEXSeq(object = glbt_small, assay = "exon", bind.assay = "RNA", bind.name = "gene_name")
 #' head(alt.exon)
 #' 
-RunDEXSeq <- function(object = NULL, bind.name = "bind_name",
+RunDEXSeq <- function(object = NULL, bind.name = "gene_name",
                       ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL,
                       assay = NULL, bind.assay = NULL,
                       features = NULL, bind.features = NULL,
@@ -163,6 +163,10 @@ RunDEXSeq <- function(object = NULL, bind.name = "bind_name",
 
   if (is.null(bind.name)) {
     stop("No bind.name specified.")
+  }
+
+  if (is.null(bind.assay)) {
+    warnings("Bind assay is not specified, will aggreate exons from the same gene.")
   }
   
   assay <- assay %||% DefaultAssay(object)
@@ -312,11 +316,19 @@ FindAltExp <- function(object = NULL,
   x <- x[features, ]
   
   if (is.null(bind.assay)) {
-    x0 <- dat[features,]
-    x0 <- as(x0, "TsparseMatrix")
 
+    idx <- which(df[[bind.name]] %in% bind.features)
+    df0 <- df[idx,]
+    idx <- names(which(table(df0[[bind.name]])>1))
+    idx <- which(df[[bind.name]] %in% idx)
+    df0 <- df[idx,]
+    features0 <- rownames(df0)
+    x0 <- dat[features0,]
+    x0 <- as(x0, "TsparseMatrix")
+    arr <- df0[[bind.name]]
+    bind.features <- unique(arr)
     # Aggregate features in the same block
-    y <- sparseMatrix(i = match(bind.features[x0@i+1], bind.features),
+    y <- sparseMatrix(i = match(arr[x0@i+1], bind.features),
                       j = x0@j+1,
                       x = x0@x, dims=c(length(bind.features), ncol(dat)))
 
@@ -328,9 +340,8 @@ FindAltExp <- function(object = NULL,
     y <- GetAssayData1(object,assay = bind.assay, layer = "counts")
     y <- y[, c(cells.1, cells.2)]
     bind.features <- intersect(unique(bind.features), rownames(y))
-    rst <- subset(rst, bind.feature %in% bind.features)
   }
-  
+  rst <- subset(rst, bind.feature %in% bind.features)
   features <- rownames(rst)
   x <- x[features,]
   y <- y[rst$bind.feature,]
@@ -369,12 +380,13 @@ FindAltExp <- function(object = NULL,
 #' @export
 #'
 #' @examples
-#' data("neuron_small")
-#' DefaultAssay(neuron_small) <- "exon"
-#' alt.exon <- RunAllAltExp(object = neuron_small, bind.assay = "RNA")
+#' data("glbt_small")
+#' DefaultAssay(glbt_small) <- "exon"
+#' alt.exon <- RunAllAltExp(object = glbt_small, bind.assay = "RNA", bind.name = "gene_name")
 #' head(alt.exon)
 #' 
 #' @importFrom SeuratObject PackageCheck
+#' @importFrom Seurat Tool
 #' @export
 FindAllAltExp <- function(object = NULL,
                           assay = NULL,
@@ -401,7 +413,7 @@ FindAllAltExp <- function(object = NULL,
     if (!PackageCheck('ape', error = FALSE)) {
       stop("Install ape package")
     }
-    tree <- Seurat:::Tool(object = object, slot = 'BuildClusterTree')
+    tree <- Seurat::Tool(object = object, slot = 'BuildClusterTree')
     if (is.null(x = tree)) {
       stop("Please run 'BuildClusterTree' before finding markers on nodes")
     }
