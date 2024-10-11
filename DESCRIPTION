@@ -10,7 +10,20 @@ LazyData: true
 RoxygenNote: 7.3.2
 LinkingTo: Matrix
 Depends:
-    R (>= 4.0.0)
+    R (>= 4.0.0),
+    RColorBrewer,
+    SeuratObject,
+    cli,
+    cowplot,
+    dplyr,
+    ggrepel,
+    gtools,
+    magrittr,
+    methods,
+    patchwork,
+    reshape2,
+    rlang,
+    scales
 Imports:
     Seurat,
     ggplot2,
@@ -18,7 +31,5 @@ Imports:
     R.utils,
     viridis,
     data.table
-Suggests:
-    dplyr
 NeedsCompilation: yes
 SystemRequirements: GNU make
