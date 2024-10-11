@@ -14,42 +14,17 @@ devtools::install_github("shiquan/Yano")
 ```
 
 # Quick start
-```{r}
-require(Yano)
-data("glbt_small")
-DefaultAssay(glbt_small) <- "RNA"
-glbt_small <- NormalizeData(glbt_small) %>% FindNeighbors() %>% RunUMAP(dim = 1:20)
 
-DimPlot(glbt_small, label = TRUE, label.size = 5)
+- [Yano's user guide](https://shiquan.github.io/Yano.html)
+- [Report issues](https://github.com/shiquan/Yano/issues)
+- [Discussions](https://github.com/shiquan/Yano/discussions)
 
-DefaultAssay(glbt_small) <- "exon"
-glbt_small <- NormalizeData(glbt_small)
-glbt_small <- ParseExonName(glbt_small)
-glbt_small <- RunAutoCorr(glbt_small)
-glbt_small <- SetAutoCorrFeatures(glbt_small)
-glbt_small <- RunBlockCorr(glbt_small, bind.name = "gene_name", bind.assay = "RNA")
-
-FbtPlot(glbt_small, val = "gene_name.padj")
-
-glbt_small[['exon']][[]] %>% filter(gene_name.padj <1e-10)
-
-FeaturePlot(glbt_small, features = c("chr19:16095264-16095454/+/TPM4", "TPM4"), order=TRUE)
-
-db <- gtf2db("./gencode.v44.annotation.gtf.gz")
-TrackPlot(bamfile="./Parent_SC3v3_Human_Glioblastoma_possorted_genome_bam.bam", gtf =db, gene = "TPM4", junc = TRUE, cell.group = Idents(glbt_small), highlights = c(16095264,16095454))
-```
 # Short cases
 
 - [Alternative splicing analysis for scRNA-seq](https://shiquan.github.io/Yano_AS.html)
 - [Allele-specific gene expression analysis for scRNA-seq](https://shiquan.github.io/Yano_ASE.html)
 - [Annotating and prioritizing genetic variants for scRNA-seq](https://shiquan.github.io/Yano_anno.html)
 
-# Issues report
-
-# FAQ
-
-# LICENSE
-MIT.
 
 # Citation
  
