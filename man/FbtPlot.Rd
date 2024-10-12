@@ -72,7 +72,7 @@ FbtPlot(
 
 \item{end}{End position to zoom in.}
 
-\item{gtf}{GTF database. Load by \code{\link{gtf2db}}. Default is NULL. If specified transcirpt tracks will be plotted.}
+\item{gtf}{GTF database. Load by \code{gtf2db}. Default is NULL. If specified transcirpt tracks will be plotted.}
 
 \item{gene}{Gene name to zoom in. Should used with gtf database specified.}
 

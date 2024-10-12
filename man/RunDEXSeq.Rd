@@ -68,6 +68,8 @@ This will test the test features and binding features are different expressed be
 }
 \examples{
 data("glbt_small")
+DefaultAssay(glbt_small) <- "exon"
+glbt_small <- ParseExonName(glbt_small)
 alt.exon <- RunDEXSeq(object = glbt_small, assay = "exon", bind.assay = "RNA", bind.name = "gene_name")
 head(alt.exon)
 

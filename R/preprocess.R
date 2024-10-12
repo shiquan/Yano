@@ -152,7 +152,7 @@ getCores <- function(threads = 0)
 #' # Check the meta table before parsing
 #' head(glbt_small[['exon']][[]])
 #' 
-#' glbt_small <- ParseExonName(neuron_small)
+#' glbt_small <- ParseExonName(glbt_small)
 #'
 #' # Now see the meta table after parsing
 #' head(glbt_small[['exon']][[]])

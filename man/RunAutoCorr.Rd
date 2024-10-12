@@ -46,15 +46,15 @@ RunAutoCorr(
 
 \item{features}{List of features to test. Default is all features with that coverage >= min.cells.}
 
-\item{weight.matrix.name}{Weight graph name in Seurat object. After this function, the graph can be visited by obj[[weight.matrix.name]]. Default name is "WeightMatrix", if you change the default name, you should specific the new name in \code{\link{{RunBlockCorr}}}.}
+\item{weight.matrix.name}{Weight graph name in Seurat object. After this function, the graph can be visited by obj[[weight.matrix.name]]. Default name is "WeightMatrix", if you change the default name, you should specific the new name in RunBlockCorr.}
 
-\item{prefix}{Prefix for score and p value names. Default prefix is "moransi". If you change the default name, you should specific the new name in \code{{\link{SetAutoCorrFeatures}}}.}
+\item{prefix}{Prefix for score and p value names. Default prefix is "moransi". If you change the default name, you should specific the new name in SetAutoCorrFeatures.}
 
 \item{threads}{Threads.}
 
 \item{verbose}{Print log message. Default is TRUE.}
 
-\item{...}{parameters pass to \code{\link{GetWeightFromSpatial}}, so it only works if spatial is TRUE.}
+\item{...}{parameters pass to GetWeightFromSpatial, so it only works if spatial is TRUE.}
 }
 \description{
 Calculate spatial autocorrelation (Moran's index) for features in parallel.

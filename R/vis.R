@@ -21,7 +21,6 @@ fbt_theme <- function() {
 #'@importFrom viridis scale_color_viridis scale_fill_viridis
 #'@import ggrepel
 #'@importFrom scales label_comma
-## @importFrom Seurat AutoPointSize
 FbtPlot0 <- function(tab = NULL,
                      col.by = NULL,
                      cols = NULL,
@@ -118,7 +117,7 @@ FbtPlot0 <- function(tab = NULL,
     }
   }
   if (isFALSE(zoom.in)) {
-    p <- p + scale_x_continuous(label = axis_set$chr, breaks = axis_set$center,
+    p <- p + scale_x_continuous(labels = axis_set$chr, breaks = axis_set$center,
                                 limits = c(min(data$bp_cum), max(data$bp_cum)),
                                 expand=c(0.01,0.01)) # , guide = guide_axis(n.dodge=2))
   } else {
@@ -162,7 +161,7 @@ FbtPlot0 <- function(tab = NULL,
 #' @param chr Choromsome to zoom in. Default is NULL, no zoom in. The zoom in mode can be enabled by setting chr or gene/gtf.
 #' @param start Start position to zoom in.
 #' @param end End position to zoom in.
-#' @param gtf GTF database. Load by \code{\link{gtf2db}}. Default is NULL. If specified transcirpt tracks will be plotted.
+#' @param gtf GTF database. Load by \code{gtf2db}. Default is NULL. If specified transcirpt tracks will be plotted.
 #' @param gene Gene name to zoom in. Should used with gtf database specified.
 #' @param upstream Flank zoom in region with upstream. Default is 1000. Only works when zoom in mode enabled.
 #' @param downstream Flank zoom in region with downstream. Default is 1000. Only works when zoom in mode enabled.
@@ -1078,7 +1077,7 @@ RatioPlot0 <- function(object = NULL,
 #' @param features Features to plot.
 #' @param dims Dimensions to plot, must be a two-length numeric vector specifying x- and y-dimensions
 #' @param cells Vector of cells to plot (default is all cells)
-#' @param cols Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by \code{\link[RColorBrewer]{brewer.pal.info}}. The default cols is c('lightgrey', 'red'). Set cols = c('lightgrey', 'blue') to get the Seurat 'classical' colors.
+#' @param cols Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by RColorBrewer::brewer.pal.info. The default cols is c('lightgrey', 'red'). Set cols = c('lightgrey', 'blue') to get the Seurat 'classical' colors.
 #' @param pt.size Adjust point size for plotting
 #' @param alpha Alpha value for points
 #' @param order Boolean determing whether to plot cells in order of PSI score.
@@ -1091,10 +1090,10 @@ RatioPlot0 <- function(object = NULL,
 #' @param ncol Number of columns to combine multiple features plots to
 #' @param coord.fixed Plot cartesian coordinates with fixed aspect ratio
 #' @param by.col If splitting by a factor, plot the splits per column with the features as rows 
-#' @param combine Combine plots into a single \code{\link[patchwork]{patchwork}} ggplot object. If \code{FALSE}, return a list of ggplot objects.
+#' @param combine Combine plots into a single patchwork ggplot object. If \code{FALSE}, return a list of ggplot objects.
 # @param raster If true, plot with geom_raster, else use geom_tile. geom_raster may look blurry on some viewing applications such as Preview due to how the raster is interpolated. Set this to FALSE if you are encountering that issue (note that plots may take longer to produce/render).
 #' @param raster.dpi Pixel resolution for rasterized plots, passed to geom_scattermore(). Default is c(512, 512).
-#' @return A \code{{\link{[patchwork]{patchwork}}}} ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
+#' @return A patchwork ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
 #' @export
 #' @concept visualization
 RatioPlot <- function(object = NULL,
@@ -1176,7 +1175,7 @@ RatioPlot <- function(object = NULL,
 #' @param features Features to plot.
 #' @param dims Dimensions to plot, must be a two-length numeric vector specifying x- and y-dimensions
 #' @param cells Vector of cells to plot (default is all cells)
-#' @param cols Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by \code{\link[RColorBrewer]{brewer.pal.info}}. 
+#' @param cols Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by RColorBrewer::brewer.pal.info. 
 #' @param pt.size Adjust point size for plotting
 #' @param alpha Alpha value for points
 #' @param order Boolean determing whether to plot cells in order of PSI score.
@@ -1189,10 +1188,10 @@ RatioPlot <- function(object = NULL,
 #' @param ncol Number of columns to combine multiple features plots to
 #' @param coord.fixed Plot cartesian coordinates with fixed aspect ratio
 #' @param by.col If splitting by a factor, plot the splits per column with the features as rows 
-#' @param combine Combine plots into a single \code{\link[patchwork]{patchwork}} ggplot object. If \code{FALSE}, return a list of ggplot objects.
+#' @param combine Combine plots into a single patchwork ggplot object. If \code{FALSE}, return a list of ggplot objects.
 # @param raster If true, plot with geom_raster, else use geom_tile. geom_raster may look blurry on some viewing applications such as Preview due to how the raster is interpolated. Set this to FALSE if you are encountering that issue (note that plots may take longer to produce/render).
 #' @param raster.dpi Pixel resolution for rasterized plots, passed to geom_scattermore(). Default is c(512, 512).
-#' @return A \code{{\link{[patchwork]{patchwork}}}} ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
+#' @return A patchwork ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
 #' @export
 #' @concept visualization
 PSIPlot <- function(object = NULL,

@@ -20,7 +20,7 @@ DefaultAssay(glbt_small) <- "exon"
 # Check the meta table before parsing
 head(glbt_small[['exon']][[]])
 
-glbt_small <- ParseExonName(neuron_small)
+glbt_small <- ParseExonName(glbt_small)
 
 # Now see the meta table after parsing
 head(glbt_small[['exon']][[]])
