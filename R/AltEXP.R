@@ -146,6 +146,8 @@ DEXSeqTest <- function(x, y, cells.1 = NULL, cells.2 = NULL, pseudo.group = 3, r
 #'
 #' @examples
 #' data("glbt_small")
+#' DefaultAssay(glbt_small) <- "exon"
+#' glbt_small <- ParseExonName(glbt_small)
 #' alt.exon <- RunDEXSeq(object = glbt_small, assay = "exon", bind.assay = "RNA", bind.name = "gene_name")
 #' head(alt.exon)
 #' 
@@ -382,7 +384,7 @@ FindAltExp <- function(object = NULL,
 #' @examples
 #' data("glbt_small")
 #' DefaultAssay(glbt_small) <- "exon"
-#' alt.exon <- RunAllAltExp(object = glbt_small, bind.assay = "RNA", bind.name = "gene_name")
+#' alt.exon <- FindAllAltExp(object = glbt_small, bind.assay = "RNA", bind.name = "gene_name")
 #' head(alt.exon)
 #' 
 #' @importFrom SeuratObject PackageCheck

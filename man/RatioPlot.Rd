@@ -44,7 +44,7 @@ RatioPlot(
 
 \item{dims}{Dimensions to plot, must be a two-length numeric vector specifying x- and y-dimensions}
 
-\item{cols}{Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by \code{\link[RColorBrewer]{brewer.pal.info}}. The default cols is c('lightgrey', 'red'). Set cols = c('lightgrey', 'blue') to get the Seurat 'classical' colors.}
+\item{cols}{Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by RColorBrewer::brewer.pal.info. The default cols is c('lightgrey', 'red'). Set cols = c('lightgrey', 'blue') to get the Seurat 'classical' colors.}
 
 \item{pt.size}{Adjust point size for plotting}
 
@@ -68,14 +68,14 @@ RatioPlot(
 
 \item{coord.fixed}{Plot cartesian coordinates with fixed aspect ratio}
 
-\item{combine}{Combine plots into a single \code{\link[patchwork]{patchwork}} ggplot object. If \code{FALSE}, return a list of ggplot objects.}
+\item{combine}{Combine plots into a single patchwork ggplot object. If \code{FALSE}, return a list of ggplot objects.}
 
 \item{raster.dpi}{Pixel resolution for rasterized plots, passed to geom_scattermore(). Default is c(512, 512).}
 
 \item{group.by}{Name of one or more metadata columns to group (color) cells by (for example, orig.ident); pass 'ident' to group by identity class}
 }
 \value{
-A \code{{\link{[patchwork]{patchwork}}}} ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
+A patchwork ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
 }
 \description{
 Plot PSI score on reduction map.
