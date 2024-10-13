@@ -2,7 +2,7 @@
 % Please edit documentation in R/AltEXP.R
 \name{RunDEXSeq}
 \alias{RunDEXSeq}
-\title{Test for alternative expression with DEXSeq}
+\title{RunDEXSeq}
 \usage{
 RunDEXSeq(
   object = NULL,
@@ -28,7 +28,7 @@ RunDEXSeq(
 \arguments{
 \item{object}{A Seurat object.}
 
-\item{bind.name}{The title of binding name in meta table.}
+\item{bind.name}{The title of binding name in meta table. Usually be "gene_name" for alternative splicing.}
 
 \item{ident.1}{Identify class to test, if not set will compare all groups one by one}
 
@@ -64,13 +64,13 @@ RunDEXSeq(
 Data frame containing p values and pct for test features and their binding features.
 }
 \description{
-This will test the test features and binding features are different expressed between groups with a generalised linear model. See DEXSeq and DESeq2 paper for details.
+This will test the test features and binding features are different expressed between groups with a generalised linear model. See DEXSeq (PMID: 22722343) paper for details.
 }
 \examples{
 data("glbt_small")
 DefaultAssay(glbt_small) <- "exon"
 glbt_small <- ParseExonName(glbt_small)
-alt.exon <- RunDEXSeq(object = glbt_small, assay = "exon", bind.assay = "RNA", bind.name = "gene_name")
+alt.exon <- RunDEXSeq(object = glbt_small, assay = "exon", bind.assay = "RNA", bind.name = "gene_name",ident.1 = "0", features = rownames(glbt_small))
 head(alt.exon)
 
 }

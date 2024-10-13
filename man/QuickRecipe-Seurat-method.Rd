@@ -34,5 +34,5 @@
 Seurat object
 }
 \description{
-Quick clust single cell gene expression matrix by Seurat pipeline
+Quick clust single cell gene expression matrix with Seurat pipeline
 }

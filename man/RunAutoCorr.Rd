@@ -2,7 +2,7 @@
 % Please edit documentation in R/moransi.R
 \name{RunAutoCorr}
 \alias{RunAutoCorr}
-\title{Calculate spatial autocorrelation (Moran's index) for features in parallel.}
+\title{RunAutoCorr}
 \usage{
 RunAutoCorr(
   object = NULL,
@@ -28,7 +28,7 @@ RunAutoCorr(
 
 \item{assay}{Working assay}
 
-\item{layer}{Input data. For expression, log scaled data is highly recommended}
+\item{layer}{Input data layer, usually be 'data'.}
 
 \item{spatial}{Use spatial coordinate instead of SNN space and linear trajectory to calculate the cell-cell weight matrix.}
 
@@ -57,5 +57,5 @@ RunAutoCorr(
 \item{...}{parameters pass to GetWeightFromSpatial, so it only works if spatial is TRUE.}
 }
 \description{
-Calculate spatial autocorrelation (Moran's index) for features in parallel.
+Calculate spatial autocorrelation (Moran's I) for features in parallel.
 }

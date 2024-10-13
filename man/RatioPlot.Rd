@@ -78,7 +78,7 @@ RatioPlot(
 A patchwork ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
 }
 \description{
-Plot PSI score on reduction map.
+Plot ratio score of test feature and its binding feature on reduction map.
 }
 \details{
 This function is edited from Seurat::FeaturePlot, used to visulize the PSI score on cells.

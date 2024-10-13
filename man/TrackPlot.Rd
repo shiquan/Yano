@@ -35,7 +35,7 @@ TrackPlot(
 )
 }
 \arguments{
-\item{bamfile}{A path to bam file or a list to bam files.}
+\item{bamfile}{A path to a BAM file or a list to BAM files. BAM file(s) should be indexed.}
 
 \item{chr}{Chromosome name.}
 
@@ -88,5 +88,5 @@ TrackPlot(
 \item{junc.min.depth}{Filter out junctions if low than this cutoff. This parameter used to remove noise background. Default is 5.}
 }
 \description{
-Plot read/UMI coverage and transcript tracks.
+Plot read/UMI coverage and transcript tracks from BAM(s).
 }

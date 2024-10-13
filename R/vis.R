@@ -305,6 +305,7 @@ FbtPlot <- function(object = NULL,
       end1 <- end1 + downstream
     }
   }
+  p <- NULL
   if (n == 1) {
     p <- FbtPlot0(tab=tab, col.by=col.by, cols=cols, xlab=xlab, ylab = ylab, point.label=point.label, shape.by=shape.by, label.size=label.size, zoom.in = zoom.in, start = start1, end = end1, gtf = gtf, print.genes = print.genes, layout.heights = layout.heights, pt.size = pt.size)
   } else {
@@ -569,8 +570,8 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
 }
 
 #' @title TrackPlot
-#' @description Plot read/UMI coverage and transcript tracks.
-#' @param bamfile A path to bam file or a list to bam files.
+#' @description Plot read/UMI coverage and transcript tracks from BAM(s).
+#' @param bamfile A path to a BAM file or a list to BAM files. BAM file(s) should be indexed.
 #' @param chr Chromosome name.
 #' @param start Start position.
 #' @param end End position.
@@ -1070,7 +1071,7 @@ RatioPlot0 <- function(object = NULL,
 #' This function is edited from Seurat::FeaturePlot, used to visulize the PSI score on cells.
 #'
 #' @title RatioPlot
-#' @description Plot PSI score on reduction map.
+#' @description Plot ratio score of test feature and its binding feature on reduction map.
 #' @param object Seurat object.
 #' @param assay Test assay name.
 #' @param bind.assay Binding assay name.
@@ -1193,7 +1194,6 @@ RatioPlot <- function(object = NULL,
 #' @param raster.dpi Pixel resolution for rasterized plots, passed to geom_scattermore(). Default is c(512, 512).
 #' @return A patchwork ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
 #' @export
-#' @concept visualization
 PSIPlot <- function(object = NULL,
                     exon.assay = NULL,
                     exclude.assay = "exclude",

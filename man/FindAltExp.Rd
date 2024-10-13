@@ -2,7 +2,7 @@
 % Please edit documentation in R/AltEXP.R
 \name{FindAltExp}
 \alias{FindAltExp}
-\title{Test for alternative expression using delta-ratio}
+\title{Find Alternative expression}
 \usage{
 FindAltExp(
   object = NULL,
@@ -12,7 +12,7 @@ FindAltExp(
   ident.2 = NULL,
   assay = NULL,
   bind.name = "gene_name",
-  test.use = "DEXSeq",
+  test.use = c("DEXSeq", "PermTest"),
   bind.assay = NULL,
   features = NULL,
   bind.features = NULL,
@@ -53,7 +53,7 @@ FindAltExp(
 
 \item{mode}{Test mode. For mode 1, X (test feature) vs Y (binding feature). For mode 2, X vs (Y-X). For mode 3, X vs (Y+X).}
 
-\item{threads}{Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.}
+\item{threads}{Threads. For DEXSeq, threads will set to 1. For other methods, threads set to 0, which will auto check the CPU cores and set threads = number of CPU cores -1.}
 
 \item{perm}{Permutation steps for calculate statistical of delta-ratio. Default is 100.}
 
@@ -61,11 +61,11 @@ FindAltExp(
 
 \item{debug}{Print debug logs. Will auto set thread to 1. Default is FALSE.}
 
-\item{pesudo.group}{Aggregate counts into groups for each clusters.}
+\item{pesudo.group}{Aggregate counts into groups for each clusters. Used only for DEXSeq.}
 }
 \description{
-Using delta-ratio and permutation method to simulate p value for each event.
+Using linear regression model (implemented by DEXSeq) or PermTest method to calculate delta ratio and simulate p value for each event.
 }
 \details{
-This function first aggregates all raw counts per feature for each group \eqn{a} and \eqn{b}, then calculates the \eqn{delta-ratio = X_a/Y_a - X_b/Y_b}.Therefore, this function only retrieve data from layer 'counts'. It then employs a permutation method to randomize the cells in the two groups 100 times (by default) to evaluate the mean and standard deviation of delta-ratio. A p-value is calculated using a t-test.
+This function first aggregates all raw counts per feature for each group and then perform alternative expression analysis with DEXSeq or PermTest method. For DEXSeq, counts per group will divide into pesudo-groups first. For PermTest method, \eqn{delta ratio = X_a/Y_a - X_b/Y_b}. It then employs a permutation method to randomize the cells in the two groups 100 times (by default) to evaluate the mean and standard deviation of delta-ratio. A p-value is calculated using a t-test. The PermTest method is not well tested. Therefore, we use DEXSeq method in default, but it's very slow if input a lot of features.
 }

@@ -1,8 +1,8 @@
-#' @name RunAutoCorr
-#' @title Calculate spatial autocorrelation (Moran's index) for features in parallel.
+#' @title RunAutoCorr
+#' @description Calculate spatial autocorrelation (Moran's I) for features in parallel.
 #' @param object Seurat object
 #' @param assay Working assay
-#' @param layer Input data. For expression, log scaled data is highly recommended
+#' @param layer Input data layer, usually be 'data'.
 #' @param spatial Use spatial coordinate instead of SNN space and linear trajectory to calculate the cell-cell weight matrix.
 #' @param snn.name name of SNN space. If spatial=FALSE and order.cells = NULL, default snn.name will set to 'RNA_snn'. Use SNN space to calculate the cell-cell weight martix.
 #' @param order.cells For linear trajetory, input ordered cell names to calculate the cell-cell distance weight matrix. Conflict with sptaial=TRUE and snn.name != NULL.
@@ -147,8 +147,8 @@ RunAutoCorr <- function(object = NULL,
   object
 }
 
-#' @name SetAutoCorrFeatures
-#' @title Set autocorrection by rank and/or score
+#' @title SetAutoCorrFeatures
+#' @description Set autocorrection by Moran's I and/or p value.
 #' @param object Seurat object
 #' @param moransi.min Minimal score for Morans I. In default is 0.
 #' @param assay Working assay. If not set, use DefaultAssay(object).
@@ -189,8 +189,8 @@ SetAutoCorrFeatures <- function(object = NULL,
   
   object
 }
-#' @name AutoCorrFeatures
-#' @title return spatial autocorrlated features
+#' @title AutoCorrFeatures
+#' @description return spatial autocorrlated features
 #' @param obejct Seurat object
 #' @param assay Working assay.
 #' @export
