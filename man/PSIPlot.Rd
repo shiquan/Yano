@@ -75,4 +75,3 @@ A patchwork ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot 
 \description{
 Plot PSI score on reduction map.
 }
-\concept{visualization}

@@ -36,5 +36,5 @@ varanno(
 \item{check.alt.only}{Only annotate records for alternative allele (non-ref allele). Default is FASLE.}
 }
 \description{
-Annotate genetic variants.
+Annotate genetic variants with VCF databases.
 }

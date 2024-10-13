@@ -2,7 +2,7 @@
 % Please edit documentation in R/moransi.R
 \name{SetAutoCorrFeatures}
 \alias{SetAutoCorrFeatures}
-\title{Set autocorrection by rank and/or score}
+\title{SetAutoCorrFeatures}
 \usage{
 SetAutoCorrFeatures(
   object = NULL,
@@ -27,5 +27,5 @@ SetAutoCorrFeatures(
 \item{verbose}{Print log message.}
 }
 \description{
-Set autocorrection by rank and/or score
+Set autocorrection by Moran's I and/or p value.
 }

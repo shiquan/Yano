@@ -2,7 +2,7 @@
 % Please edit documentation in R/dissimilarity.R
 \name{RunBlockCorr}
 \alias{RunBlockCorr}
-\title{Run spatial dissimilarity test for features and their binding features in parallel.}
+\title{RunBlockCorr}
 \usage{
 RunBlockCorr(
   object = NULL,

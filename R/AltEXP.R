@@ -120,12 +120,42 @@ DEXSeqTest <- function(x, y, cells.1 = NULL, cells.2 = NULL, pseudo.group = 3, r
 
   return(rst)
 }
+PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode = c(1,2,3), threads = 1, debug = FALSE)
+{
+  stopifnot(identical(dim(x), dim(y)))
+  x <- as(x, "dgCMatrix")
+  y <- as(y, "dgCMatrix")
+
+  cells <- colnames(x)
+  if (is.null(cells)) {
+   stop("Colnames of X is empty.")
+  }
+  
+  idx.1 <- match(cells.1, cells)
+  idx.2 <- match(cells.2, cells)
+  
+  df <- .Call("alt_exp", x, y, idx.1, idx.2, mode[1L], perm, threads, seed)
+
+  if (length(df) == 1) {
+    stop(df)
+  }
+  rst$delta <- df[[1]]
+  rst$tval <- df[[2]]
+  rst$mean <- df[[3]]
+  rst$var <- df[[4]]
+  rst$ratio.1 <- df[[5]]
+  rst$ratio.2 <- df[[6]]
+  rst$pval <- 2*(1-pt(abs(rst$tval), df = perm - 1))
+  rst$padj <- p.adjust(rst$pval, method = "BH")
+  return (rst)
+}
+
 #'
 #' @name RunDEXSeq
-#' @title Test for alternative expression with DEXSeq
-#' @description This will test the test features and binding features are different expressed between groups with a generalised linear model. See DEXSeq and DESeq2 paper for details.
+#' @title RunDEXSeq
+#' @description This will test the test features and binding features are different expressed between groups with a generalised linear model. See DEXSeq (PMID: 22722343) paper for details.
 #' @param object A Seurat object.
-#' @param bind.name The title of binding name in meta table.
+#' @param bind.name The title of binding name in meta table. Usually be "gene_name" for alternative splicing.
 #' @param ident.1 Identify class to test, if not set will compare all groups one by one
 #' @param ident.2 A second class for comparsion. If NULL (default), use all other cells for comparison.
 #' @param cells.1 Vector of cell names belong to group 1. Conflict with ident.1
@@ -148,7 +178,7 @@ DEXSeqTest <- function(x, y, cells.1 = NULL, cells.2 = NULL, pseudo.group = 3, r
 #' data("glbt_small")
 #' DefaultAssay(glbt_small) <- "exon"
 #' glbt_small <- ParseExonName(glbt_small)
-#' alt.exon <- RunDEXSeq(object = glbt_small, assay = "exon", bind.assay = "RNA", bind.name = "gene_name")
+#' alt.exon <- RunDEXSeq(object = glbt_small, assay = "exon", bind.assay = "RNA", bind.name = "gene_name",ident.1 = "0", features = rownames(glbt_small))
 #' head(alt.exon)
 #' 
 RunDEXSeq <- function(object = NULL, bind.name = "gene_name",
@@ -183,7 +213,8 @@ RunDEXSeq <- function(object = NULL, bind.name = "gene_name",
   if (!is.null(ident.1) | !is.null(cells.1)) {
     tb <- FindAltExp(object, ident.1 = ident.1, ident.2 = ident.2, cells.1 = cells.1, cells.2 = cells.2,
                      assay = assay, bind.assay = bind.assay,
-                     bind.name = bind.name, # test.use = "DEXSeq",
+                     bind.name = bind.name,
+                     test.use = "DEXSeq",
                      #min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature,
                      mode = mode,
                      features = features,
@@ -192,7 +223,7 @@ RunDEXSeq <- function(object = NULL, bind.name = "gene_name",
                      debug = debug)
   } else {
     tb <- FindAllAltExp(object, assay = assay, bind.assay = bind.assay, bind.name = bind.name,
-                        # test.use = "DEXSeq",
+                        test.use = "DEXSeq",
                         node = node, features = features,
                         return.thresh = return.thresh,
                         #min.pct = min.pct, min.pct.bind.feature = min.pct.bind.feature,
@@ -203,9 +234,9 @@ RunDEXSeq <- function(object = NULL, bind.name = "gene_name",
 }
 
 #' @name FindAltExp
-#' @title Test for alternative expression using delta-ratio
-#' @description Using delta-ratio and permutation method to simulate p value for each event.
-#' @details This function first aggregates all raw counts per feature for each group \eqn{a} and \eqn{b}, then calculates the \eqn{delta-ratio = X_a/Y_a - X_b/Y_b}.Therefore, this function only retrieve data from layer 'counts'. It then employs a permutation method to randomize the cells in the two groups 100 times (by default) to evaluate the mean and standard deviation of delta-ratio. A p-value is calculated using a t-test. 
+#' @title Find Alternative expression
+#' @description Using linear regression model (implemented by DEXSeq) or PermTest method to calculate delta ratio and simulate p value for each event.
+#' @details This function first aggregates all raw counts per feature for each group and then perform alternative expression analysis with DEXSeq or PermTest method. For DEXSeq, counts per group will divide into pesudo-groups first. For PermTest method, \eqn{delta ratio = X_a/Y_a - X_b/Y_b}. It then employs a permutation method to randomize the cells in the two groups 100 times (by default) to evaluate the mean and standard deviation of delta-ratio. A p-value is calculated using a t-test. The PermTest method is not well tested. Therefore, we use DEXSeq method in default, but it's very slow if input a lot of features.
 #' @param object A Seurat object.
 #' @param ident.1 Identify class to test, if not set will compare all groups one by one
 #' @param ident.2 A second class for comparsion. If NULL (default), use all other cells for comparison.
@@ -217,12 +248,12 @@ RunDEXSeq <- function(object = NULL, bind.name = "gene_name",
 #' @param features Candidate list to test. If not set, will use AutoCorrFeatures(object, assay = assay).
 #' @param bind.features Candidate list for bind features to test. If not set, will test all covered.
 #' @param min.cells Used to filter candiate features or binding features. Require them at least expressed in min.cells. Default is 10.
-#' @param pesudo.group Aggregate counts into groups for each clusters.
+#' @param pesudo.group Aggregate counts into groups for each clusters. Used only for DEXSeq.
 #' @param return.thresh Only return markers that have a p-value < return.thresh. Default is NULL.
 #' @param mode Test mode. For mode 1, X (test feature) vs Y (binding feature). For mode 2, X vs (Y-X). For mode 3, X vs (Y+X). 
 #' @param perm Permutation steps for calculate statistical of delta-ratio. Default is 100.
 #' @param seed Seed for generate random number. Default is 999.
-#' @param threads Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.
+#' @param threads Threads. For DEXSeq, threads will set to 1. For other methods, threads set to 0, which will auto check the CPU cores and set threads = number of CPU cores -1.
 #' @param debug Print debug logs. Will auto set thread to 1. Default is FALSE.
 #' @importFrom SeuratObject PackageCheck
 #' @export
@@ -231,7 +262,7 @@ FindAltExp <- function(object = NULL,
                        ident.1 = NULL, ident.2 = NULL,
                        assay = NULL,
                        bind.name = "gene_name",
-                       test.use = "DEXSeq",
+                       test.use = c("DEXSeq", "PermTest"),
                        bind.assay = NULL,
                        features = NULL,
                        bind.features = NULL,
@@ -249,6 +280,8 @@ FindAltExp <- function(object = NULL,
     stop("No bind.name specified.")
   }
 
+  test.use <- match.arg(test.use)
+  
   assay <- assay %||% DefaultAssay(object)
   
   bind.features0 <- CheckBindName(object, bind.name, assay = assay)
@@ -365,9 +398,13 @@ FindAltExp <- function(object = NULL,
 
   DefaultAssay(object) <- old.assay
   threads <- getCores(threads)
+
+  if (test.use == "PermTest") {
+    rst <- PermTest(x, y, cells.1, cells.2, rst, perm = perm, seed = seed, mode = 1, threads = threads)
+  } else {
+    rst <- DEXSeqTest(x, y, cells.1, cells.2, rst = rst, mode = 1, pseudo.group = pseudo.group)
+  }
   
-  ## rst <- PermTest(x, y, cells.1, cells.2, rst, perm = perm, seed = seed, mode = 1, threads = threads, debug = debug)
-  rst <- DEXSeqTest(x, y, cells.1, cells.2, rst = rst, mode = 1, pseudo.group = pseudo.group)
   if (!is.null(return.thresh)) {
     rst <- subset(rst, padj < return.thresh)
   }
@@ -384,7 +421,7 @@ FindAltExp <- function(object = NULL,
 #' @examples
 #' data("glbt_small")
 #' DefaultAssay(glbt_small) <- "exon"
-#' alt.exon <- FindAllAltExp(object = glbt_small, bind.assay = "RNA", bind.name = "gene_name")
+#' alt.exon <- FindAllAltExp(object = glbt_small, bind.assay = "RNA", bind.name = "gene_name", features = rownames(glbt_small))
 #' head(alt.exon)
 #' 
 #' @importFrom SeuratObject PackageCheck
@@ -400,6 +437,7 @@ FindAllAltExp <- function(object = NULL,
                           min.cells = 10,
                           return.thresh = NULL,
                           mode = c(1,2,3),
+                          test.use = c("DEXSeq","PermTest"),
                           threads = 0,
                           perm = 100,
                           seed = 999,
@@ -463,6 +501,7 @@ FindAllAltExp <- function(object = NULL,
           min.cells = min.cells,
           return.thresh = return.thresh,
           mode = mode[1L],
+          test.use = test.use,
           threads = threads,
           pseudo.group = pseudo.group,
           perm = perm,

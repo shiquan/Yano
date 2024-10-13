@@ -82,7 +82,7 @@ ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, nvar= 3000
 }
 
 #' @title QuickRecipe
-#' @description Quick clust single cell gene expression matrix by Seurat pipeline
+#' @description Quick clust single cell gene expression matrix with Seurat pipeline
 #' @param counts raw counts matrix or Seurat object.
 #' @param min.cells Only compute for features in at least this many cells
 #' @param min.features Only computer for cells contained at least this many features

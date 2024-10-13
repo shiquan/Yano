@@ -39,8 +39,8 @@ IdentToCells <- function(
 }
 
 
-#' @name RunBlockCorr
-#' @title Run spatial dissimilarity test for features and their binding features in parallel.
+#' @title RunBlockCorr
+#' @description Run spatial dissimilarity test for features and their binding features in parallel.
 #' @param object Seurat object
 #' @param bind.name Title name for binding features in the meta table. Consider most users start Yano to perform alternative splicing analysis, the default bind.name set to "gene_name".
 #' @param features Vector of features to calculate. Default is AutoCorrFeatures(object).

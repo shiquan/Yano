@@ -5,7 +5,7 @@ anno_vcf <- function(chr, start, end, ref, alt, strand, vcf, tags, check.alt.onl
   sl
 }
 #' @title varanno
-#' @description Annotate genetic variants.
+#' @description Annotate genetic variants with VCF databases.
 #' @param chr Vector of chromosome names.
 #' @param start Vector of start positions.
 #' @param end Vector of end positions.
@@ -38,12 +38,12 @@ anno_gene <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NU
 }
 
 #' @title annoVAR
-#' @description Annotate gene region and other tags for genetic variants. VCF database can be specified, and the type of VCF tags will be consider. See VCF specification and manual page for details <https://shiquan.github.io/Yano.html>.
+#' @description Annotate genetic variants with preload GTF and/or VCF databases. Will generate gene region and other tags.
 #' @param object Seurat object.
 #' @param assay Work assay.
 #' @param gtf GTF object, load by gtf2db.
 #' @param vcf VCF database. Should be indexed with `bcftools index` at first.
-#' @param tags Vector of tags to annotate. Require VCF database specified, and tags should be well formated in the VCF header.
+#' @param tags Vector of tags to annotate. Require VCF database specified, and tags should be well formated in the VCF header. See VCF specification (https://samtools.github.io/hts-specs/VCFv4.2.pdf) for details.
 #' @param check.alt.only Only annotate records for alternative allele (non-ref allele). Default is FASLE.
 #' @param chr Colname name for chromsome, default is "chr".
 #' @return Annotated Seurat object.

@@ -2,7 +2,7 @@
 % Please edit documentation in R/moransi.R
 \name{AutoCorrFeatures}
 \alias{AutoCorrFeatures}
-\title{return spatial autocorrlated features}
+\title{AutoCorrFeatures}
 \usage{
 AutoCorrFeatures(object = NULL, assay = NULL)
 }
