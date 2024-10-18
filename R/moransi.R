@@ -6,6 +6,7 @@
 #' @param reduction Cell space used to calculate SNN graph, default is 'pca'.
 #' @param dims Dimensions of reduction used to calculate SNN graph.
 #' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. This paramter will be passed to Seurat::FindNeighbors.Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50, which is different from Seurat. Because the default cutoff of FindNeighbors may lost many sparse features for large cell population. More features can be select by setting to smaller value but will increase computational time.
+#' @param k.param Defines k for K-nearest neighbor algorithm
 #' @param nn.method nn.method passed to Seurat::FindNeighbors, default is "euclidean".
 #' @param n.trees n.trees passed to Seurat::FindNeighbors, default is 50.
 #' @param annoy.metric annoy.metric passed to Seurat::FindNeighbors, default is "annoy".
@@ -19,7 +20,7 @@
 #' @param weight.method Weight method for distance, default 1/dist^2. Also support average, use mean weight value for nearby cells.
 #' @param prune.distance Set the cutoff for neighbors for order cells and spatial coordinates. In default, 50 for order cells, 8 for spatial coordinates.
 #' @param features List of features to test. Default is all features with that coverage >= min.cells.
-#' @param wm.name Weight graph name in Seurat object. After this function, the graph can be visited by obj[[wm.name]]. Default name is "RNA_wm", if you change the default name, you should specific the new name in RunBlockCorr.
+#' @param wm.name Weight matrix/graph name in Seurat object. After this function, the graph can be visited by obj[[wm.name]]. Default name is "RNA_wm", if you change the default name, you should specific the new name in RunBlockCorr.
 #' @param prefix Prefix for score and p value names. Default prefix is "moransi". If you change the default name, you should specific the new name in SetAutoCorrFeatures.
 #' @param threads Threads.
 #' @param verbose Print log message. Default is TRUE.
@@ -31,6 +32,7 @@ RunAutoCorr <- function(object = NULL,
                         layer = "data",
                         reduction = "pca",
                         dims=1:20,
+                        k.param = 20,
                         prune.SNN = 1/50,
                         nn.method = "annoy",
                         n.trees = 50,
@@ -130,9 +132,9 @@ RunAutoCorr <- function(object = NULL,
   W <- W[colnames(object), colnames(object)]
   W <- as(W, "Graph")
 
-  graph.name <- graph.name %||% paste0(assay, "_wm")
+  wm.name <- wm.name %||% paste0(reduction, "_wm")
 
-  object[[graph.name]] <- W
+  object[[wm.name]] <- W
   
   x0 <- GetAssayData1(object, assay = assay, layer = layer)[,cells]
   rs <- rowSums(x0>0)
