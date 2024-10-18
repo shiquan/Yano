@@ -45,7 +45,7 @@ RunAutoCorr(
 
 \item{k.param}{Defines k for K-nearest neighbor algorithm}
 
-\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. This paramter will be passed to Seurat::FindNeighbors.Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50, which is different from Seurat. Because the default cutoff of FindNeighbors may lost many sparse features for large cell population. More features can be select by setting to smaller value but will increase computational time.}
+\item{prune.SNN}{This parameter sets the cutoff for the acceptable Jaccard index when computing neighborhood overlap during SNN (Shared Nearest Neighbor) construction. It is passed to Seurat::FindNeighbors. Any edges with Jaccard index values less than or equal to this cutoff will be set to 0 and removed from the SNN graph, effectively controlling the stringency of pruning (with 0 meaning no pruning and 1 meaning everything is pruned). The default value is 1/50, which differs from Seurat's default setting. This is because Seurat’s default is OK for cell clustering but may cause the loss of many sparse features in large cell populations during spatial dissimilarity test. Setting the cutoff to a smaller value can capture more features, but it will also increase computational time.}
 
 \item{nn.method}{nn.method passed to Seurat::FindNeighbors, default is "euclidean".}
 
