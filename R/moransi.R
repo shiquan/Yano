@@ -3,15 +3,23 @@
 #' @param object Seurat object
 #' @param assay Working assay
 #' @param layer Input data layer, usually be 'data'.
-#' @param spatial Use spatial coordinate instead of SNN space and linear trajectory to calculate the cell-cell weight matrix.
-#' @param snn.name name of SNN space. If spatial=FALSE and order.cells = NULL, default snn.name will set to 'RNA_snn'. Use SNN space to calculate the cell-cell weight martix.
-#' @param order.cells For linear trajetory, input ordered cell names to calculate the cell-cell distance weight matrix. Conflict with sptaial=TRUE and snn.name != NULL.
-#' @param prune.distance Set the cutoff for neighbors for order cells and spatial coordinates.
-#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.
+#' @param reduction Cell space used to calculate SNN graph, default is 'pca'.
+#' @param dims Dimensions of reduction used to calculate SNN graph.
+#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. This paramter will be passed to Seurat::FindNeighbors.Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50, which is different from Seurat. Because the default cutoff of FindNeighbors may lost many sparse features for large cell population. More features can be select by setting to smaller value but will increase computational time.
+#' @param nn.method nn.method passed to Seurat::FindNeighbors, default is "euclidean".
+#' @param n.trees n.trees passed to Seurat::FindNeighbors, default is 50.
+#' @param annoy.metric annoy.metric passed to Seurat::FindNeighbors, default is "annoy".
+#' @param nn.eps nn.eps passed to Seurat::FindNeighbors, default is 0
+#' @param l2.norm L2 normalization. Default is FALSE.
 #' @param cells Cells used for calculate weight matrix. Used with snn graph. In default will use all cells.
 #' @param min.cells If a feature can be detect in few than min.cells, will skip to save time. Default is 10.
+#' @param snn.name name of SNN space. If spatial=FALSE and order.cells = NULL, default snn.name will set to 'RNA_snn'. Use SNN space to calculate the cell-cell weight martix.
+#' @param spatial Use spatial coordinate instead of SNN space and linear trajectory to calculate the cell-cell weight matrix.
+#' @param order.cells For linear trajetory, input ordered cell names to calculate the cell-cell distance weight matrix. Conflict with sptaial=TRUE and snn.name != NULL.
+#' @param weight.method Weight method for distance, default 1/dist^2. Also support average, use mean weight value for nearby cells.
+#' @param prune.distance Set the cutoff for neighbors for order cells and spatial coordinates. In default, 50 for order cells, 8 for spatial coordinates.
 #' @param features List of features to test. Default is all features with that coverage >= min.cells.
-#' @param weight.matrix.name Weight graph name in Seurat object. After this function, the graph can be visited by obj[[weight.matrix.name]]. Default name is "WeightMatrix", if you change the default name, you should specific the new name in RunBlockCorr.
+#' @param wm.name Weight graph name in Seurat object. After this function, the graph can be visited by obj[[wm.name]]. Default name is "RNA_wm", if you change the default name, you should specific the new name in RunBlockCorr.
 #' @param prefix Prefix for score and p value names. Default prefix is "moransi". If you change the default name, you should specific the new name in SetAutoCorrFeatures.
 #' @param threads Threads.
 #' @param verbose Print log message. Default is TRUE.
@@ -19,61 +27,84 @@
 #' @importFrom methods as
 #' @export
 RunAutoCorr <- function(object = NULL,
-                        assay = NULL,                       
+                        assay = NULL,
                         layer = "data",
-                        spatial = FALSE,
-                        snn.name = NULL,
-                        order.cells = NULL,
-                        prune.distance = 20,
+                        reduction = "pca",
+                        dims=1:20,
                         prune.SNN = 1/50,
+                        nn.method = "annoy",
+                        n.trees = 50,
+                        annoy.metric = "euclidean",
+                        nn.eps = 0,
+                        l2.norm = FALSE,
                         cells = NULL,
                         min.cells = 10,
+                        snn.name = NULL,
+                        spatial = FALSE,
+                        order.cells = NULL,
+                        weight.method = c("dist", "average"),
+                        prune.distance = -1,
                         features = NULL,
-                        weight.matrix.name = "WeightMatrix",
+                        wm.name = NULL,
                         prefix="moransi",
                         threads=0,
                         verbose = TRUE,
                         ...)
 {
   check.par <- 0
-  if (!is.null(snn.name)) check.par <- check.par + 1
+  if (!is.null(snn.name)) {
+    if (snn.name %ni% names(object)) {
+      stop(paste0("SNN graph not found, ", snn.name))
+    }
+    check.par <- check.par + 1
+  }
   if (!is.null(order.cells)) check.par <- check.par + 1
   if (isTRUE(spatial)) check.par <- check.par + 1
 
   if (check.par > 1) {
     stop("Only support to set one of spatial, snn.name, and order.cells.")
   }
-  
-  if (check.par == 0) {
-    snns <- grep("_snn$", names(object), value=TRUE)
-    if (length(snns) == 0) stop("No SNN graph found at object, try to specify snn.name first or run Seurat::FindNeighbors.")
-    snn.name <- snns[1]
-    if (isTRUE(verbose)) {
-      message("Using ", snn.name, " to construct cell weight matrix.")
-    }
-  }
 
+  cells <- order.cells %||% cells
+  cells <- cells %||% colnames(object)
+  cells <- intersect(cells,colnames(object))
+
+  if (check.par == 0) {
+    if (reduction %ni% Reductions(object)) {
+      stop(paste0("No reduction ", reduction, " found. You should perform RunPCA first."))
+    }
+    data.use <- Embeddings(object[[reduction]])
+    data.use <- data.use[cells, dims]
+    ng <- FindNeighbors(object = data.use,
+                        k.param = k.param,
+                        compute.SNN = TRUE,
+                        prune.SNN = prune.SNN,
+                        nn.method = nn.method,
+                        annoy.metric = annoy.metric,
+                        n.trees = n.trees,
+                        nn.eps = nn.eps,
+                        l2.norm = l2.norm, cache.index = FALSE, verbose = FALSE)
+      snn <- ng[['snn']]
+      W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
+  }
+    
   if (packageVersion("Seurat") >= numeric_version(as.character(5))) {
     layer <- Layers(object = object, search = layer)
     if (is.null(layer)) {
       abort("No layer found. Please run NormalizeData or RunTFIDF and retry..")
     }
   }
-  
+    
   tt <- Sys.time()
   
   assay <- assay %||% DefaultAssay(object = object)
   if (isTRUE(verbose)) {
     message(paste0("Working on assay : ", assay))
   }
-
-  cells <- order.cells %||% cells
-  cells <- cells %||% colnames(object)
-  cells <- intersect(cells,colnames(object))
   
   features <- features %||% rownames(object)
   features <- intersect(rownames(object),features)
-
+  
   threads <- getCores(threads)
   
   if (!is.null(snn.name)) {
@@ -81,11 +112,11 @@ RunAutoCorr <- function(object = NULL,
   }
 
   if (!is.null(order.cells)) {
-    W <- GetWeights(order.cells = order.cells, prune.distance = prune.distance)
+    W <- GetWeights(order.cells = order.cells, prune.distance = prune.distance, weight.method = weight.method)
   }
 
   if (isTRUE(spatial)) {
-    W <- GetWeightsFromSpatial(object = object, prune.distance = prune.distance, ...)
+    W <- GetWeightsFromSpatial(object = object, prune.distance = prune.distance, weight.method = weight.method, ...)
   }
 
   ncell <- ncol(object)
@@ -98,7 +129,10 @@ RunAutoCorr <- function(object = NULL,
   rownames(W) <- cells1
   W <- W[colnames(object), colnames(object)]
   W <- as(W, "Graph")
-  object[[weight.matrix.name]] <- W
+
+  graph.name <- graph.name %||% paste0(assay, "_wm")
+
+  object[[graph.name]] <- W
   
   x0 <- GetAssayData1(object, assay = assay, layer = layer)[,cells]
   rs <- rowSums(x0>0)
@@ -141,7 +175,7 @@ RunAutoCorr <- function(object = NULL,
   
   tt <- Sys.time()-tt
   if (isTRUE(verbose)) {
-    message(paste0("Runtime : ",format(tt)));
+    message(paste0("Runtime : ",format(tt)))
   }
   
   object

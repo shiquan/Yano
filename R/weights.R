@@ -1,3 +1,8 @@
+spatialDistTest <- function(coord = NULL, n = 8) {
+  coord <- as.matrix(coord)
+  arr <- .Call(colNNMax, coord, n)
+  median(arr)
+}
 #' @title GetWeights
 #' @description Calcualte cell-cell weight matrix by one of shared nearest neighbour matrix, spatial locations, cell embedding and linear trajectory.
 #' @param snn Shared nearest neighbour graph, usually can found at object[["RNA_snn"]]. This graph can be calculate by Seurat::FindNeighbors().
@@ -5,8 +10,8 @@
 #' @param order.cells Predefined cell ranks, used for cell lineage analysis.
 #' @param emb Cell dimesional space (PCA/ICA/harmony).
 #' @param k.nn K-nearest neighbors, for calculating weight matrix with emb.
-#' @param prune.distance Sets the cutoff for cell distance on lineage trajectory (ranked cells) or spatial cooridates (bin distance) when computing the neighborhood overlap for the weight matrix construction. Any edges with values greater than this will be set to 0 and removed from the weight matrix graph. Default is 20, means only calculate weight edges for nearby 20 cells for each cell.
-#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/15.
+#' @param prune.distance Sets the cutoff for cell distance on lineage trajectory (ranked cells) or spatial cooridates (bin/spot distance) when computing the neighborhood overlap for the weight matrix construction. Any edges with values greater than this will be set to 0 and removed from the weight matrix graph. Default is 50 for lineage cells, means only calculate weight edges for nearby 50 cells for each cell, while 8 for spatial coordinates.
+#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.
 #' @param diag.value Diagnoal value in the weight matrix.
 #' @param cells Cell list. Default use all cells.
 #' @returns A sparse weight matrix.
@@ -17,10 +22,11 @@ GetWeights <- function(snn = NULL,
                        order.cells = NULL,
                        emb = NULL,
                        k.nn = 20,
-                       prune.distance = 20,
-                       prune.SNN = 1/15,
+                       prune.distance = -1,
+                       prune.SNN = 1/50,
                        diag.value = 0,
-                       cells = NULL)
+                       cells = NULL,
+                       weight.method = c("dist", "average"))
 {
   check.par <- 0
   
@@ -28,6 +34,8 @@ GetWeights <- function(snn = NULL,
   if (!is.null(pos)) check.par <- check.par + 1
   if (!is.null(order.cells)) check.par <- check.par + 1
   if (!is.null(emb)) check.par <- check.par + 1
+
+  weight.method <- match.arg(weight.method)
   
   if (check.par != 1) {
     stop("Should only specify one of snn, pos or order.cells.")
@@ -45,11 +53,20 @@ GetWeights <- function(snn = NULL,
   }
 
   if (!is.null(pos)) {
+    if (prune.distance == -1) {
+      prune.distance <- spatialDistTest(pos, n = 8)
+    }
     pos.dist <- as.matrix(dist(x=pos))
     pos.dist[pos.dist > prune.distance] <- 0
     W <- as(pos.dist, "CsparseMatrix")
-    W@x <- 1/W@x^2
     diag(x = W) <- diag.value
+
+    if (weight.method == "dist") {
+      W@x <- 1/W@x^2
+    } else if (weight.method == "average") {
+      W@x <- (W@x>0)+0
+    }
+    
     W <- W/rowSums(W)
     W <- t(W)
     cells <- rownames(pos)
@@ -73,10 +90,19 @@ GetWeights <- function(snn = NULL,
   }
   
   if (!is.null(order.cells)) {
+    if (prune.distance == -1) {
+      prune.distance <- 50
+    }
     pos.dist <- as.matrix(dist(x=c(1:length(order.cells))))
     pos.dist[pos.dist > prune.distance] <- 0
     W <- as(pos.dist, "CsparseMatrix")
-    W@x <- 1/W@x
+
+    if (weight.method == "dist") {
+      W@x <- 1/W@x^2
+    } else if (weight.method == "average") {
+      W@x <- (W@x>0)+0
+    }
+
     diag(x = W) <- diag.value
     W <- W/rowSums(W)
     W <- t(W)
@@ -86,7 +112,7 @@ GetWeights <- function(snn = NULL,
   }
 }
 
-GetWeightsFromSNN <- function(object = NULL, name = "RNA_snn", prune.SNN = 1/15, cells = NULL)
+GetWeightsFromSNN <- function(object = NULL, name = "RNA_snn", prune.SNN = 1/50, cells = NULL)
 {
   if (name %ni% names(object)) {
     stop(paste0("No ", name, " found at object. Run FindNeighbors on RNA assay first."))

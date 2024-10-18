@@ -527,7 +527,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   
   p1 <- p1 + scale_y_continuous(breaks=pretty_breaks(),guide=guide_axis(check.overlap = T))
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
-  p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), expand=FALSE)
+  p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), ylim = c(ymin, ymax), expand=FALSE)
   p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue"))
   p1 <- p1 + theme_cov()
   p1 <- p1 + theme(panel.spacing.y = unit(0.1, "lines"))
