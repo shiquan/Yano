@@ -358,13 +358,18 @@ RunBlockCorr <- function(object = NULL,
     
   } else {
     if (is.null(cells)) {
-      if (weight.matrix.name %ni% names(object)) {
+      wm.names <- grep("_wm$", names(object))
+      if (length(wm.names) == 0) {
+        stop("No weight matrix found. Perform RunAutoCorr() first.")
+      }
+      wm.name <- wm.name %||% wm.names[1L]
+      if (wm.name %ni% names(object)) {
         stop("No weight matrix found. Perform RunAutoCorr() first.")
       }
       if (verbose) {
-        message("Use predefined weight matrix \"", weight.matrix.name, "\"", ".")
+        message("Use predefined weight matrix \"", wm.name, "\"", ".")
       }
-      W <- object[[weight.matrix.name]]
+      W <- object[[wm.name]]
       ta <- .Call("D_test", x, y, W, method, perm, threads, idx, bidx, cs, scale.factor, mode, scale, TRUE, seed, debug)
     } else {
       if (verbose) {

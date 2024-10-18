@@ -8,15 +8,23 @@ RunAutoCorr(
   object = NULL,
   assay = NULL,
   layer = "data",
-  spatial = FALSE,
-  snn.name = NULL,
-  order.cells = NULL,
-  prune.distance = 20,
+  reduction = "pca",
+  dims = 1:20,
   prune.SNN = 1/50,
+  nn.method = "annoy",
+  n.trees = 50,
+  annoy.metric = "euclidean",
+  nn.eps = 0,
+  l2.norm = FALSE,
   cells = NULL,
   min.cells = 10,
+  snn.name = NULL,
+  spatial = FALSE,
+  order.cells = NULL,
+  weight.method = c("dist", "average"),
+  prune.distance = -1,
   features = NULL,
-  weight.matrix.name = "WeightMatrix",
+  wm.name = NULL,
   prefix = "moransi",
   threads = 0,
   verbose = TRUE,
@@ -30,23 +38,39 @@ RunAutoCorr(
 
 \item{layer}{Input data layer, usually be 'data'.}
 
-\item{spatial}{Use spatial coordinate instead of SNN space and linear trajectory to calculate the cell-cell weight matrix.}
+\item{reduction}{Cell space used to calculate SNN graph, default is 'pca'.}
 
-\item{snn.name}{name of SNN space. If spatial=FALSE and order.cells = NULL, default snn.name will set to 'RNA_snn'. Use SNN space to calculate the cell-cell weight martix.}
+\item{dims}{Dimensions of reduction used to calculate SNN graph.}
 
-\item{order.cells}{For linear trajetory, input ordered cell names to calculate the cell-cell distance weight matrix. Conflict with sptaial=TRUE and snn.name != NULL.}
+\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. This paramter will be passed to Seurat::FindNeighbors.Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50, which is different from Seurat. Because the default cutoff of FindNeighbors may lost many sparse features for large cell population. More features can be select by setting to smaller value but will increase computational time.}
 
-\item{prune.distance}{Set the cutoff for neighbors for order cells and spatial coordinates.}
+\item{nn.method}{nn.method passed to Seurat::FindNeighbors, default is "euclidean".}
 
-\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
+\item{n.trees}{n.trees passed to Seurat::FindNeighbors, default is 50.}
+
+\item{annoy.metric}{annoy.metric passed to Seurat::FindNeighbors, default is "annoy".}
+
+\item{nn.eps}{nn.eps passed to Seurat::FindNeighbors, default is 0}
+
+\item{l2.norm}{L2 normalization. Default is FALSE.}
 
 \item{cells}{Cells used for calculate weight matrix. Used with snn graph. In default will use all cells.}
 
 \item{min.cells}{If a feature can be detect in few than min.cells, will skip to save time. Default is 10.}
 
+\item{snn.name}{name of SNN space. If spatial=FALSE and order.cells = NULL, default snn.name will set to 'RNA_snn'. Use SNN space to calculate the cell-cell weight martix.}
+
+\item{spatial}{Use spatial coordinate instead of SNN space and linear trajectory to calculate the cell-cell weight matrix.}
+
+\item{order.cells}{For linear trajetory, input ordered cell names to calculate the cell-cell distance weight matrix. Conflict with sptaial=TRUE and snn.name != NULL.}
+
+\item{weight.method}{Weight method for distance, default 1/dist^2. Also support average, use mean weight value for nearby cells.}
+
+\item{prune.distance}{Set the cutoff for neighbors for order cells and spatial coordinates. In default, 50 for order cells, 8 for spatial coordinates.}
+
 \item{features}{List of features to test. Default is all features with that coverage >= min.cells.}
 
-\item{weight.matrix.name}{Weight graph name in Seurat object. After this function, the graph can be visited by obj[[weight.matrix.name]]. Default name is "WeightMatrix", if you change the default name, you should specific the new name in RunBlockCorr.}
+\item{wm.name}{Weight graph name in Seurat object. After this function, the graph can be visited by obj[[wm.name]]. Default name is "RNA_wm", if you change the default name, you should specific the new name in RunBlockCorr.}
 
 \item{prefix}{Prefix for score and p value names. Default prefix is "moransi". If you change the default name, you should specific the new name in SetAutoCorrFeatures.}
 
