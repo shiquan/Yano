@@ -358,7 +358,7 @@ RunBlockCorr <- function(object = NULL,
     
   } else {
     if (is.null(cells)) {
-      wm.names <- grep("_wm$", names(object))
+      wm.names <- grep("_wm$", names(object), value = TRUE)
       if (length(wm.names) == 0) {
         stop("No weight matrix found. Perform RunAutoCorr() first.")
       }

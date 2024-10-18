@@ -10,6 +10,7 @@ RunAutoCorr(
   layer = "data",
   reduction = "pca",
   dims = 1:20,
+  k.param = 20,
   prune.SNN = 1/50,
   nn.method = "annoy",
   n.trees = 50,
@@ -42,6 +43,8 @@ RunAutoCorr(
 
 \item{dims}{Dimensions of reduction used to calculate SNN graph.}
 
+\item{k.param}{Defines k for K-nearest neighbor algorithm}
+
 \item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. This paramter will be passed to Seurat::FindNeighbors.Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50, which is different from Seurat. Because the default cutoff of FindNeighbors may lost many sparse features for large cell population. More features can be select by setting to smaller value but will increase computational time.}
 
 \item{nn.method}{nn.method passed to Seurat::FindNeighbors, default is "euclidean".}
@@ -70,7 +73,7 @@ RunAutoCorr(
 
 \item{features}{List of features to test. Default is all features with that coverage >= min.cells.}
 
-\item{wm.name}{Weight graph name in Seurat object. After this function, the graph can be visited by obj[[wm.name]]. Default name is "RNA_wm", if you change the default name, you should specific the new name in RunBlockCorr.}
+\item{wm.name}{Weight matrix/graph name in Seurat object. After this function, the graph can be visited by obj[[wm.name]]. Default name is "RNA_wm", if you change the default name, you should specific the new name in RunBlockCorr.}
 
 \item{prefix}{Prefix for score and p value names. Default prefix is "moransi". If you change the default name, you should specific the new name in SetAutoCorrFeatures.}
 
