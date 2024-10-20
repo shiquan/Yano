@@ -490,15 +490,17 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     bc$depth <- log1p(bc$depth)
   }
 
-  ymax0 <- ifelse(max.depth > 0, max.depth, max(bc$depth))
-  bc$depth <- bc$depth * ifelse(bc$strand=='+',1,-1)
 
+  bc$depth <- bc$depth * ifelse(bc$strand=='+',1,-1)
+  
   ymax <- max(bc$depth)
   ymin <- min(bc$depth)
   ymin0 <- ymin
   if (ymin < 0) {
-    ymin0 <- ifelse(max.depth > 0, -max.depth, ymin)
+    ymin0 <- ifelse(max.depth > 0, -1*max.depth, ymin)
   }
+  ymax0 <- ifelse(max.depth > 0, max.depth, ymax)
+  
   posmax <- max(bc$pos)
   posmin <- min(bc$pos)
 
