@@ -153,7 +153,7 @@ PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode =
 #'
 #' @name RunDEXSeq
 #' @title RunDEXSeq
-#' @description This will test the test features and binding features are different expressed between groups with a generalised linear model. See DEXSeq (PMID: 22722343) paper for details.
+#' @description This method tests whether the test features and binding features are differentially expressed between groups using a generalized linear model. For details, refer to the DEXSeq method (PMID: 22722343). Since this approach is applied to single cells, cells within the same group are aggregated into several pseudo-bulk datasets for analysis.
 #' @param object A Seurat object.
 #' @param bind.name The title of binding name in meta table. Usually be "gene_name" for alternative splicing.
 #' @param ident.1 Identify class to test, if not set will compare all groups one by one

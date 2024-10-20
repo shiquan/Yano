@@ -42,17 +42,17 @@ IdentToCells <- function(
 #' @title RunBlockCorr
 #' @description Run spatial dissimilarity test for features and their binding features in parallel.
 #' @param object Seurat object
-#' @param bind.name Title name for binding features in the meta table. Consider most users start Yano to perform alternative splicing analysis, the default bind.name set to "gene_name".
+#' @param bind.name The title of binding features in the meta table is important, as most users begin Yano to perform alternative splicing analysis. By default, the `bind.name` is set to "gene_name".
 #' @param features Vector of features to calculate. Default is AutoCorrFeatures(object).
 #' @param assay Work assay.
 #' @param min.cells Features detected in few than minimal number of cells will be skipped. Default is 10.
-#' @param bind.assay Name of binding assay.
+#' @param bind.assay Name of binding assay. If the binding assay is not set, raw counts of features from the same block will be aggregated first, followed by normalization.
 #' @param bind.features List of bind features. Default use all.
 #' @param min.cells.bind Binding features detected in few than minimal number of cells will be skipped. Default is 10.
 #' @param prefix Prefix name for output scores and values. Default is same with bind.name.
-## @param subset Rules for subset meta table before select features to perform test.
-#' @param scale.factor Scale factor to normalise counts. Default is 1e4. For mode 1, this function will use data from Layer 'data'. For mode 2 and 3, will use data from Layer 'counts'. The counts will further be normalised with sample size and scale factor for spatial dissimilarity test.
-#' @param mode Test mode. For mode 1, X (test feature) vs Y (binding feature). For mode 2, X vs (Y-X). For mode 3, X vs (Y+X). Please note, when set to mode 2 or 3, will use raw counts to update expression value of binding features. Then normalise the counts before testing. For mode 1, will use Layer 'data'. Default is mode 1.
+#' @param subset Rules for subsetting meta table before selecting features to perform test.
+#' @param scale.factor The scale factor used to normalize counts is set to a default of 1e4. This function uses raw counts from the "counts" layer. The counts are further normalized by sample size and scale factor for the spatial dissimilarity test.
+#' @param mode Test mode. Mode 1: Compares X (test feature) vs Y (binding feature). Mode 2: Compares X vs (Y - X). Mode 3: Compares X vs (Y + X).
 #' @param method Method to use. Support D, D2 and Lee. \eqn{D = sqrt(L_x)(1-r_xy)}. \eqn{D2 = sqrt(L_x)sqrt(L_y)(1-r_xy)}. Lee for Lee's Score. In default use D method, see the manual for details.
 #' @param library.size Library size for each cell, used for normalise counts when mode is 2 or 3. If not set, use colSum(counts) instead.
 ## @param scale Scale expression of the test feature and binding feature when perfroming test.
