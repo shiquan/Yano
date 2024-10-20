@@ -455,7 +455,22 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
                      junc=FALSE, junc.min.depth = 0)
 {
   if (is.null(chr) || start == -1 || end == -1) stop("Require a genomic region.")
-  
+  if (is.list(cell.group)) {
+    nm <- names(cell.group)
+    if (!is.null(nm)) {
+      if (is.list(bamfile)) {
+        nm2 <- names(bamfile)
+        if (!is.null(nm2)) {
+          bad.nm <- setdiff(nm, nm2)
+          if (length(bad.nm) > 0) {
+            warnings("Inconsistance list name between cell group and bam files.")
+          }
+          nm <- intersect(nm, nm2)
+          bamfile <- bamfile[nm]
+        } 
+      }
+    }
+  }
   bc <- bamcov(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
                split.bc=split.bc,
                cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
