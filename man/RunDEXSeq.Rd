@@ -64,7 +64,7 @@ RunDEXSeq(
 Data frame containing p values and pct for test features and their binding features.
 }
 \description{
-This will test the test features and binding features are different expressed between groups with a generalised linear model. See DEXSeq (PMID: 22722343) paper for details.
+This method tests whether the test features and binding features are differentially expressed between groups using a generalized linear model. For details, refer to the DEXSeq method (PMID: 22722343). Since this approach is applied to single cells, cells within the same group are aggregated into several pseudo-bulk datasets for analysis.
 }
 \examples{
 data("glbt_small")
