@@ -490,15 +490,15 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     bc$depth <- log1p(bc$depth)
   }
 
-  if (max.depth > 0) {
-    bc$depth[bc$depth > max.depth] <- max.depth
-  }
-  ymax0 <- max(bc$depth)
+  ymax0 <- ifelse(max.depth > 0, max.depth, max(bc$depth))
   bc$depth <- bc$depth * ifelse(bc$strand=='+',1,-1)
 
   ymax <- max(bc$depth)
   ymin <- min(bc$depth)
-
+  ymin0 <- ymin
+  if (ymin < 0) {
+    ymin0 <- ifelse(max.depth > 0, -max.depth, ymin)
+  }
   posmax <- max(bc$pos)
   posmin <- min(bc$pos)
 
@@ -542,7 +542,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   
   p1 <- p1 + scale_y_continuous(breaks=pretty_breaks(),guide=guide_axis(check.overlap = T))
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
-  p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), ylim = c(ymin, ymax), expand=FALSE)
+  p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), ylim = c(ymin0, ymax0), expand=FALSE)
   p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue"))
   p1 <- p1 + theme_cov()
   p1 <- p1 + theme(panel.spacing.y = unit(0.1, "lines"))
