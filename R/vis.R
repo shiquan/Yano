@@ -408,7 +408,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   p <- p + theme(panel.spacing= unit(0, "lines"), axis.text.y = element_blank(), axis.title.y =element_blank(), axis.ticks.y =element_blank())
   p <- p + ylab("") + xlab("") + coord_cartesian(xlim=c(start, end), expand=FALSE)
   p <- p + ylim(0,mi)
-  p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue"))
+  p <- p + scale_color_manual(values = c("+" = "red", "-" = "blue", "." = "grey60"))
   p <- p + fbt_theme()
   p
 }
@@ -424,7 +424,7 @@ plot.bed <- function(start = NULL, end = NULL, peaks = NULL, col.by = NULL, grou
   } else {
     p <- p + geom_rect(data = tab, inherit.aes = F,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=strand), size = 1)
     #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
-    p <- p + scale_fill_manual(values = c("+" = "red", "-" = "blue"))
+    p <- p + scale_fill_manual(values = c("+" = "red", "-" = "blue", "." = "grey60"))
   }
   if (!is.null(highlights)) {
     df <- as.data.frame(highlights)
@@ -474,7 +474,6 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   bc <- bamcov(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
                split.bc=split.bc,
                cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
-
   if (junc) {
     juncs <- bamjunc(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
                      split.bc=split.bc,
@@ -490,8 +489,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     bc$depth <- log1p(bc$depth)
   }
 
-
-  bc$depth <- bc$depth * ifelse(bc$strand=='+',1,-1)
+  bc$depth <- bc$depth * ifelse(bc$strand=='-',-1,1)
   
   ymax <- max(bc$depth)
   ymin <- min(bc$depth)
@@ -503,6 +501,11 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   
   posmax <- max(bc$pos)
   posmin <- min(bc$pos)
+
+  if (strand == "ignore") {
+    idx <- which (bc$strand == "+")
+    bc["strand"][idx,] <- "."
+  }
 
   p1 <- ggplot() + geom_area(data=bc, aes(x=pos,y=depth,fill=strand), stat = "identity")
   
@@ -517,10 +520,6 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
       if (isTRUE(log.scaled)) {
         juncs$depth <- log1p(juncs$depth)
       }
-      
-      # ymax0 <- max(abs(bc$depth))
-      # juncs$depth <- juncs$depth/ymax0
-      # juncs$depth[which(juncs$depth>0.99)] <- 0.99
 
       juncs[["y"]] <- 0
       
@@ -545,7 +544,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   p1 <- p1 + scale_y_continuous(breaks=pretty_breaks(),guide=guide_axis(check.overlap = T))
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
   p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), ylim = c(ymin0, ymax0), expand=FALSE)
-  p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue"))
+  p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue", "." = "grey60"))
   p1 <- p1 + theme_cov()
   p1 <- p1 + theme(panel.spacing.y = unit(0.1, "lines"))
   p1 <- p1 + theme(legend.position="none")

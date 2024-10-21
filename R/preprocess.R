@@ -51,10 +51,10 @@ ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, nvar= 3000
   features <- intersect(features,rownames(object))
 
   if (isTRUE(verbose)) {
-    message(paste0("object <- ScaleData(object, features =  @features)"))
+    message("object <- ScaleData(object, features =  @features, vars.to.regress = \"nCount_RNA\")")
   } 
 
-  object <- ScaleData(object, features = features)
+  object <- ScaleData(object, features = features, vars.to.regress = "nCount_RNA")
 
   if (isTRUE(verbose)) {
     message(paste0("object <- RunPCA(object, features = @features"))
