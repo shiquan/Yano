@@ -504,7 +504,8 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
 
   if (strand == "ignore") {
     idx <- which (bc$strand == "+")
-    bc["strand"][idx,] <- "."
+    bc <- bc[idx,]
+    bc["strand"] <- "."
   }
 
   p1 <- ggplot() + geom_area(data=bc, aes(x=pos,y=depth,fill=strand), stat = "identity")
