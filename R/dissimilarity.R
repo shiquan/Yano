@@ -47,7 +47,7 @@ IdentToCells <- function(
 #' @param assay Work assay.
 #' @param min.cells Features detected in few than minimal number of cells will be skipped. Default is 10.
 #' @param bind.assay Name of binding assay. If the binding assay is not set, raw counts of features from the same block will be aggregated first, followed by normalization.
-#' @param bind.features List of bind features. Default use all.
+#' @param bind.features List of bind features. If set, bind features will be subset with this list.
 #' @param min.cells.bind Binding features detected in few than minimal number of cells will be skipped. Default is 10.
 #' @param prefix Prefix name for output scores and values. Default is same with bind.name.
 #' @param subset Rules for subsetting meta table before selecting features to perform test.
@@ -189,10 +189,11 @@ RunBlockCorr <- function(object = NULL,
         message("No bind.assay specified, update min.features.per.block to 2.")
       }
       min.features.per.block <- 2
-      blocks <- names(which(table(tab[[bind.name]]) >= min.features.per.block))
-      tab <- subset(tab, tab[[bind.name]] %in% blocks)
-      features <- intersect(features, rownames(tab))
     }
+
+    blocks <- names(which(table(tab[[bind.name]]) >= min.features.per.block))
+    tab <- subset(tab, tab[[bind.name]] %in% blocks)
+    features <- intersect(features, rownames(tab))
 
     if (isTRUE(verbose)) {
       message("Use \"counts\" layer for test features.")
@@ -385,7 +386,7 @@ RunBlockCorr <- function(object = NULL,
         message("Use predefined weight matrix \"", wm.name, "\"", ".")
       }
       W <- object[[wm.name]]
-      ta <- .Call("D_test", x, y, W, method, perm, threads, idx, bidx, cs, scale.factor, mode, scale, TRUE, seed, debug)
+      ta <- .Call("D_test", x, y, W, method, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm, seed, debug)
     } else {
       if (verbose) {
         message("Construct SNN graph for cells with \"", reduction, "\"", ".")
@@ -403,7 +404,7 @@ RunBlockCorr <- function(object = NULL,
                           l2.norm = FALSE, cache.index = FALSE, verbose = FALSE)
       snn <- ng[['snn']]
       W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
-      ta <- .Call("D_test", x[,cells], y[,cells], W[cells, cells], method, perm, threads, idx, bidx, cs[cells], scale.factor, mode, scale, TRUE, seed, debug)
+      ta <- .Call("D_test", x[,cells], y[,cells], W[cells, cells], method, perm, threads, idx, bidx, cs[cells], scale.factor, mode, scale, norm, seed, debug)
     }
     
     if (length(ta) == 1) stop(ta[[1]])
