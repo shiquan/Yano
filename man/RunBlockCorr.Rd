@@ -52,7 +52,7 @@ RunBlockCorr(
 
 \item{bind.assay}{Name of binding assay. If the binding assay is not set, raw counts of features from the same block will be aggregated first, followed by normalization.}
 
-\item{bind.features}{List of bind features. Default use all.}
+\item{bind.features}{List of bind features. If set, bind features will be subset with this list.}
 
 \item{min.cells.bind}{Binding features detected in few than minimal number of cells will be skipped. Default is 10.}
 
