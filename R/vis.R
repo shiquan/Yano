@@ -700,8 +700,9 @@ TrackPlot <- function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
   } 
   return(p1 / p2 + plot_layout(heights=layout.heights[c(2,3)]))
 }
+
 #' @importFrom grDevices rgb
-#' @importFrom patchwork wrap_plots
+#' @importFrom patchwork wrap_plots area plot_layout
 #' @importFrom cowplot theme_cowplot
 #' @importFrom SeuratObject FetchData
 #' @importFrom Seurat SingleDimPlot
@@ -730,7 +731,8 @@ RatioPlot0 <- function(object = NULL,
                        combine = TRUE,
                        raster = NULL,
                        raster.dpi = c(512,512),
-                       legend.title = NULL
+                       legend.title = NULL,
+                       figure_plot = FALSE
                        )
 {
   # Set a theme to remove right-hand Y axis lines
@@ -774,7 +776,7 @@ RatioPlot0 <- function(object = NULL,
   }
   
   data1 <- FetchData(object = object, cells = cells, vars = features, slot = "counts")
-
+  data2 <- NULL
   # binding assay
   if (!is.null(bind.name)) {
     df <- object[[assay]][[]]
@@ -1082,11 +1084,33 @@ RatioPlot0 <- function(object = NULL,
     }
     plots <- suppressMessages(plots & scale_color_gradientn(colors = cols, limits = c(min.cutoff,max.cutoff)))
   }
+
+  if (isTRUE(figure_plot)) {
+    # this parameter is edited from scCustomize::Figure_Plot, credit to original authors
+    plots <- plots & NoAxes()
+    axis_plot <- ggplot(data.frame(x= 100, y = 100), aes(x = .data[["x"]], y = .data[["y"]])) +
+      geom_point() +
+      xlim(c(0, 10)) + ylim(c(0, 10)) +
+      theme_classic() +
+      ylab("umap_2") + xlab("umap_1") +
+      theme(plot.background = element_rect(fill = "transparent", colour = NA),
+            panel.background = element_rect(fill = "transparent"),
+            axis.text.x = element_blank(),
+            axis.text.y = element_blank(),
+            axis.ticks = element_blank(),
+            axis.line = element_line(
+              arrow = arrow(angle = 15, length = unit(.5, "cm"), type = "closed")
+            )
+            )
+    figure_layout <- c(
+      area(t = 1, l = 2, b = 11, r = 11),
+      area(t = 10, l = 1, b = 12, r = 2))
+    plots <- plots + axis_plot + plot_layout(design = figure_layout)
+  }
   return(plots)
 }
 
-#' This function is edited from Seurat::FeaturePlot, used to visulize the PSI score on cells.
-#'
+#' This function is edited from Seurat::FeaturePlot, used to visulize the ratio or PSI score on reduction map
 #' @title RatioPlot
 #' @description Plot ratio score of test feature and its binding feature on reduction map.
 #' @param object Seurat object.
@@ -1109,8 +1133,10 @@ RatioPlot0 <- function(object = NULL,
 #' @param coord.fixed Plot cartesian coordinates with fixed aspect ratio
 #' @param by.col If splitting by a factor, plot the splits per column with the features as rows 
 #' @param combine Combine plots into a single patchwork ggplot object. If \code{FALSE}, return a list of ggplot objects.
-# @param raster If true, plot with geom_raster, else use geom_tile. geom_raster may look blurry on some viewing applications such as Preview due to how the raster is interpolated. Set this to FALSE if you are encountering that issue (note that plots may take longer to produce/render).
+#' @param raster If true, plot with geom_raster, else use geom_tile. geom_raster may look blurry on some viewing applications such as Preview due to how the raster is interpolated. Set this to FALSE if you are encountering that issue (note that plots may take longer to produce/render).
 #' @param raster.dpi Pixel resolution for rasterized plots, passed to geom_scattermore(). Default is c(512, 512).
+#' @param legend.title Legend title. Default is 'ratio'.
+#' @param figure_plot Whether to remove the axes and plot with legend on left of plot denoting axes labels.  (Default is FALSE). This parameter is modified from scCustumize::Figure_Plot, credit to original authors.
 #' @return A patchwork ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
 #' @export
 #' @concept visualization
@@ -1137,7 +1163,8 @@ RatioPlot <- function(object = NULL,
                       combine = TRUE,
                       raster = NULL,
                       raster.dpi = c(512,512),
-                      legend.title = "Ratio"
+                      legend.title = "Ratio",
+                      figure_plot = FALSE
                       )
 {
   assay <- assay %||% DefaultAssay(object)
@@ -1155,8 +1182,7 @@ RatioPlot <- function(object = NULL,
   if (is.null(bind.name)) {
     stop("bind.name is not set.")
   }
-
-  message(paste0("Retrieve counts from assay ", assay, ", and counts from binding assay ", assay))
+  
   plots <- RatioPlot0(object = object,
                       assay = assay,
                       bind.assay = bind.assay,
@@ -1180,7 +1206,8 @@ RatioPlot <- function(object = NULL,
                       combine = combine,
                       raster = raster,
                       raster.dpi = raster.dpi,
-                      legend.title = legend.title)
+                      legend.title = legend.title,
+                      figure_plot = figure_plot)
   
   return(plots)
   

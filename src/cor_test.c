@@ -712,11 +712,9 @@ SEXP D_test(SEXP _A,
             Lx1 += pow(tmpa_s[j]-mna,2);
             Lx2 += pow(tmpa[j]-mna,2);
 
-            if (method != 1) {
-                Ly1 += pow(tmpb_s[j]-mnb,2);
-                Ly2 += pow(tmpb[j]-mnb,2);
-            }
-
+            Ly1 += pow(tmpb_s[j]-mnb,2);
+            Ly2 += pow(tmpb[j]-mnb,2);
+            
             tmpa_s[j] = tmpa_s[j] - mna_s;
             tmpb_s[j] = tmpb_s[j] - mnb_s;
             ra  += tmpa_s[j] * tmpb_s[j];
@@ -727,16 +725,16 @@ SEXP D_test(SEXP _A,
         rb1 = sqrt(rb1);
         rb2 = sqrt(rb2);
         
-        double Lx = Lx1/Lx2;        
+        double Lx = Lx1/Lx2;
+        double Ly = Ly1/Ly2;
         double r = ra/(rb1*rb2);
-        double Ly, e;
+        double e;
         if (method == 1) {
             e = sqrt(Lx) * (1-r);
         } else if (method == 2) {
-            Ly = Ly1/Ly2;
-            e = sqrt(Lx) * sqrt(Ly) * (1-r);
+            // e = sqrt(Lx) * sqrt(Ly) * (1-r);
+            e = sqrt(Ly) * (1-r);
         } else {
-            Ly = Ly1/Ly2;
             e = sqrt(Lx) * sqrt(Ly) * r;
         }
         
@@ -759,26 +757,27 @@ SEXP D_test(SEXP _A,
         // R_CheckStack();
         
         for (int k = 0; k < perm; ++k) {
-            shuffle(tmpa, ris[k], n_cell);
-            smooth_W(tmpa, tmpa_s, n_cell, W);
-            mna_s = 0;
-            for (int j = 0; j < n_cell; ++j) {
-                mna_s += tmpa_s[j];
+            if (method == 1 || method == 3) {
+                shuffle(tmpa, ris[k], n_cell);
+                smooth_W(tmpa, tmpa_s, n_cell, W);
+                mna_s = 0;
+                for (int j = 0; j < n_cell; ++j) {
+                    mna_s += tmpa_s[j];
+                }
+                mna_s = mna_s/n_cell;
+                Lx1 = 0;
+                ra = 0;
+                rb1 = 0;
+                for (int j = 0; j < n_cell; ++j) {
+                    // Lx1 += pow(tmpa_s[j]-mna_s,2);
+                    Lx1 += pow(tmpa_s[j]-mna, 2);
+                    tmpa_s[j] = tmpa_s[j] - mna_s;
+                    rb1 += pow(tmpa_s[j], 2);
+                }
+                rb1 = sqrt(rb1);
+                Lx = Lx1/Lx2;
             }
-            mna_s = mna_s/n_cell;
-            Lx1 = 0;
-            ra = 0;
-            rb1 = 0;
-            for (int j = 0; j < n_cell; ++j) {
-                // Lx1 += pow(tmpa_s[j]-mna_s,2);
-                Lx1 += pow(tmpa_s[j]-mna, 2);
-                tmpa_s[j] = tmpa_s[j] - mna_s;
-                rb1 += pow(tmpa_s[j], 2);
-            }
-            rb1 = sqrt(rb1);
-            Lx = Lx1/Lx2;
-
-            if (method != 1) {
+            if (method == 2) {
                 shuffle(tmpb, ris[k], n_cell);
                 smooth_W(tmpb, tmpb_s, n_cell, W);
                 mnb_s = 0;
@@ -805,7 +804,8 @@ SEXP D_test(SEXP _A,
             if (method == 1) {
                 es[k] = sqrt(Lx) *(1-r);
             } else if (method == 2) {
-                es[k] = sqrt(Lx) * sqrt(Ly) *(1-r);
+                // es[k] = sqrt(Lx) * sqrt(Ly) *(1-r);
+                es[k] = sqrt(Ly) *(1-r);
             } else {
                 es[k] = sqrt(Lx) * sqrt(Ly) * r;
             }

@@ -28,7 +28,8 @@ RatioPlot(
   combine = TRUE,
   raster = NULL,
   raster.dpi = c(512, 512),
-  legend.title = "Ratio"
+  legend.title = "Ratio",
+  figure_plot = FALSE
 )
 }
 \arguments{
@@ -70,7 +71,13 @@ RatioPlot(
 
 \item{combine}{Combine plots into a single patchwork ggplot object. If \code{FALSE}, return a list of ggplot objects.}
 
+\item{raster}{If true, plot with geom_raster, else use geom_tile. geom_raster may look blurry on some viewing applications such as Preview due to how the raster is interpolated. Set this to FALSE if you are encountering that issue (note that plots may take longer to produce/render).}
+
 \item{raster.dpi}{Pixel resolution for rasterized plots, passed to geom_scattermore(). Default is c(512, 512).}
+
+\item{legend.title}{Legend title. Default is 'ratio'.}
+
+\item{figure_plot}{Whether to remove the axes and plot with legend on left of plot denoting axes labels.  (Default is FALSE). This parameter is modified from scCustumize::Figure_Plot, credit to original authors.}
 
 \item{group.by}{Name of one or more metadata columns to group (color) cells by (for example, orig.ident); pass 'ident' to group by identity class}
 }
@@ -81,6 +88,6 @@ A patchwork ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot 
 Plot ratio score of test feature and its binding feature on reduction map.
 }
 \details{
-This function is edited from Seurat::FeaturePlot, used to visulize the PSI score on cells.
+This function is edited from Seurat::FeaturePlot, used to visulize the ratio or PSI score on reduction map
 }
 \concept{visualization}
