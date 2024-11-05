@@ -64,7 +64,7 @@ RunBlockCorr(
 
 \item{mode}{Test mode. Mode 1: Compares X (test feature) vs Y (binding feature). In this mode and bind.assay is set, normlised counts from layer 'data' will be used for comparing.  If bind.assay is none, will use raw counts from layer 'counts'. Mode 2: Compares X vs (Y - X). Mode 3: Compares X vs (Y + X). For mode 2 and 3, only support to use raw counts from layer 'counts'.}
 
-\item{method}{Method to use. Support D, D2 and Lee. \eqn{D = sqrt(L_x)(1-r_xy)}. \eqn{D2 = sqrt(L_x)sqrt(L_y)(1-r_xy)}. Lee for Lee's Score. In default use D method, see the manual for details.}
+\item{method}{Method to use. Support D, D2 and Lee. \eqn{D = sqrt(L_x)(1-r_xy)}. \eqn{D2 = sqrt(L_y)(1-r_xy)}. Lee for Lee's Score. In default use D method, see the manual for details.}
 
 \item{library.size}{Library size for each cell, used for normalise counts. If not set, use colSum(counts) instead.}
 
