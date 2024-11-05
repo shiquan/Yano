@@ -51,7 +51,7 @@ FbtPlot0 <- function(tab = NULL,
           end <- max(tab$start)
         }
         p1 <- plot.genes(chr = chr, start = start, end = end, gtf = gtf)
-        return(p/p1 + plot_layout(heights=c(5,3)))
+        return(p/p1 + plot_layout(heights=layout.heights))
       }
     }
 
@@ -79,6 +79,10 @@ FbtPlot0 <- function(tab = NULL,
 
   qval.min <- min(data$qval) - 1
   qval.max <- max(data$qval) + 1
+  if (qval.min < -0.01 & qval.max < 10) {
+    qval.min <- -0.01
+  }
+
 
   pt.size <- pt.size %||% 1
   p <- ggplot(data) 

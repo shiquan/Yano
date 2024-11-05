@@ -26,6 +26,7 @@ enum feature_type {
     feature_5UTR_alias,
     feature_3UTR_alias,
     feature_Selenocysteine,
+    feature_antisense, // antisense gene
 };
 struct attr {
     int id;
