@@ -1091,21 +1091,9 @@ RatioPlot0 <- function(object = NULL,
 
   if (isTRUE(figure_plot)) {
     # this parameter is edited from scCustomize::Figure_Plot, credit to original authors
+    # See 'samuel-marsh.github.io/scCustomize/articles/FAQ.html' for citation info.
     plots <- plots & NoAxes()
-    axis_plot <- ggplot(data.frame(x= 100, y = 100), aes(x = .data[["x"]], y = .data[["y"]])) +
-      geom_point() +
-      xlim(c(0, 10)) + ylim(c(0, 10)) +
-      theme_classic() +
-      ylab("umap_2") + xlab("umap_1") +
-      theme(plot.background = element_rect(fill = "transparent", colour = NA),
-            panel.background = element_rect(fill = "transparent"),
-            axis.text.x = element_blank(),
-            axis.text.y = element_blank(),
-            axis.ticks = element_blank(),
-            axis.line = element_line(
-              arrow = arrow(angle = 15, length = unit(.5, "cm"), type = "closed")
-            )
-            )
+    axis_plot <- ggplot() + geom_segment(data = data.frame(x=c(0,1),y = c(1,0), dx=c(10,1),dy=c(1,10)), aes(x=x,y=y,xend=dx,yend=dy), arrow = grid::arrow(15, grid::unit(0.8, "lines"), ends = "last", type = "closed"))+theme(plot.background = element_rect(fill = "transparent", colour = NA), panel.background = element_rect(fill = "transparent"), axis.text.x = element_blank(), axis.text.y = element_blank(), axis.ticks = element_blank()) + xlab(dims[1]) + ylab(dims[2])
     figure_layout <- c(
       area(t = 1, l = 2, b = 11, r = 11),
       area(t = 10, l = 1, b = 12, r = 2))

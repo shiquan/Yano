@@ -32,8 +32,14 @@ varanno <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL
   df
 }
 
+#' @export
 anno_gene <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, gtf = NULL) {
   sl <- .Call("anno_gene", chr, start, end, ref, alt, strand, gtf)
+  sl
+}
+#' @export
+anno_conseq <- function(chr = NULL, pos = NULL, ref = NULL, alt = NULL, strand = NULL, gtf = NULL, fasta=NULL, debug=FALSE) {
+  sl <- .Call("anno_conseq", chr, as.integer(pos), ref, alt, strand, gtf, fasta, debug)
   sl
 }
 
@@ -46,9 +52,10 @@ anno_gene <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NU
 #' @param tags Vector of tags to annotate. Require VCF database specified, and tags should be well formated in the VCF header. See VCF specification (https://samtools.github.io/hts-specs/VCFv4.2.pdf) for details.
 #' @param check.alt.only Only annotate records for alternative allele (non-ref allele). Default is FASLE.
 #' @param chr Colname name for chromsome, default is "chr".
+#' @param fasta Genome reference in FATSA format, should be indexed with `samtools faidx` first.
 #' @return Annotated Seurat object.
 #' @export
-annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE, chr = "chr")
+annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = NULL, check.alt.only = FALSE, chr = "chr", fasta = NULL)
 {
   assay <- assay %||% DefaultAssay(object)
   old.assay <- DefaultAssay(object)
@@ -73,9 +80,15 @@ annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
   }
 
   if (!is.null(gtf)) {
-    df0 <- anno_gene(chr = df$chr, start = as.integer(df$start), ref = df$ref, alt = df$alt, strand = df$strand, gtf = gtf)
-    object[[assay]][["gene_name"]] <- df0[[1]]
-    object[[assay]][["type"]] <- df0[[2]]
+    if (is.null(fasta)) {
+      df0 <- anno_gene(chr = df$chr, start = as.integer(df$start), ref = df$ref, alt = df$alt, strand = df$strand, gtf = gtf)
+      object[[assay]][["gene_name"]] <- df0[[1]]
+      object[[assay]][["type"]] <- df0[[2]]
+    } else {
+      df0 <- anno_conseq(chr = df$chr, pos = as.integer(df$start), ref = df$ref, alt = df$alt, strand = df$strand, gtf = gtf, fasta=fasta)
+      object[[assay]][["gene_name"]] <- df0[[1]]
+      object[[assay]][["consequence"]] <- df0[[2]]
+    }
   }
   DefaultAssay(object) <- old.assay
 
