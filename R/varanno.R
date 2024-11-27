@@ -81,11 +81,11 @@ annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
 
   if (!is.null(gtf)) {
     if (is.null(fasta)) {
-      df0 <- anno_gene(chr = df$chr, start = as.integer(df$start), ref = df$ref, alt = df$alt, strand = df$strand, gtf = gtf)
+      df0 <- anno_gene(chr = df[[chr]], start = as.integer(df$start), ref = df$ref, alt = df$alt, strand = df$strand, gtf = gtf)
       object[[assay]][["gene_name"]] <- df0[[1]]
       object[[assay]][["type"]] <- df0[[2]]
     } else {
-      df0 <- anno_conseq(chr = df$chr, pos = as.integer(df$start), ref = df$ref, alt = df$alt, strand = df$strand, gtf = gtf, fasta=fasta)
+      df0 <- anno_conseq(chr = df[[chr]], pos = as.integer(df$start), ref = df$ref, alt = df$alt, strand = df$strand, gtf = gtf, fasta=fasta)
       object[[assay]][["gene_name"]] <- df0[[1]]
       object[[assay]][["consequence"]] <- df0[[2]]
     }
