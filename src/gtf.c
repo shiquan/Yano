@@ -13,6 +13,12 @@ KSTREAM_INIT(gzFile, gzread, 8193)
 
 KHASH_MAP_INIT_INT(attr, char*)
 
+static char *mito = "MT";
+void setup_mito(char *mn)
+{
+    mito = mn;
+}
+
 struct _ctg_idx {
     int offset;
     int idx;
@@ -82,6 +88,8 @@ void gtf_copy(struct gtf *dest, struct gtf *src)
     dest->type = src->type;
     dest->start = src->start;
     dest->end = src->end;
+    dest->cstart = src->cstart;
+    dest->cend = src->cend;
     dest->strand = src->strand;
     dest->gene_id = src->gene_id;
     dest->gene_name = src->gene_name;
@@ -304,11 +312,11 @@ static int gtf_push(struct gtf_spec *G, struct gtf_ctg *ctg, struct gtf *gtf, in
     struct gtf *exon_gtf = tx_gtf->gtf[tx_gtf->n_gtf++];
     gtf_copy(exon_gtf, gtf);
 
-    // update coding signature
-    if (exon_gtf->type == feature_CDS) {
-        tx_gtf->coding = 1;
-        gene_gtf->coding = 1;
-    }
+    /* // update coding signature */
+    /* if (exon_gtf->type == feature_CDS) { */
+    /*     tx_gtf->coding = 1; */
+    /*     gene_gtf->coding = 1; */
+    /* } */
 
     // inhert gene and transcript name 
     if (exon_gtf->gene_id == -1) exon_gtf->gene_id = gene_gtf->gene_id;
@@ -474,11 +482,40 @@ static struct region_index *ctg_build_idx(struct gtf_ctg *ctg)
     }
     return idx;
 }
+void update_cds(struct gtf *g)
+{
+    int cstart0 = -1;
+    int cend0 = -1;
+    int i;
+    
+    for (i = 0; i < g->n_gtf; ++i) {
+        struct gtf *tx = g->gtf[i];
+        if (tx->type != feature_transcript) continue;
+        int j;
+        int cstart = -1;
+        int cend = -1;
+        for (j = 0; j < tx->n_gtf; ++j) {
+            struct gtf *e = tx->gtf[j];
+            if (e->type == feature_CDS) {
+                if (cstart == -1) cstart = e->start;
+                cend = e->end;
+            }
+        }
+        tx->cstart = cstart;
+        tx->cend = cend;
+        if (cstart0 == -1) cstart0 = cstart;
+        if (cend0 < cend) cend0 = cend;
+    }
+    g->cstart = cstart0;
+    g->cend = cend0;
+}
+
 static int gtf_build_index(struct gtf_spec *G)
 {
     // update gene and transcript start and end record
     int i;
     int total_gene = 0;
+    int mito_id = dict_query(G->name, mito);
     for (i = 0; i < dict_size(G->name); ++i) {
         struct gtf_ctg *ctg = dict_query_value(G->name,i);
         assert(ctg);
@@ -487,6 +524,8 @@ static int gtf_build_index(struct gtf_spec *G)
         for (j = 0; j < ctg->n_gtf; ++j) {
             gtf_sort(ctg->gtf[j]); // sort gene
             struct gtf *g = ctg->gtf[j];
+            if (g->seqname == mito_id) g->is_mito = 1;
+            update_cds(g);
             struct gtf *g0 = dict_query_value(G->gene_name, g->gene_name);
             if (g0 == NULL) {
                 dict_assign_value(G->gene_name, g->gene_name, g);
@@ -502,6 +541,9 @@ static int gtf_build_index(struct gtf_spec *G)
             int k;
             for (k = 0; k < g->n_gtf; ++k) {
                 struct gtf *tx = g->gtf[k];
+
+                if (tx->seqname == mito_id) tx->is_mito = 1;
+                
                 struct gtf *tx0 = dict_query_value(G->transcript_id, tx->transcript_id);
                 if (tx0 == NULL) {
                     dict_assign_value(G->transcript_id, tx->transcript_id, tx);

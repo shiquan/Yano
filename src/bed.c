@@ -224,7 +224,8 @@ void bed_spec_dedup(struct bed_spec *B, int check_name)
     for (i = 0; i < B->n; i++) {
         struct bed *bed0 = &B->bed[i];
         if (bed0->seqname == -1) continue;
-        for (int j = i + 1; j < B->n; ++j) {
+        int j;
+        for (j = i + 1; j < B->n; ++j) {
             struct bed *bed1 = &B->bed[j];
             if (bed1->seqname == -1) continue;
             if (check_name == 1) {
@@ -703,12 +704,13 @@ struct bed_spec *bed_spec_flatten(struct bed_spec *B0, int offset)
     
     int n = 0, m = 0;
     int *bps = NULL;
-    
-    for (int i = 0; i < B->n; ++i) {
+    int i;
+    for (i = 0; i < B->n; ++i) {
         n = 0;
         struct bed *bed0 = &B->bed[i];
         if (bed0->seqname == -1) continue;
-        for (int j = i+1; j < B->n; ++j) {
+        int j;
+        for (j = i+1; j < B->n; ++j) {
             struct bed *bed = &B->bed[j];
             if (bed->seqname == -1) continue;
             if (bed->seqname != bed0->seqname) break;
@@ -772,24 +774,28 @@ struct bed_spec *gtf2bed(struct gtf_spec *G, struct region_itr *itr, int level, 
     if (offset != 0) offset = 1;
 
     if (itr == NULL) {
-        for (int i = 0; i < dict_size(G->name); ++i) {
+        int i;
+        for (i = 0; i < dict_size(G->name); ++i) {
             struct gtf_ctg *ctg = dict_query_value(G->name, i);
             char *seqname = dict_name(G->name, i);
-            for (int j = 0; j < ctg->n_gtf; ++j) {
+            int j;
+            for (j = 0; j < ctg->n_gtf; ++j) {
                 struct gtf *g = ctg->gtf[j];
                 char *name = NULL;
                 if (name_level == 1) name = dict_name(G->gene_name, g->gene_name);
                 if (level == 1) {
                     bed_spec_push0(B, seqname, g->start-offset, g->end, g->strand, name, NULL);
                 } else {
-                    for (int k = 0; k < g->n_gtf; ++k) {
+                    int k;
+                    for (k = 0; k < g->n_gtf; ++k) {
                         struct gtf *t = g->gtf[k];
                         if (name_level == 2) name = dict_name(G->transcript_id, t->transcript_id);
                         else if (name_level == 3) name = NULL;
                         if (level== 2) {
                             bed_spec_push0(B, seqname, t->start-offset, t->end, t->strand, name, NULL);   
                         } else {
-                            for (int e = 0; e < t->n_gtf; ++e) {
+                            int e;
+                            for (e = 0; e < t->n_gtf; ++e) {
                                 struct gtf *ex= t->gtf[e];
                                 if (level == 3 && ex->type == feature_exon) {
                                     bed_spec_push0(B, seqname, ex->start-offset, ex->end, ex->strand, name, NULL);
@@ -802,8 +808,9 @@ struct bed_spec *gtf2bed(struct gtf_spec *G, struct region_itr *itr, int level, 
                 }
             }
         }
-    } else {    
-        for (int j = 0; j < itr->n; ++j) {
+    } else {
+        int j;
+        for (j = 0; j < itr->n; ++j) {
             struct gtf *g = (struct gtf *)itr->rets[j];
             char *seqname = dict_name(G->name, g->seqname);
             char *name = NULL;
@@ -811,14 +818,16 @@ struct bed_spec *gtf2bed(struct gtf_spec *G, struct region_itr *itr, int level, 
             if (level == 1) {
                 bed_spec_push0(B, seqname, g->start-offset, g->end, g->strand, name, NULL);            
             } else {
-                for (int k = 0; k < g->n_gtf; ++k) {
+                int k;
+                for (k = 0; k < g->n_gtf; ++k) {
                     struct gtf *t = g->gtf[k];
                     if (name_level == 2) name = dict_name(G->transcript_id, t->transcript_id);
                     else if (name_level == 3) name = NULL;
                     if (level== 2) {
                         bed_spec_push0(B, seqname, t->start-offset, t->end, t->strand, name, NULL);   
                     } else {
-                        for (int e = 0; e < t->n_gtf; ++e) {
+                        int e;
+                        for (e = 0; e < t->n_gtf; ++e) {
                             struct gtf *ex= t->gtf[e];
                             if (level == 3 && ex->type == feature_exon) {
                                 bed_spec_push0(B, seqname, ex->start-offset, ex->end, ex->strand, name, NULL);
@@ -845,19 +854,15 @@ static int cmpfunc2(const void *_a, const void *_b)
 }
 
 // exon
-static int query_exon(int start, int end, struct gtf const *G, struct anno0 *a, int coding)
+static int query_exon(int start, int end, struct gtf const *G, struct anno0 *a)
 {
-    int utr = 0;
-    if (coding) utr = 1; // if CDS record exists, turn utr to 0 if region overlapped with CDS region
-    int pass_cds = 0;
-
     int n = 0;
     struct gtf **gtf_pool = malloc(G->n_gtf *sizeof(struct gtf*));
     int i;
     for (i = 0; i < G->n_gtf; ++i) { // exon level
         struct gtf *g0 = G->gtf[i];
         // filter type
-        if (g0->type != feature_CDS && g0->type != feature_exon) continue;
+        if (g0->type != feature_exon) continue;
         // check overlapped
         
         // non-overlap
@@ -868,18 +873,9 @@ static int query_exon(int start, int end, struct gtf const *G, struct anno0 *a, 
             break;   
         }
 
-        if (g0->type == feature_CDS) {
-            if (start > g0->end) pass_cds = 1;
-        }
             
         if (start > g0->end) continue; // check next
-        
-        // CDS record is only used to distiguish UTR and EXON
-        if (g0->type == feature_CDS) {
-            utr = 0; // it's a coding region
-            continue;
-        }
-        
+                
         // push to pool
         gtf_pool[n++] = g0;
 
@@ -911,12 +907,12 @@ static int query_exon(int start, int end, struct gtf const *G, struct anno0 *a, 
         a->g = g0;
     }
 
-    if (a->type == BAT_EXON && utr == 1) {
-        // forward
-        if (G->strand == 0) a->type = pass_cds ? BAT_UTR3 : BAT_UTR5;
-        // backward
-        else a->type = pass_cds ? BAT_UTR5 : BAT_UTR3;
-    }
+    /* if (a->type == BAT_EXON && utr == 1) { */
+    /*     // forward */
+    /*     if (G->strand == 0) a->type = pass_cds ? BAT_UTR3 : BAT_UTR5; */
+    /*     // backward */
+    /*     else a->type = pass_cds ? BAT_UTR5 : BAT_UTR3; */
+    /* } */
 
     free(gtf_pool);
     
@@ -945,7 +941,17 @@ static int query_trans(int start, int end, struct gtf const *G, struct anno0 *a)
         if (start >= g0->end) continue;
         if (end <= g0->start) continue;
         
-        int ret = query_exon(start, end, g0, &a0[j], g0->coding);
+        int ret = query_exon(start, end, g0, &a0[j]);
+        if (a0[j].type != BAT_INTRON) {
+            if (end < g0->cstart) {
+                if (g0->type == GTF_STRAND_REV) a0[j].type = BAT_UTR3;
+                else a0[j].type = BAT_UTR5;
+            }
+            if (start > g0->cend) {
+                if (g0->type == GTF_STRAND_REV) a0[j].type = BAT_UTR5;
+                else a0[j].type = BAT_UTR3;
+            }
+        }
         if (ret == 0) j++;
     }
     
@@ -1034,7 +1040,8 @@ struct anno0 *anno_bed_core(const char *name, int start, int end, int strand, st
     // annotate all possibility
     struct anno0 *a = malloc(sizeof(struct anno0)*itr->n);
     int k = 0;
-    for (int j = 0; j < itr->n; ++j) {
+    int j;
+    for (j = 0; j < itr->n; ++j) {
         struct gtf *g0 = (struct gtf*)itr->rets[j];
         if (start <= g0->start && end >= g0->end) {
             a[k].type = BAT_WHOLEGENE;
@@ -1123,7 +1130,8 @@ struct anno0 *anno_bed_core(const char *name, int start, int end, int strand, st
 
     if (k > 1) {
         qsort(a, k, sizeof(struct anno0), cmpfunc2);
-        for (int j = 1; j < k; ++j) { //incase multiple antisense situations
+        int j;
+        for (j = 1; j < k; ++j) { //incase multiple antisense situations
             if (a[j].type > BAT_WHOLEGENE) {
                 k = j;
                 break;

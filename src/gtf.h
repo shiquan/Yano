@@ -40,11 +40,14 @@ struct gtf {
     enum feature_type type;
     int start;
     int end;
+    int cstart;
+    int cend;
     int strand; // 0 on forward, 1 on reverse
     int gene_id;
     int gene_name;
     int transcript_id;
-    int coding; // set to 1 if CDS exists
+    int is_mito; // is mitochondria
+    // int coding; // set to 1 if CDS exists
     // struct dict *attr; // attributions
     struct attr *attr;
     //struct dict *query; // used to fast access gtf, dedup
