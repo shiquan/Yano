@@ -34,9 +34,9 @@ void bed_copy(struct bed *a, struct bed *b);
 // promoter come before UTR considering region behind TSS may also play as promoter,
 // but maybe this is not a perfect design, may change in the future. SQ 19/04/2024
 #define BAT_PROMOTER         1
-#define BAT_UTR3             2 
-#define BAT_UTR5             3 
-#define BAT_EXON             4 
+#define BAT_EXON             2
+#define BAT_UTR3             3 
+#define BAT_UTR5             4 
 #define BAT_MULTIEXONS       5 
 #define BAT_EXONINTRON       6
 #define BAT_WHOLEGENE        7 

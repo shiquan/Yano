@@ -14,9 +14,9 @@ KSTREAM_INIT(gzFile, gzread, 8193)
 static const char *bed_anno_type[] = {
     "unknown",
     "promoter", // use for old version, now be replaced by upstream
+    "exon", // exon come early than utr
     "utr3",
     "utr5",
-    "exon",
     "multiexons",
     "exonintron",
     "whole_gene",

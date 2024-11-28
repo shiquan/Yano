@@ -86,8 +86,12 @@ annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
       object[[assay]][["type"]] <- df0[[2]]
     } else {
       df0 <- anno_conseq(chr = df[[chr]], pos = as.integer(df$start), ref = df$ref, alt = df$alt, strand = df$strand, gtf = gtf, fasta=fasta)
-      object[[assay]][["gene_name"]] <- df0[[1]]
-      object[[assay]][["consequence"]] <- df0[[2]]
+      if (length(df0) == 2) {
+        object[[assay]][["gene_name"]] <- df0[[1]]
+        object[[assay]][["consequence"]] <- df0[[2]]
+      } else {
+        stop(df0)
+      }
     }
   }
   DefaultAssay(object) <- old.assay

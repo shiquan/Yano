@@ -609,6 +609,10 @@ char *construct_reference(struct gtf *tx, struct gtf_spec *G, const char *fasta,
             // Rprintf("start, %d, end, %d\n", st, ed);
             int len;
             char *seq = faidx_fetch_seq(fai, GTF_seqname(G, tx->seqname), st-1, ed-1, &len);
+            if (seq == NULL) {
+                if (tmp.m) free(tmp.s);
+                return NULL;
+            }
             kputs(seq, &tmp);
         }
     }
@@ -816,7 +820,11 @@ enum mol_con predict_func0(const char *chr, int pos, int strand, const char *ref
         }
         
         char *ref_str = construct_reference(tx, G, fasta, fai);
-
+        if (ref_str == NULL ) {
+            return mc_exon_splice_sites;
+            // continue; // return mc_unknown;   
+        }
+        
         if (lref == 1 && lalt == 1) {
             int ss;
             int cds = find_cds_location(tx, pos, &ss);
@@ -860,9 +868,10 @@ enum mol_con predict_func0(const char *chr, int pos, int strand, const char *ref
     }
     return ret;
 }
+static struct dict *wnames = NULL;
 struct csq *predict_func(const char *chr, int pos, int strand, const char *ref, const char *alt,
                          struct gtf_spec *G,
-                         const char *fasta, faidx_t *fai, int *n, struct dict *wnames, int debug)
+                         const char *fasta, faidx_t *fai, int *n, int debug)
 {
     *n = 0;
     
@@ -972,7 +981,7 @@ SEXP anno_conseq(SEXP _chr, SEXP _pos, SEXP _ref, SEXP _alt, SEXP _strand, SEXP 
     SEXP sl = PROTECT(allocVector(VECSXP, 2));
     SEXP gene = PROTECT(allocVector(STRSXP, l));
     SEXP conseq = PROTECT(allocVector(STRSXP, l));
-    struct dict *wnames = NULL;
+    // struct dict *wnames = NULL;
                
     for (int i = 0; i < l; ++i) {
         const char *chr = translateChar(STRING_ELT(_chr, i));
@@ -988,7 +997,7 @@ SEXP anno_conseq(SEXP _chr, SEXP _pos, SEXP _ref, SEXP _alt, SEXP _strand, SEXP 
         }
 
         int n_csq = 0;
-        struct csq *csq = predict_func(chr, pos, strand, ref, alt, G, fasta, fai, &n_csq, wnames, debug);
+        struct csq *csq = predict_func(chr, pos, strand, ref, alt, G, fasta, fai, &n_csq, debug);
         if (n_csq > 1) qsort(csq, n_csq, sizeof(struct csq), cmp);
         if (n_csq == 0) {
             SET_STRING_ELT(gene, i, mkChar("."));
