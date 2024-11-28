@@ -474,10 +474,10 @@ enum mol_con {
     mc_reference = 0,              // reference allele
     mc_whole_gene,                 // delete of whole gene
     mc_exon_loss,                  // delete of an exon
-    mc_splice_donor,               // start region of an intron (2bp at the 5' end of intron)
-    mc_splice_acceptor,            // end region of an intron (2bp at the 3' end of intron)
     mc_stop_gained,                // nonsense
     mc_exon_splice_sites,
+    mc_splice_donor,               // start region of an intron (2bp at the 5' end of intron)
+    mc_splice_acceptor,            // end region of an intron (2bp at the 3' end of intron)
     mc_frameshift_truncation,     
     mc_frameshift_elongation,      // translational reading frame to be extended relative to the reference
     mc_stop_loss,
@@ -514,10 +514,10 @@ const char *MCT[] = {
     "ref",                        //
     "whole_gene_delete",           //
     "exon_loss",                  //
+    "stop_gained",                //
+    "splice_sites",               //
     "splice_donor",               //
     "splice_acceptor",            //
-    "stop_gained",                //
-    "splice_sites",               //      
     "frameshift_truncation",      //
     "frameshift_elongation",      //
     "stop_loss",                  //
@@ -527,7 +527,7 @@ const char *MCT[] = {
     "synonymous",                  //
     "nocall",                     // not implement yet
     "stop_retained",               //
-    "start_retained",              //
+    "start_retained",              //    
     "utr5_start_gain",   // not implement yet
     "utr5",                        //
     "utr3",                        //
