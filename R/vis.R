@@ -99,8 +99,9 @@ FbtPlot0 <- function(tab = NULL,
       } else {
         n <- length(unique(data[[col.by]]))
         cols <- cols %||% sample(colours(distinct = TRUE),n)
-        p <- p + scale_fill_manual(values = cols) + guides(fill = guide_legend(override.aes = list(shape=21)))
+        p <- p + scale_fill_manual(values = cols) 
       }
+      p <- p + guides(fill = guide_legend(override.aes = list(shape=21)))
     } else {
       p <- p + geom_point(aes(x=bp_cum, y=qval, fill=.data[[col.by]], shape=.data[[shape.by]]), size = pt.size)
       p <- p + scale_shape_manual(values = c(21, 24, 22, 23, 25)) 
