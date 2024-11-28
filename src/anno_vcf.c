@@ -795,7 +795,7 @@ enum mol_con predict_func0(const char *chr, int pos, int strand, const char *ref
             return mc_antisense_intron;
         }
         struct gtf *ex = tx->gtf[e];
-        if (lref - lalt >= ex->end - ex->start) return mc_exon_loss;
+        if (lref - lalt >= 10 && lref-lalt >= ex->end - ex->start) return mc_exon_loss;
         
         if (ret == mc_noncoding_intron) {
             if (pos < tx->start)
