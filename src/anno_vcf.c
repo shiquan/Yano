@@ -472,6 +472,8 @@ SEXP anno_gene(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand
 // Sequence ontology variant types
 enum mol_con {
     mc_reference = 0,              // reference allele
+    mc_nc_reference,           // reference allele for noncoding gene
+    mc_antisense_ref,           // ref allele at antisense gene
     mc_whole_gene,                 // delete of whole gene
     mc_exon_loss,                  // delete of an exon
     mc_stop_gained,                // nonsense
@@ -512,6 +514,8 @@ enum mol_con {
 
 const char *MCT[] = {
     "ref",                        //
+    "ref",
+    "ref",
     "whole_gene_delete",           //
     "exon_loss",                  //
     "stop_gained",                //
@@ -774,7 +778,11 @@ enum mol_con predict_func0(const char *chr, int pos, int strand, const char *ref
     enum mol_con ret = mc_reference;
     int lref = strlen(ref);
     int lalt = strlen(alt);
-    if (lref == lalt && strcmp(ref, alt) == 0) return ret;
+    if (lref == lalt && strcmp(ref, alt) == 0) {
+        if (strand != -1 && strand != tx->strand) return mc_antisense_ref;
+        if (tx->cstart == tx->cend) return mc_nc_reference;
+        return ret;
+    }
     int e = 0;
     if (tx->cstart == tx->cend) {
         ret = fast_predict(pos,tx, &e);
@@ -806,9 +814,9 @@ enum mol_con predict_func0(const char *chr, int pos, int strand, const char *ref
         }
         if (ret == mc_noncoding_splice_region) {
             if (pos < ex->start && ex->start - pos < 3)
-                return tx->strand == GTF_STRAND_FWD ? mc_splice_donor : mc_splice_acceptor;
+                return tx->strand == GTF_STRAND_FWD ? mc_splice_acceptor : mc_splice_donor;
             if (pos > ex->end && pos - ex->end < 3)
-                return tx->strand == GTF_STRAND_FWD ? mc_splice_donor : mc_splice_acceptor;
+                return tx->strand == GTF_STRAND_FWD ? mc_splice_acceptor : mc_splice_donor;
             return mc_splice_region;
         }
 
@@ -868,7 +876,9 @@ enum mol_con predict_func0(const char *chr, int pos, int strand, const char *ref
     }
     return ret;
 }
+
 static struct dict *wnames = NULL;
+
 struct csq *predict_func(const char *chr, int pos, int strand, const char *ref, const char *alt,
                          struct gtf_spec *G,
                          const char *fasta, faidx_t *fai, int *n, int debug)
