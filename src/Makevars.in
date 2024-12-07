@@ -2,8 +2,8 @@ HTSDIR = htslib-1.21
 HTSLIB = $(HTSDIR)/libhts.a
 HTSLIB_CPPFLAGS = -I$(HTSDIR)
 
-PKG_CFLAGS = @PKG_CFLAGS@ @openmp_cflags@ $(HTSLIB_CPPFLAGS)
-PKG_LIBS = @PKG_LIBS@ @openmp_cflags@ $(HTSDIR)/libhts.a -lcurl
+PKG_CFLAGS = @PKG_CFLAGS@ @openmp_cflags@ $(HTSLIB_CPPFLAGS) -I.
+PKG_LIBS = @PKG_LIBS@ @openmp_cflags@ $(HTSDIR)/libhts.a -lcurl -lz -llzma
 
 all: HTS
 
