@@ -53,6 +53,8 @@
     } while(0)
 
 // timer, copied from bwa/utils.c
+
+#if defined(__linux__)
 #include <sys/resource.h>
 #include <sys/time.h>
 
@@ -81,5 +83,6 @@ static inline long peakrss(void)
 	return r.ru_maxrss;
 #endif
 }
+#endif
 
 #endif
