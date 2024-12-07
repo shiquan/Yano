@@ -645,8 +645,8 @@ TrackPlot <- function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
   }
 
   if (is.null(start) || is.null(end)) stop("No start or/and end position specified.")
-  if (end >= start) {
-    stop("Corrupt locations, check the start and end coordinates.")
+  if (end <= start) {
+    stop("Corrupt locations (end <= start), check the start and end coordinates.")
   }
   start <- start - upstream
   end <- end + downstream
