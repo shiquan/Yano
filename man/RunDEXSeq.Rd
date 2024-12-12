@@ -66,11 +66,3 @@ Data frame containing p values and pct for test features and their binding featu
 \description{
 This method tests whether the test features and binding features are differentially expressed between groups using a generalized linear model. For details, refer to the DEXSeq method (PMID: 22722343). Since this approach is applied to single cells, cells within the same group are aggregated into several pseudo-bulk datasets for analysis.
 }
-\examples{
-data("glbt_small")
-DefaultAssay(glbt_small) <- "exon"
-glbt_small <- ParseExonName(glbt_small)
-alt.exon <- RunDEXSeq(object = glbt_small, assay = "exon", bind.assay = "RNA", bind.name = "gene_name",ident.1 = "0", features = rownames(glbt_small))
-head(alt.exon)
-
-}

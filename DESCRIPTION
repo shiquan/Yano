@@ -1,11 +1,11 @@
 Package: Yano
-Title: Yet ANother package for single cell Omics data analysis
+Title: Yet Another Package for Single Cell Genomics
 Version: 1.0
 Author: Quan Shi
 Maintainer: Quan Shi <shiquan.biomed@icloud.com>
-Description: Spatial dissimilarity analysis for single cell transcriptomics
+Description: A toolkit to perform spatial dissimilarity analysis for single cell transcriptomics.
 URL: https://github.com/shiquan/Yano
-License: MIT
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.2

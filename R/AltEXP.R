@@ -173,14 +173,6 @@ PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode =
 #' @param threads Threads passed to DEXSeq. Default is 1.
 #' @return Data frame containing p values and pct for test features and their binding features.
 #' @export
-#'
-#' @examples
-#' data("glbt_small")
-#' DefaultAssay(glbt_small) <- "exon"
-#' glbt_small <- ParseExonName(glbt_small)
-#' alt.exon <- RunDEXSeq(object = glbt_small, assay = "exon", bind.assay = "RNA", bind.name = "gene_name",ident.1 = "0", features = rownames(glbt_small))
-#' head(alt.exon)
-#' 
 RunDEXSeq <- function(object = NULL, bind.name = "gene_name",
                       ident.1 = NULL, ident.2 = NULL, cells.1 = NULL, cells.2 = NULL,
                       assay = NULL, bind.assay = NULL,

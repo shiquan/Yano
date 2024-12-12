@@ -11,7 +11,8 @@ annoVAR(
   vcf = NULL,
   tags = NULL,
   check.alt.only = FALSE,
-  chr = "chr"
+  chr = "chr",
+  fasta = NULL
 )
 }
 \arguments{
@@ -28,6 +29,8 @@ annoVAR(
 \item{check.alt.only}{Only annotate records for alternative allele (non-ref allele). Default is FASLE.}
 
 \item{chr}{Colname name for chromsome, default is "chr".}
+
+\item{fasta}{Genome reference in FATSA format, should be indexed with `samtools faidx` first.}
 }
 \value{
 Annotated Seurat object.

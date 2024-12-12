@@ -32,12 +32,11 @@ varanno <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL
   df
 }
 
-#' @export
 anno_gene <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, gtf = NULL) {
   sl <- .Call("anno_gene", chr, start, end, ref, alt, strand, gtf)
   sl
 }
-#' @export
+
 anno_conseq <- function(chr = NULL, pos = NULL, ref = NULL, alt = NULL, strand = NULL, gtf = NULL, fasta=NULL, debug=FALSE) {
   sl <- .Call("anno_conseq", chr, as.integer(pos), ref, alt, strand, gtf, fasta, debug)
   sl
