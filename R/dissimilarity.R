@@ -1,8 +1,8 @@
-#DScore <- function(x = NULL, y = NULL, W = NULL)
-#{
-#  d <- .Call("D_score_lite", x, y, W)
-#  d
-#}
+DScore <- function(x = NULL, y = NULL, W = NULL)
+{
+  d <- .Call("D_score_lite", x, y, W)
+  d
+}
 
 #
 #' @importFrom methods is
