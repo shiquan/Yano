@@ -28,7 +28,7 @@ GetWeights(
 
 \item{k.nn}{K-nearest neighbors, for calculating weight matrix with emb.}
 
-\item{prune.distance}{Sets the cutoff for cell distance on lineage trajectory (ranked cells) or spatial cooridates (bin/spot distance) when computing the neighborhood overlap for the weight matrix construction. Any edges with values greater than this will be set to 0 and removed from the weight matrix graph. Default is 50 for lineage cells, means only calculate weight edges for nearby 50 cells for each cell, while 8 for spatial coordinates.}
+\item{prune.distance}{Sets the cutoff for cell distance on lineage trajectory (ranked cells) or spatial cooridates (bin/spot distance) when computing the neighborhood overlap for the weight matrix construction. Any edges with values greater than this will be set to 0 and removed from the weight matrix graph. Default is -1 for automatic search. For lineage cells will set to length(cells)/100; for spatial coordinates, will set the distance to one unit, maximal 8 neigbors for each bin/spot.}
 
 \item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
 

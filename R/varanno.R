@@ -38,7 +38,7 @@ anno_gene <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NU
 }
 
 anno_conseq <- function(chr = NULL, pos = NULL, ref = NULL, alt = NULL, strand = NULL, gtf = NULL, fasta=NULL, debug=FALSE) {
-  sl <- .Call("anno_conseq", chr, as.integer(pos), ref, alt, strand, gtf, fasta, debug)
+  sl <- .Call("anno_conseq", chr, as.integer(pos), ref, alt, strand, gtf, normalizePath(fasta), debug)
   sl
 }
 

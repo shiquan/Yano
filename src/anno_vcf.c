@@ -13,6 +13,9 @@
 #include "htslib/bgzf.h"
 #include "htslib/faidx.h"
 
+#define UPSTREAM_FLK 1000
+#define DOWNSTREAM_FLK 1000
+
 struct val0 {
     union {
         double f;
@@ -28,6 +31,7 @@ struct val {
     int convert2str;
     struct val0 *v;
 };
+
 // this function edit from bcftools/vcf.c
 int process_fmt_array(kstring_t *s, int n, int type, void *data)
 {
@@ -436,7 +440,7 @@ SEXP anno_gene(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand
         }
 
         int k;
-        struct anno0 *a = anno_bed_core(chr, start-1, start, strand, G, &k, 1000, 1000);
+        struct anno0 *a = anno_bed_core(chr, start-1, start, strand, G, &k, DOWNSTREAM_FLK, UPSTREAM_FLK);
         if (k == 0) {
             SET_STRING_ELT(gene, i, mkChar("."));
             SET_STRING_ELT(type, i, mkChar("intergenic"));
@@ -500,12 +504,12 @@ enum mol_con {
     mc_noncoding_exon,
     mc_noncoding_splice_region,
     mc_noncoding_intron,
+    mc_upstream_1K,
+    mc_downstream_1K,
     mc_antisense_utr3,              // variant located at antisense UTR3 region
     mc_antisense_utr5,
     mc_antisense_exon,
     mc_antisense_intron,
-    mc_upstream_1K,
-    mc_downstream_1K,
     mc_antisense_upstream_1K,
     mc_antisense_downstream_1K,
     mc_intergenic,
@@ -542,12 +546,12 @@ const char *MCT[] = {
     "noncoding_exon",              //
     "noncoding_splice_region",     //
     "noncoding_intron",            //
+    "upstream_1K",                 //
+    "downstream_1K",               //
     "antisense_utr3",              //
     "antisense_utr5",              //
     "antisense_exon",              //
     "antisense_intron",            //
-    "upstream_1K",                 //
-    "downstream_1K",               //
     "antisense_upstream_1K",       //
     "antisense_downstream_1K",     //
     "intergenic",                   //
@@ -884,8 +888,8 @@ struct csq *predict_func(const char *chr, int pos, int strand, const char *ref, 
                          const char *fasta, faidx_t *fai, int *n, int debug)
 {
     *n = 0;
-    
-    struct region_itr *itr = gtf_query(G, chr, pos - 1000, pos + 1000);
+    int flank = DOWNSTREAM_FLK > UPSTREAM_FLK ? DOWNSTREAM_FLK : UPSTREAM_FLK;
+    struct region_itr *itr = gtf_query(G, chr, pos - flank, pos + flank);
     if (itr == NULL) {
         int id = dict_query(G->name, chr);
         if (id == -1) {

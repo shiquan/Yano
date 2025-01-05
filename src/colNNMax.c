@@ -48,12 +48,14 @@ SEXP colNNMax(SEXP x, SEXP _n)
     double d[nr];
     int i, j;
     for (i = 0; i < nr; ++i) {
-        d[i] = 0;
-        for (j = i + 1; j < nr; ++j) {
-            d[j] = R_euclidean(REAL(x), nr, nc, i, j);
+        for (j = 0; j < nr; ++j) {
+            if (i == j) d[j] = 0;
+            else {
+                d[j] = R_euclidean(REAL(x), nr, nc, i, j);
+            }
         }
         qsort(d, nr, sizeof(double), comp);
-        REAL(md)[i] = d[n];
+        REAL(md)[i] = d[n-1];
     }
 
     UNPROTECT(2);

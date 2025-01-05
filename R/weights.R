@@ -1,7 +1,10 @@
 spatialDistTest <- function(coord = NULL, n = 8) {
   coord <- as.matrix(coord)
-  arr <- .Call(colNNMax, coord, n)
-  median(arr)
+  if (nrow(coord) > 10000) {
+    coord <- coord[1:10000,]
+  }
+  arr <- .Call("colNNMax", coord, n)
+  min(arr)
 }
 #' @title GetWeights
 #' @description Calcualte cell-cell weight matrix by one of shared nearest neighbour matrix, spatial locations, cell embedding and linear trajectory.
@@ -10,7 +13,7 @@ spatialDistTest <- function(coord = NULL, n = 8) {
 #' @param order.cells Predefined cell ranks, used for cell lineage analysis.
 #' @param emb Cell dimesional space (PCA/ICA/harmony).
 #' @param k.nn K-nearest neighbors, for calculating weight matrix with emb.
-#' @param prune.distance Sets the cutoff for cell distance on lineage trajectory (ranked cells) or spatial cooridates (bin/spot distance) when computing the neighborhood overlap for the weight matrix construction. Any edges with values greater than this will be set to 0 and removed from the weight matrix graph. Default is 50 for lineage cells, means only calculate weight edges for nearby 50 cells for each cell, while 8 for spatial coordinates.
+#' @param prune.distance Sets the cutoff for cell distance on lineage trajectory (ranked cells) or spatial cooridates (bin/spot distance) when computing the neighborhood overlap for the weight matrix construction. Any edges with values greater than this will be set to 0 and removed from the weight matrix graph. Default is -1 for automatic search. For lineage cells will set to length(cells)/100; for spatial coordinates, will set the distance to one unit, maximal 8 neigbors for each bin/spot.
 #' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.
 #' @param diag.value Diagnoal value in the weight matrix.
 #' @param cells Cell list. Default use all cells.
@@ -55,10 +58,12 @@ GetWeights <- function(snn = NULL,
   if (!is.null(pos)) {
     if (prune.distance == -1) {
       prune.distance <- spatialDistTest(pos, n = 8)
+      message(paste0("Set prune distance to ", prune.distance))
     }
-    pos.dist <- as.matrix(dist(x=pos))
-    pos.dist[pos.dist > prune.distance] <- 0
-    W <- as(pos.dist, "CsparseMatrix")
+    #pos.dist <- as.matrix(dist(x=pos))
+    #pos.dist[pos.dist > prune.distance] <- 0
+    #W <- as(pos.dist, "CsparseMatrix")
+    W <- .Call("matrix_distance2", as.matrix(pos), "euclidean", prune.distance)
     diag(x = W) <- diag.value
 
     if (weight.method == "dist") {
@@ -91,7 +96,8 @@ GetWeights <- function(snn = NULL,
   
   if (!is.null(order.cells)) {
     if (prune.distance == -1) {
-      prune.distance <- 50
+      prune.distance <- as.integer(length(order.cells)/100)
+      message(paste0("Auto set prune.distance to ", prune.distance))
     }
     pos.dist <- as.matrix(dist(x=c(1:length(order.cells))))
     pos.dist[pos.dist > prune.distance] <- 0
@@ -122,7 +128,7 @@ GetWeightsFromSNN <- function(object = NULL, name = "RNA_snn", prune.SNN = 1/50,
   W <- GetWeights(snn=snn, prune.SNN = prune.SNN, cells = cells)
   return(W)
 }
-GetWeightsFromSpatial <- function(object = NULL, diag.value = 0, prune.distance = 20, ...) {
+GetWeightsFromSpatial <- function(object = NULL, diag.value = 0, prune.distance = -1, ...) {
   cells <- colnames(object)
   emb <- GetTissueCoordinates(object = object, ...)
   W <- GetWeights(pos = emb, diag.value = diag.value, prune.distance = prune.distance)

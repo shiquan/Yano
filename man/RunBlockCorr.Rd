@@ -30,7 +30,7 @@ RunBlockCorr(
   idents = NULL,
   node = NULL,
   reduction = "pca",
-  dims = 1:10,
+  dims = 1:20,
   k.param = 20,
   prune.SNN = 1/50,
   n.trees = 50,
