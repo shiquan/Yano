@@ -1,15 +1,16 @@
 #' @importFrom data.table fread
-#' @importFrom Matrix sparseMatrix
+#' @importFrom Matrix readMM
 .ReadMM <- function(file = NULL)
 {
-  DT <- fread(file,sep='\t', skip = "%", header = FALSE)
-  nr <- DT[1,1]
-  nc <- DT[1,2]
-  DT <- DT[-1,]
-  nr <- nr[[1]]
-  nc <- nc[[1]]
-  mt <- sparseMatrix(i = DT$V1, j = DT$V2, x = DT$V3, dims = c(nr,nc))
-
+  ## DT <- fread(file,sep='\t', skip = "%", header = FALSE)
+  ## nr <- DT[1,1]
+  ## nc <- DT[1,2]
+  ## DT <- DT[-1,]
+  ## nr <- nr[[1]]
+  ## nc <- nc[[1]]
+  ## mt <- sparseMatrix(i = DT$V1, j = DT$V2, x = DT$V3, dims = c(nr,nc))
+  
+  mt <- readMM(file)
   mt
 }
 #' @title ReadPISA

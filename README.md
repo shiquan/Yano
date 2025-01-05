@@ -13,5 +13,8 @@
 
 ## Citation
  
+Shi, Q., & Kristiansen, K. (2025). Spatial dissimilarity analysis in single cell transcriptomics. bioRxiv, 2025.01.04.631330. https://doi.org/10.1101/2025.01.04.631330 
+
+
 
 

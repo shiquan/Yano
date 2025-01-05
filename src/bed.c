@@ -22,16 +22,16 @@ static const char *bed_anno_type[] = {
     "whole_gene",
     "multigenes",
     "intron",
+    "upstream",
+    "downstream",
     "antisense_utr3",
     "antisense_utr5",
     "antisense_exon",
     "antisense_intron",
     "antisense_complex",
-    "flank",  // flank region
-    "upstream",
-    "downstream",
     "antisense_upstream",
     "antisense_downstream",
+    "flank",  // flank region
     "intergenic",
     "unknown_chromosome",
 };

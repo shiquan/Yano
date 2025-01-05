@@ -436,7 +436,6 @@ FindAllAltExp <- function(object = NULL,
                           pseudo.group = 3,
                           debug = FALSE
                           )
-  
 {
   ## node paramenter inhert from Seurat v5.0.0, check Seurat::FindAllMarkers for details
   if (is.null(x = node)) {
