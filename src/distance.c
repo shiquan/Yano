@@ -157,8 +157,8 @@ SEXP matrix_distance2(SEXP x, SEXP method, SEXP _dist)
     if (TYPEOF(x) != REALSXP) x = coerceVector(x, REALSXP);
     PROTECT(x);
 
-    int nr = nrows(x);
-    int nc = ncols(x);
+    int nr = nrows(x); 
+    int nc = ncols(x); 
 
     int n = 0;
     int m = 10000;
@@ -172,7 +172,8 @@ SEXP matrix_distance2(SEXP x, SEXP method, SEXP _dist)
     for (i = 0; i < nr; ++i) {
         pp[i] = n;
         matrix_i(REAL(x), i, nc, nr, a);
-        for (j = i + 1; j < nr; ++j) {
+        for (j = 0; j < nr; ++j) {
+            if (i == j) continue;
             matrix_i(REAL(x), j, nc, nr, b);
             double d = func(a, b, nc);
             if (d <= prune_dist) {
@@ -204,143 +205,6 @@ SEXP matrix_distance2(SEXP x, SEXP method, SEXP _dist)
     R_Free(xx);
 
     UNPROTECT(1);
-    return M_chm_sparse_to_SEXP(ans, 1, -1, 0, "N", R_NilValue);;
-}
-
-// distance between positions, with prune.distance
-// exp is a sparse matrix
-// x is a dense matrix of spatial coordinates
-// dist is prune distance to define nearby cells/spots/bins
-// method: 1, mean; 2, distance
-SEXP smooth_exp_with_large_weight_matrix(SEXP _exp, SEXP x, SEXP _dist, SEXP method)
-{
-    double prune_dist = asReal(_dist);
-    if (prune_dist < 0) error("prune distance is < 0.");
-    
-    int norm = asInteger(method);
-    
-    switch(TYPEOF(x)) {
-    case LGLSXP:
-    case INTSXP:
-    case REALSXP:
-        break;
-    default:
-        error("'x' must be numeric");
-    }
-
-    if(TYPEOF(x) != REALSXP) x = coerceVector(x, REALSXP);
-    PROTECT(x);
-
-    CHM_SP exp0 = AS_CHM_SP__(_exp);
-
-    CHM_SP exp = M_cholmod_transpose(exp0, (int)exp0->xtype, &c);
-    if (c.status < CHOLMOD_OK) return mkString("Out of memory");
-
-    int ncell = exp->nrow;
-    int nfeature = exp->ncol;
-    
-    const int *mp = (int*)exp->p;
-    const int *mi = (int*)exp->i;
-    const double *mx = (double*)exp->x;
-
-    int nr = nrows(x); // cells
-    int nc = ncols(x); // dims
-
-    if (nr != ncell) error("Inconsistance cell number.");
-    
-    double a[nc];
-    double b[nc];
-    double tmp[nr];
-    
-    int n = 0;
-    int m = 10000;
-    int *pp = R_Calloc(ncell+1, int);
-    int *ii = R_Calloc(m, int);
-    double *xx = R_Calloc(m, double);
-    pp[0] = 0;
-    int i, j;
-    for (i = 0; i < nr; ++i) {
-        memset(tmp, 0, sizeof(double)*nr);
-        matrix_i(REAL(x), i, nc, nr, a);
-        int cnt = 0;
-        for (j = 0; j < nr; ++j) {
-            if (i == j) continue;
-            matrix_i(REAL(x), j, nc, nr, b);
-            double d = euclidean(a, b, nc);
-            if (d <= prune_dist) {
-                cnt++;
-                tmp[j] = d;
-            }
-        }
-        if (norm == 1) {
-            int k;
-            for (k = 0; k < nr && cnt > 0; ++k) {
-                if (tmp[k] > 0) tmp[k] = 1.0/cnt;
-            }
-        } else if (norm == 2) {
-            double sum = 0;
-            int k;
-            for (k = 0; k < nr && cnt > 0; ++k) {
-                if (tmp[k] > 0) {
-                    tmp[k] = 1/tmp[k];
-                    sum += tmp[k];
-                }
-            }
-            for (k = 0; k < nr && sum > 0; ++k) {
-                if (tmp[k] > 0) tmp[k] = tmp[k]/sum;
-            }
-        } else {
-            error("Unknown normalised method.");
-        }
-        // Rprintf("nn, %d\n", cnt);
-        // smooth data
-        int i1, i2;
-        for (i1 = 0; i1 < nfeature && cnt > 0; ++i1) {
-            double sm = 0;
-            for (i2 = mp[i1]; i2 < mp[i1+1]; ++i2) {
-                int idx = mi[i2];
-                if (tmp[idx] > 0) {
-                    double x0 = mx[i2];
-                    sm += x0 * tmp[idx];
-                }
-            }
-            if (sm > 0) {
-                if (n == m) {
-                    m = m *2;
-                    ii = R_Realloc(ii, m, int);
-                    xx = R_Realloc(xx, m, double);
-                }
-                xx[n] = sm;
-                ii[n] = i1;
-                n++;
-            }
-            // pp[i1+1] = n;
-        }
-        pp[i+1] = n;
-    }
-    Rprintf("n, %d\n", n);
-    M_R_cholmod_start(&c);
-    CHM_SP ans = M_cholmod_allocate_sparse(nfeature, ncell, n, TRUE, TRUE, 0, CHOLMOD_REAL, &c);
-    if (ans == NULL) return(mkString("Failed to create sparse matrix"));
-    int *ap = (int *)ans->p;
-    int *ai = (int *)ans->i;
-    double *ax = (double *)ans->x;
-    memcpy(ap, pp, sizeof(int)*(ncell+1));
-    memcpy(ai, ii, sizeof(int)*n);
-    memcpy(ax, xx, sizeof(double)*n);
-
-    R_Free(pp);
-    R_Free(ii);
-    R_Free(xx);
-
-    M_cholmod_free_sparse(&exp, &c);
-
-    //CHM_SP X = M_cholmod_transpose(ans, (int)ans->xtype, &c);
-    //if (c.status < CHOLMOD_OK) return mkString("Out of memory");
-    //M_cholmod_free_sparse(&ans, &c);
-
-    M_cholmod_finish(&c);
-    UNPROTECT(1);
-    return M_chm_sparse_to_SEXP(ans, 1, -1, 0, "N", R_NilValue);
+    return M_chm_sparse_to_SEXP(ans, 1, 0, 0, "N", R_NilValue);;
 }
 

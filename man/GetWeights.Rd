@@ -12,6 +12,7 @@ GetWeights(
   k.nn = 20,
   prune.distance = -1,
   prune.SNN = 1/50,
+  nn = 8,
   diag.value = 0,
   cells = NULL,
   weight.method = c("dist", "average")
@@ -31,6 +32,8 @@ GetWeights(
 \item{prune.distance}{Sets the cutoff for cell distance on lineage trajectory (ranked cells) or spatial cooridates (bin/spot distance) when computing the neighborhood overlap for the weight matrix construction. Any edges with values greater than this will be set to 0 and removed from the weight matrix graph. Default is -1 for automatic search. For lineage cells will set to length(cells)/100; for spatial coordinates, will set the distance to one unit, maximal 8 neigbors for each bin/spot.}
 
 \item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
+
+\item{nn}{Nearest neighbors for spatial bins/spots/cells. Default is 8.}
 
 \item{diag.value}{Diagnoal value in the weight matrix.}
 
