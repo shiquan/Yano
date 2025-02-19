@@ -219,7 +219,7 @@ RunBlockCorr <- function(object = NULL,
     DefaultAssay(object) <- bind.assay
     blocks <- intersect(blocks, rownames(object))
 
-    y <- GetAssayData1(object, assay = bind.assay, slot = "counts")
+    y <- GetAssayData1(object, assay = bind.assay, layer = "counts")
 
     rs <- Matrix::rowSums(y>0)
     idx <- which(rs >= min.cells.bind)
@@ -234,8 +234,8 @@ RunBlockCorr <- function(object = NULL,
       if (isTRUE(verbose)) {
         message("Use \"data\" layer for test features and binding features.")
       }
-      x <- GetAssayData1(object, assay = assay, slot = "data")
-      y <- GetAssayData1(object, assay = bind.assay, slot = "data")
+      x <- GetAssayData1(object, assay = assay, layer = "data")
+      y <- GetAssayData1(object, assay = bind.assay, layer = "data")
       norm <- FALSE
     } else {
       if (isTRUE(verbose)) {
@@ -294,7 +294,7 @@ RunBlockCorr <- function(object = NULL,
     #cellnames.use <- colnames(x = object0)
     cellnames.use <- cells0
 
-    messages <- list()    
+    messages <- list()
     for (i in 1:length(idents)) {
       if (verbose) {
         message("Calculating cluster ", idents[i], ".")
@@ -386,7 +386,10 @@ RunBlockCorr <- function(object = NULL,
         message("Use predefined weight matrix \"", wm.name, "\"", ".")
       }
       W <- object[[wm.name]]
-      ta <- .Call("D_test", x, y, W, method, perm, threads, idx, bidx, cs, scale.factor, mode, scale, norm, seed, debug)
+
+      ## cell order may be changed due to merge, here reorder them
+      cells <- colnames(W)
+      ta <- .Call("D_test", x[,cells], y[,cells], W, method, perm, threads, idx, bidx, cs[cells], scale.factor, mode, scale, norm, seed, debug)
     } else {
       if (verbose) {
         message("Construct SNN graph for cells with \"", reduction, "\"", ".")
