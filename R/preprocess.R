@@ -2,8 +2,7 @@
 setMethod(f = "QuickRecipe0",
           signature = signature(counts = "SMatrix"),
           definition = function(counts = NULL, min.cells = 20, min.features = 200,
-                                assay = NULL, verbose = TRUE,
-                                ...
+                                assay = NULL, verbose = TRUE
                                 ) {
 
             assay <- assay %||% "RNA"
@@ -15,26 +14,27 @@ setMethod(f = "QuickRecipe0",
                                          min.features = min.features, assay = assay)
 
             
-            return(QuickRecipe0(counts, assay = assay, ...))
+            return(QuickRecipe0(counts, assay = assay, verbose = verbose))
           })
 
 #' @export
 setMethod(f = "QuickRecipe0",
           signature = signature(counts = "Seurat"),
           definition = function(counts = NULL, scale.factor = 1e4,
-                                assay = NULL, verbose = TRUE,
-                                ...
+                                assay = NULL, verbose = TRUE
                                 ) {
             assay <- assay %||% DefaultAssay(counts)
-            message(paste0("Set default assay to ", assay))
+            if (verbose) {
+              message(paste0("Set default assay to ", assay))
+            }
             DefaultAssay(counts) <- assay
 
-            if (isTRUE(verbose)) {
+            if (verbose) {
               message(paste0("object <- NormalizeData(object, normalization.method = \"LogNormalize\", scale.factor = ", scale.factor, ")"))
             } 
             
             counts <- NormalizeData(counts, normalization.method = "LogNormalize",
-                                    scale.factor = scale.factor)
+                                    scale.factor = scale.factor, verbose = verbose)
             counts
           })
 
@@ -45,7 +45,7 @@ ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, nvar= 3000
     message(paste0("object <- FindVariableFeatures(object, selection.method = \"vst\", nfeatures = ", nvar, ")"))
   } 
 
-  object <- FindVariableFeatures(object, selection.method = "vst", nfeatures = nvar)
+  object <- FindVariableFeatures(object, selection.method = "vst", nfeatures = nvar, verbose = verbose)
   
   features <- features %||% VariableFeatures(object)
   features <- intersect(features,rownames(object))
@@ -54,30 +54,30 @@ ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, nvar= 3000
     message("object <- ScaleData(object, features =  @features, vars.to.regress = \"nCount_RNA\")")
   } 
 
-  object <- ScaleData(object, features = features, vars.to.regress = "nCount_RNA")
+  object <- ScaleData(object, features = features, vars.to.regress = "nCount_RNA", verbose = verbose)
 
   if (isTRUE(verbose)) {
     message(paste0("object <- RunPCA(object, features = @features"))
   } 
 
-  object <- RunPCA(object, features = features)
+  object <- RunPCA(object, features = features,verbose = verbose)
 
   if (isTRUE(verbose)) {
     message(paste0("object <- FindNeighbors(object, dims = 1:", ndim,")"))
   } 
 
-  object <- FindNeighbors(object, dims = 1:ndim)
+  object <- FindNeighbors(object, dims = 1:ndim, verbose = verbose)
 
   if (isTRUE(verbose)) {
     message(paste0("object <- FindClusters(object, resolution = ", resolution, ")"))
   } 
-  object <- FindClusters(object, resolution = resolution)
+  object <- FindClusters(object, resolution = resolution, verbose = verbose)
 
   if (isTRUE(verbose)) {
     message(paste0("object <- RunUMAP(object, dims = 1:", ndim, ")"))
   } 
 
-  object <- RunUMAP(object, dims = 1:ndim)
+  object <- RunUMAP(object, dims = 1:ndim, verbose = verbose)
   object
 }
 
@@ -90,6 +90,7 @@ ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, nvar= 3000
 #' @param resolution Value of the resolution parameter pass to FindClusters, use a value above (below) 1.0 if you want to obtain a larger (smaller) number of communities
 #' @param assay Assay name. Default is 'RNA'.
 #' @param ndim Use top N PCs for clustering and UMAP. Default is 20.
+#' @param verbose Print log information.
 #' @return Seurat object
 #' @import Seurat
 #' @import Matrix
@@ -113,12 +114,12 @@ setMethod(f = "QuickRecipe",
           signature = signature(counts = "SMatrix"),
           definition = function(counts = NULL, min.cells = 20, min.features = 200,
                                 nvar = 3000, resolution = 0.5, assay = NULL,
-                                ndim = 20, verbose = TRUE, ...
+                                ndim = 20, verbose = TRUE
                                 ) {
             
             object <- QuickRecipe0(counts=counts,
                                    min.cells =min.cells, min.features = min.features,
-                                   assay = assay, verbose = verbose, ...)
+                                   assay = assay, verbose = verbose)
 
             ProcessDimReduc(object, ndim=ndim, resolution=resolution, nvar=nvar, verbose = verbose)
           })
