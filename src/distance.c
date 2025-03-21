@@ -126,7 +126,7 @@ SEXP matrix_distance(SEXP _m, SEXP method, SEXP _threads)
     }
     
     ap[ncell] = nz;
-    return M_chm_sparse_to_SEXP(ans, 1, -1, 0, "N", R_NilValue);;
+    return M_chm_sparse_to_SEXP(ans, 1, -1, 0, "N", R_NilValue);
 }
 
 double *matrix_i(double *x, int i, int nc, int nr, double *a)
@@ -205,6 +205,6 @@ SEXP matrix_distance2(SEXP x, SEXP method, SEXP _dist)
     R_Free(xx);
 
     UNPROTECT(1);
-    return M_chm_sparse_to_SEXP(ans, 1, 0, 0, "N", R_NilValue);;
+    return M_chm_sparse_to_SEXP(ans, 1, 0, 0, "N", R_NilValue);
 }
 
