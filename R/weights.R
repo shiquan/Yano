@@ -1,3 +1,4 @@
+#' @export
 spatialDistTest <- function(coord = NULL, n = 8) {
   coord <- as.matrix(coord)
   if (nrow(coord) > 10000) {

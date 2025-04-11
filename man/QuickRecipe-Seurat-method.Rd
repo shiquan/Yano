@@ -29,6 +29,8 @@
 \item{assay}{Assay name. Default is 'RNA'.}
 
 \item{ndim}{Use top N PCs for clustering and UMAP. Default is 20.}
+
+\item{verbose}{Print log information.}
 }
 \value{
 Seurat object

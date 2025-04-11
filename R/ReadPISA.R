@@ -132,7 +132,11 @@ ReadPISA <- function(mex_dir=NULL,
       colnames(mat) <- barcode.names$V1
     }
     if (use_10X == TRUE) {
-      rownames(mat) <- make.unique(feature.names$V2)
+      if (is.null(feature.names$V2)) {
+        rownames(mat) <- make.unique(feature.names$V1)
+      } else {
+        rownames(mat) <- make.unique(feature.names$V2)
+      }
     } else {
       rownames(mat) <- make.unique(feature.names$V1)
     }
