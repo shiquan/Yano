@@ -208,3 +208,4 @@ SEXP matrix_distance2(SEXP x, SEXP method, SEXP _dist)
     return M_chm_sparse_to_SEXP(ans, 1, 0, 0, "N", R_NilValue);
 }
 
+
