@@ -1,0 +1,5 @@
+#define HTS_CC "gcc"
+#define HTS_CPPFLAGS ""
+#define HTS_CFLAGS "-g -Wall -O2 -fpic"
+#define HTS_LDFLAGS "-fpic"
+#define HTS_LIBS "-lz -lm -lbz2 -llzma -lcurl"

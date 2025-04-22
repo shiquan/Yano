@@ -2,12 +2,21 @@
 #include <Rinternals.h>
 #include <Rmath.h>
 
-static double R_euclidean(double *x, int nr, int nc, int i1, int i2)
+double R_euclidean(double *x, int nr, int nc, int i1, int i2)
 {
     double dev, dist;
     int count, j;
     count = 0;
     dist = 0;
+
+    if (i1 >= nr) {
+        error("i1 should smaller than nrow.");
+    }
+
+    if (i2 >= nr) {
+        error("i2 should smaller than nrow.");
+    }
+
     for (j = 0; j < nc; j++) {
         if (!ISNAN(x[i1]) && !ISNAN(x[i2])) {
             dev = (x[i1] - x[i2]);
