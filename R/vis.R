@@ -98,7 +98,13 @@ FbtPlot0 <- function(tab = NULL,
         p <- p + scale_fill_viridis()
       } else {
         n <- length(unique(data[[col.by]]))
-        cols <- cols %||% sample(colours(distinct = TRUE),n)
+        
+        if (n < 15) {
+          cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
+        } else {
+          cols <- cols %||% sample(colours(distinct = TRUE),n)
+        }
+
         p <- p + scale_fill_manual(values = cols) 
       }
     } else {
@@ -108,7 +114,12 @@ FbtPlot0 <- function(tab = NULL,
         p <- p + scale_fill_viridis()
       } else {
         n <- length(unique(data[[col.by]]))
-        cols <- cols %||% sample(colours(distinct = TRUE),n)
+        if (n < 15) {
+          cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
+        } else {
+          cols <- cols %||% sample(colours(distinct = TRUE),n)
+        }
+
         p <- p + scale_fill_manual(values = cols)
       }
       p <- p + guides(fill = guide_legend(override.aes = list(shape=21)))
@@ -152,8 +163,10 @@ FbtPlot0 <- function(tab = NULL,
 #' @param chr.name The title of chromosome name in the meta table. Default is "chr".
 #' @param start.name The title of start position name in the meta table. Default is "start".
 #' @param end.name The title of end position name in the meta table. Default is "end".
-#' @param col.by Color points by specify the title of values in meta table. Can be discrete or continous.
-#' @param cols Manually specify the colors. Used with col.by.
+#' @param color.by Color points by specify the title of values in meta table. Can be discrete or continous.
+#' @param col.by Alias to "color.by".
+#' @param colors Manually specify the colors. Used with color.by.
+#' @param cols Alias to "colors".
 #' @param sel.chrs Vector of selected chromosome names to plot. Change the order by set the level of chr names.
 #' @param pt.size Point size.
 #' @param xlab Label for x axis. Default is "Chromosome".
@@ -179,7 +192,9 @@ FbtPlot <- function(object = NULL,
                     val = NULL,
                     assay = NULL,
                     chr.name = "chr", start.name = "start", end.name = "end",
-                    col.by = NULL, cols = NULL, sel.chrs = NULL,
+                    color.by = NULL, colors = NULL,
+                    col.by = NULL, cols = NULL,
+                    sel.chrs = NULL,
                     pt.size = NULL,
                     xlab = "Chromosome", ylab = expression(-log[10](p)),
                     subset = NULL,
@@ -192,8 +207,11 @@ FbtPlot <- function(object = NULL,
                     remove.chr = FALSE,
                     layout.heights = c(3,2))
 {
-  if (is.null(val)) stop("No value name specified.")  
-  # cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
+  if (is.null(val)) stop("No value name specified.")
+
+  col.by <- col.by %||% color.by
+  cols <- cols %||% colors
+  
   assay <- assay %||% DefaultAssay(object)
 
   n <- length(assay)

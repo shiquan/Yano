@@ -11,6 +11,8 @@ FbtPlot(
   chr.name = "chr",
   start.name = "start",
   end.name = "end",
+  color.by = NULL,
+  colors = NULL,
   col.by = NULL,
   cols = NULL,
   sel.chrs = NULL,
@@ -46,9 +48,13 @@ FbtPlot(
 
 \item{end.name}{The title of end position name in the meta table. Default is "end".}
 
-\item{col.by}{Color points by specify the title of values in meta table. Can be discrete or continous.}
+\item{color.by}{Color points by specify the title of values in meta table. Can be discrete or continous.}
 
-\item{cols}{Manually specify the colors. Used with col.by.}
+\item{colors}{Manually specify the colors. Used with color.by.}
+
+\item{col.by}{Alias to "color.by".}
+
+\item{cols}{Alias to "colors".}
 
 \item{sel.chrs}{Vector of selected chromosome names to plot. Change the order by set the level of chr names.}
 
