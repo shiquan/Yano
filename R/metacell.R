@@ -41,24 +41,27 @@ makeMetaCells <- function(object, features = NULL, ncell = 5000L, assay = NULL, 
   cells
 }
 #' @export
-addMetaCells <- function(object, assays = NULL, meta.cells = NULL, reduction = "pca", dims = 1:30, meta.name = "meta_cells", k.param = 1, ncell = 5000L, features = NULL, seed = 123)
+addMetaCells <- function(object, assays = NULL, meta.cells = NULL, reduction = "pca", dims = 1:30, meta.name = "meta_cells", k.param = 1, ncell = 5000L, features = NULL, seed = 123, verbose = TRUE)
 {
   if (is.null(meta.cells)) {
     #stop("No meta.cells, use makeMetaCells select meta cells.")
-    meta.cells <- makeMetaCells(object, ncell = ncell, features = features, seed = seed)
+    meta.cells <- makeMetaCells(object, ncell = ncell, features = features, seed = seed, verbose = verbose)
   }
 
-  data <- Reductions(object, reduction)[[]]
-
-  gp <- FindNeighbors(data[meta.cells,dims], query = data[,dims], return.neighbor = TRUE, k.param=k.param, compute.SNN = FALSE)
+  if (reduction %in% Reductions(object)) {
+    data <- Loadings(object[[reduction]])
+    data <- data[,dims]
+  } else {
+    features <- features %||% VariableFeatures(object)
+    object0 <- object[,meta.cells]
+    object0 <- ScaleData(object0, verbose = verbose)
+    object0 <- RunPCA(object0, verbose = verbose)
+    data <- ProjectCellEmbeddings(object, object0, dims=dims, verbose = verbose)
+    rm(object0)
+  }
+  gp <- FindNeighbors(data[meta.cells,dims], query = data[,dims], return.neighbor = TRUE, k.param=k.param, compute.SNN = FALSE, verbose = verbose)
 
   object[[meta.name]] <- paste0("metacell-", gp@nn.idx[,1])
-  #orig.name <- meta.cells
-  #names(orig.name) <- paste0("metacell-", 1:length(orig.name))
-  # object[['meta_nn']] <- gp
-  
-  #object0 <- AggregateExpression(object, groups.by = meta.name, return.seurat = TRUE)
-  #object0$orig.name <- orig.name[colnames(object0)]
   object
 }
 RefinedDist <- function(dist, coord, dd)
