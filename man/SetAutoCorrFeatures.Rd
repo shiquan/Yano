@@ -10,6 +10,7 @@ SetAutoCorrFeatures(
   assay = DefaultAssay(object),
   p.thresh = 0.01,
   prefix = "moransi",
+  name = "autocorr.variable",
   verbose = TRUE
 )
 }

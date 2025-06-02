@@ -9,10 +9,10 @@ GetWeights(
   pos = NULL,
   order.cells = NULL,
   emb = NULL,
-  k.nn = 20,
+  k.param = 20,
   prune.distance = -1,
-  prune.SNN = 1/50,
-  nn = 8,
+  prune.SNN = 1/30,
+  nn = -1,
   diag.value = 0,
   cells = NULL,
   weight.method = c("dist", "average")
@@ -21,27 +21,25 @@ GetWeights(
 \arguments{
 \item{snn}{Shared nearest neighbour graph, usually can found at object[["RNA_snn"]]. This graph can be calculate by Seurat::FindNeighbors().}
 
-\item{pos}{Tissue coordinates matrix.}
+\item{pos}{Manually setup cell coordinates, in a matrix format. This matrix requires at least 2 dimensions.}
 
 \item{order.cells}{Predefined cell ranks, used for cell lineage analysis.}
 
-\item{emb}{Cell dimesional space (PCA/ICA/harmony).}
+\item{emb}{Cell dimesional space (i.e. PCA/ICA/harmony).}
 
-\item{k.nn}{K-nearest neighbors, for calculating weight matrix with emb.}
+\item{k.param}{K-nearest neighbors, for calculating weight matrix with emb. Default is 20.}
 
-\item{prune.distance}{Sets the cutoff for cell distance on lineage trajectory (ranked cells) or spatial cooridates (bin/spot distance) when computing the neighborhood overlap for the weight matrix construction. Any edges with values greater than this will be set to 0 and removed from the weight matrix graph. Default is -1 for automatic search. For lineage cells will set to length(cells)/100; for spatial coordinates, will set the distance to one unit, maximal 8 neigbors for each bin/spot.}
+\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/30.}
 
-\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
-
-\item{nn}{Nearest neighbors for spatial bins/spots/cells. Default is 8.}
+\item{nn}{Nearest neighbors for pos, based on cell coordinates. Default is 8 for spatial coordinate, 20 for lineage trajectory,}
 
 \item{diag.value}{Diagnoal value in the weight matrix.}
 
-\item{cells}{Cell list. Default use all cells.}
+\item{cells}{Cell list. Default use all cells. If set, pre-defined SNN is not appliable.}
 }
 \value{
-A sparse weight matrix.
+A column-wise normalised sparse matrix.
 }
 \description{
-Calcualte cell-cell weight matrix by one of shared nearest neighbour matrix, spatial locations, cell embedding and linear trajectory.
+Calcualte cell-cell weight matrix by one of shared nearest neighbour matrix, spatial locations, cell embedding and linear trajectory. In default, if no snn/pos/order.cells/emb set, the weight matrix will be generated with PCA.
 }

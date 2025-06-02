@@ -96,7 +96,8 @@ SEXP gene_tracks0(const char *chr, int start, int end, struct gtf_spec *G, struc
         INTEGER(ed)[k] = g->end;
         char *gene = GTF_genename(G, g->gene_name);
         char *trans = GTF_transid(G, g->transcript_id);
-        
+        if (gene == NULL) gene = ".";
+        if (trans == NULL) trans = ".";
         SET_STRING_ELT(gn, k, mkChar(gene));
         SET_STRING_ELT(tx, k, mkChar(trans));
         SET_STRING_ELT(str, k, mkChar(g->strand == 0 ? "+" : "-"));

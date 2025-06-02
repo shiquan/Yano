@@ -7,29 +7,74 @@ spatialDistTest <- function(coord = NULL, n = 8) {
   m <- .Call("min_Dist_N_Nearest_Neighbors", coord, n)
   m
 }
-#' @title GetWeights
-#' @description Calcualte cell-cell weight matrix by one of shared nearest neighbour matrix, spatial locations, cell embedding and linear trajectory.
-#' @param snn Shared nearest neighbour graph, usually can found at object[["RNA_snn"]]. This graph can be calculate by Seurat::FindNeighbors().
-#' @param pos Tissue coordinates matrix.
-#' @param order.cells Predefined cell ranks, used for cell lineage analysis.
-#' @param emb Cell dimesional space (PCA/ICA/harmony).
-#' @param k.nn K-nearest neighbors, for calculating weight matrix with emb.
-#' @param prune.distance Sets the cutoff for cell distance on lineage trajectory (ranked cells) or spatial cooridates (bin/spot distance) when computing the neighborhood overlap for the weight matrix construction. Any edges with values greater than this will be set to 0 and removed from the weight matrix graph. Default is -1 for automatic search. For lineage cells will set to length(cells)/100; for spatial coordinates, will set the distance to one unit, maximal 8 neigbors for each bin/spot.
+
+##
+## This function edited from BPCells::knn_annoy(), credit to orignal authors
+##
+#' @title buildKNN
+#' @description Compute KNN with RcppAnnoy.
+#' @param k.param K-nearest neighbors, for calculating weight matrix with emb. Default is 20.
+#' @param n.trees Number of trees during index build time. More trees gives higher accuracy
+#' @export
+buildKNN <- function(data, query = data, k.param = 20, metric = c("euclidean", "cosine", "manhattan", "hamming"), n.trees = 50) {
+  metric <- match.arg(metric)
+  annoy <- switch(metric,
+    "euclidean" = new(RcppAnnoy::AnnoyEuclidean, ncol(data)),
+    "cosine" = new(RcppAnnoy::AnnoyAngular, ncol(data)),
+    "manhattan" = new(RcppAnnoy::AnnoyManhattan, ncol(data)),
+    "hamming" = new(RcppAnnoy::AnnoyHamming, ncol(data)),
+  )
+  for (i in seq_len(nrow(data))) {
+    annoy$addItem(i - 1, data[i, ])
+  }
+  annoy$build(n.trees)
+
+  idx <- matrix(nrow = nrow(query), ncol = k.param)
+  dist <- matrix(nrow = nrow(query), ncol = k.param)
+  rownames(idx) <- rownames(query)
+  rownames(dist) <- rownames(query)
+  for (i in seq_len(nrow(query))) {
+    res <- annoy$getNNsByVectorList(query[i, ], k.param, -1, include_distances = TRUE)
+    idx[i, ] <- res$item + 1
+    dist[i, ] <- res$dist
+  }
+  if (metric == "cosine") dist <- 0.5 * (dist * dist)
+  list(idx = idx, dist = dist)
+}
+#' @title buildKNN
+#' @description Convert a knn object into a shared nearest neighbors adjacency matrix.
 #' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.
-#' @param nn Nearest neighbors for spatial bins/spots/cells. Default is 8.
+#' @export
+buildSNN <- function(knn, prune.SNN = 1/30) {
+  snn <- .Call("knn2snn", knn$idx, prune.SNN)
+  snn <- snn + t(snn)
+  diag(snn) <- 1
+  colnames(snn) <- rownames(knn$idx)
+  rownames(snn) <- rownames(knn$idx)
+  snn
+}
+#' @title GetWeights
+#' @description Calcualte cell-cell weight matrix by one of shared nearest neighbour matrix, spatial locations, cell embedding and linear trajectory. In default, if no snn/pos/order.cells/emb set, the weight matrix will be generated with PCA.
+#' @param snn Shared nearest neighbour graph, usually can found at object[["RNA_snn"]]. This graph can be calculate by Seurat::FindNeighbors().
+#' @param pos Manually setup cell coordinates, in a matrix format. This matrix requires at least 2 dimensions.
+#' @param order.cells Predefined cell ranks, used for cell lineage analysis.
+#' @param emb Cell dimesional space (i.e. PCA/ICA/harmony).
+#' @param k.param K-nearest neighbors, for calculating weight matrix with emb. Default is 20.
+#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/30.
+#' @param nn Nearest neighbors for pos, based on cell coordinates. Default is 8 for spatial coordinate, 20 for lineage trajectory,
 #' @param diag.value Diagnoal value in the weight matrix.
-#' @param cells Cell list. Default use all cells.
-#' @returns A sparse weight matrix.
+#' @param cells Cell list. Default use all cells. If set, pre-defined SNN is not appliable.
+#' @returns A column-wise normalised sparse matrix.
 #' @importFrom Matrix rowSums
 #' @export
 GetWeights <- function(snn = NULL,
                        pos = NULL,
                        order.cells = NULL,
                        emb = NULL,
-                       k.nn = 20,
+                       k.param = 20,
                        prune.distance = -1,
-                       prune.SNN = 1/50,
-                       nn = 8,
+                       prune.SNN = 1/30,
+                       nn = -1,
                        diag.value = 0,
                        cells = NULL,
                        weight.method = c("dist", "average"))
@@ -40,11 +85,11 @@ GetWeights <- function(snn = NULL,
   if (!is.null(pos)) check.par <- check.par + 1
   if (!is.null(order.cells)) check.par <- check.par + 1
   if (!is.null(emb)) check.par <- check.par + 1
-
+  
   weight.method <- match.arg(weight.method)
   
   if (check.par != 1) {
-    stop("Should only specify one of snn, pos or order.cells.")
+    stop("Should only specify one of snn, pos, emb, or order.cells.")
   }
 
   if (!is.null(snn)) {
@@ -59,23 +104,25 @@ GetWeights <- function(snn = NULL,
   }
 
   if (!is.null(pos)) {
-    if (prune.distance == -1) {
-      prune.distance <- spatialDistTest(pos, n = nn)
-      message(paste0("Set prune distance to ", prune.distance))
+    if (nn == -1) {
+      nn <- 8
     }
-    #pos.dist <- as.matrix(dist(x=pos))
-    #pos.dist[pos.dist > prune.distance] <- 0
-    #W <- as(pos.dist, "CsparseMatrix")
+    pos <- as.matrix(pos[,1:2])
+    prune.distance <- spatialDistTest(pos, n = nn)
+    message(paste0("Set prune distance to ", prune.distance))    
     W <- .Call("matrix_distance2", as.matrix(pos), "euclidean", prune.distance)
     diag(x = W) <- diag.value
-
     if (weight.method == "dist") {
       W@x <- 1/W@x^2
     } else if (weight.method == "average") {
       W@x <- (W@x>0)+0.0
     }
-    
+
     W <- W/rowSums(W)
+
+    W[is.na(W)] <- 0 
+    W <- as(W, "CsparseMatrix")
+
     W <- t(W)
     cells <- rownames(pos)
 
@@ -87,10 +134,10 @@ GetWeights <- function(snn = NULL,
   }
 
   if (!is.null(emb)) {
-    cells <- celles %||% rownames(emb)
+    cells <- cells %||% rownames(emb)
     emb <- emb[cells,]
-    knn <- buildKNN(emb, k.nn=k.nn)
-    snn <- buildSNN(knn)    
+    knn <- buildKNN(emb, k.param=k.param)
+    snn <- buildSNN(knn, prune.SNN = prune.SNN)    
     colnames(snn) <- cells
     rownames(snn) <- cells
     W <- GetWeights(snn=snn, diag.value = diag.value, prune.SNN = prune.SNN)
@@ -98,12 +145,11 @@ GetWeights <- function(snn = NULL,
   }
   
   if (!is.null(order.cells)) {
-    if (prune.distance == -1) {
-      prune.distance <- as.integer(length(order.cells)/100)
-      message(paste0("Auto set prune.distance to ", prune.distance))
+    if (nn == -1) {
+      nn = 20
     }
     pos.dist <- as.matrix(dist(x=c(1:length(order.cells))))
-    pos.dist[pos.dist > prune.distance] <- 0
+    pos.dist[pos.dist > nn] <- 0
     W <- as(pos.dist, "CsparseMatrix")
 
     if (weight.method == "dist") {
@@ -114,6 +160,9 @@ GetWeights <- function(snn = NULL,
 
     diag(x = W) <- diag.value
     W <- W/rowSums(W)
+    W[is.na(W)] <- 0 
+    W <- as(W, "CsparseMatrix")
+
     W <- t(W)
     colnames(W) <- order.cells
     rownames(W) <- order.cells
@@ -121,20 +170,20 @@ GetWeights <- function(snn = NULL,
   }
 }
 
-GetWeightsFromSNN <- function(object = NULL, name = "RNA_snn", prune.SNN = 1/50, cells = NULL)
+GetWeightsFromSNN <- function(object = NULL, snn = "RNA_snn", prune.SNN = 1/50, cells = NULL)
 {
-  if (name %ni% names(object)) {
-    stop(paste0("No ", name, " found at object. Run FindNeighbors on RNA assay first."))
+  if (snn %ni% names(object)) {
+    stop(paste0("No ", snn, " found at object. Run FindNeighbors on RNA assay first."))
   }
 
-  snn <- object[[name]]
-  W <- GetWeights(snn=snn, prune.SNN = prune.SNN, cells = cells)
+  snn.graph <- object[[snn]]
+  W <- GetWeights(snn=snn.graph, prune.SNN = prune.SNN, cells = cells)
   return(W)
 }
-GetWeightsFromSpatial <- function(object = NULL, diag.value = 0, prune.distance = -1, nn = 8, ...) {
+GetWeightsFromSpatial <- function(object = NULL, diag.value = 0, nn = 8, image = NULL, ...) {
   cells <- colnames(object)
-  emb <- GetTissueCoordinates(object = object, ...)
-  W <- GetWeights(pos = emb, diag.value = diag.value, prune.distance = prune.distance, nn = nn)
+  emb <- GetTissueCoordinates(object = object, image = image, ...)
+  W <- GetWeights(pos = emb, diag.value = diag.value, nn = nn)
   colnames(W) <- cells
   rownames(W) <- cells
   return(W)
