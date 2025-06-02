@@ -94,12 +94,20 @@ SEXP gene_tracks0(const char *chr, int start, int end, struct gtf_spec *G, struc
         struct gtf *g = pool[i];
         INTEGER(st)[k] = g->start;
         INTEGER(ed)[k] = g->end;
-        char *gene = GTF_genename(G, g->gene_name);
-        char *trans = GTF_transid(G, g->transcript_id);
-        if (gene == NULL) gene = ".";
-        if (trans == NULL) trans = ".";
+        char *gene = GTF_genename(G, g->gene_name);        
+        //Rprintf("gene,%d, %s\n", g->gene_name, gene);
+        if (g->gene_name == -1) {
+            gene = GTF_genename(G, g->gene_id);
+        }
         SET_STRING_ELT(gn, k, mkChar(gene));
-        SET_STRING_ELT(tx, k, mkChar(trans));
+        char *trans = NULL;
+        if (g->transcript_id != -1) {
+            trans = GTF_transid(G, g->transcript_id);
+            SET_STRING_ELT(tx, k, mkChar(trans));
+        } else {
+            SET_STRING_ELT(tx, k, mkChar("."));
+        }
+        
         SET_STRING_ELT(str, k, mkChar(g->strand == 0 ? "+" : "-"));
         INTEGER(id)[k] = idx[i];
         INTEGER(type)[k] = 1;
@@ -111,7 +119,7 @@ SEXP gene_tracks0(const char *chr, int start, int end, struct gtf_spec *G, struc
 
             SET_STRING_ELT(str, k, mkChar(ex->strand == 0 ? "+" : "-"));
             SET_STRING_ELT(gn, k, mkChar(gene));
-            SET_STRING_ELT(tx, k, mkChar(trans));
+            SET_STRING_ELT(tx, k, mkChar(trans == NULL ? "." : trans));
             INTEGER(id)[k] = idx[i];
             INTEGER(type)[k] = 2;
             k++;
