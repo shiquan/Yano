@@ -1,6 +1,6 @@
 Package: Yano
 Title: Yet Another Package for Single Cell Genomics
-Version: 1.0
+Version: 1.1
 Author: Quan Shi
 Maintainer: Quan Shi <shiquan.biomed@icloud.com>
 Description: A toolkit to perform spatial dissimilarity analysis for single cell transcriptomics.
