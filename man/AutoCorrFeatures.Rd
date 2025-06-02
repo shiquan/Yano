@@ -4,7 +4,7 @@
 \alias{AutoCorrFeatures}
 \title{AutoCorrFeatures}
 \usage{
-AutoCorrFeatures(object = NULL, assay = NULL)
+AutoCorrFeatures(object = NULL, assay = NULL, name = "autocorr.variable")
 }
 \arguments{
 \item{assay}{Working assay.}

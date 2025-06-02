@@ -36,7 +36,7 @@ CPPFLAGS =
 # For testing strict C99 support add -std=c99 -D_XOPEN_SOURCE=600
 #CFLAGS   = -g -Wall -O2 -pedantic -std=c99 -D_XOPEN_SOURCE=600
 #CFLAGS   = -g -Wall -O2 -fvisibility=hidden
-CFLAGS   = -g -Wall -O2 -fpic
+CFLAGS   = -g -Wall -O0 -fpic
 EXTRA_CFLAGS_PIC = -fpic
 TARGET_CFLAGS =
 #LDFLAGS  = -fvisibility=hidden

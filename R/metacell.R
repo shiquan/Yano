@@ -1,5 +1,5 @@
 #' @export
-makeMetaCells <- function(object, features = NULL, ncell = 5000L, assay = NULL, leverage.name = "leverage.score", seed = 123)
+makeMetaCells <- function(object, features = NULL, ncell = 5000L, assay = NULL, leverage.name = "leverage.score", seed = 123, verbose = TRUE)
 {
   ncols <- ncol(object)
   
@@ -49,7 +49,7 @@ addMetaCells <- function(object, assays = NULL, meta.cells = NULL, reduction = "
   }
 
   if (reduction %in% Reductions(object)) {
-    data <- Loadings(object[[reduction]])
+    data <- object[[reduction]][[]]
     data <- data[,dims]
   } else {
     features <- features %||% VariableFeatures(object)
@@ -108,7 +108,7 @@ addSpatialMetaCells <- function(object, assays = NULL, meta.cells = NULL, reduct
   }
   
   if (reduction %in% Reductions(object)) {
-    data <- Loadings(object[[reduction]])
+    data <- object[[reduction]][[]]
     data <- data[,dims]
   } else {
     features <- features %||% VariableFeatures(object)

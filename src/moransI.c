@@ -122,7 +122,6 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     M_cholmod_free_sparse(&WWt, &c);
 
     const double varI_norm = (NN*S1-N*S2+3*S02)/(S02*(NN-1)) - EI2;
-    // const double varC_norm = ((2*S1+S2)*N1 - 4 * S02)/(2*(N+1)*S02);
 
     int ci;
 #pragma omp parallel for num_threads(n_thread)
@@ -133,14 +132,7 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
         }
 
         double *tmpa = R_Calloc(N, double);
-        // memset(tmpa, 0, sizeof(double)*N);
         
-        /* for (j = ap[ci]; j < ap[ci+1]; ++j) { */
-        /*     if (ISNAN(ax[j])) continue; */
-        /*     mn += ax[j]; */
-        /* } */
-        /* mn = mn/(double)N; */
-
         // scaled
         double mn = 0;
         for (int j = ap[ci]; j < ap[ci+1]; ++j) {
@@ -160,36 +152,18 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
             tmpa[j] = (tmpa[j] -mn)/sigma;
         }
 
-        // for (j = 0; j < N; ++j) tmpa[j] = tmpa[j] -mn;
-        // xix = 0;
         double m2 = (double)N1/N;
         double m4 = 0;
         for (int j = 0; j < N; ++j) { // for cells
-            //xix += pow(tmpa[j], 2);
             m4  += pow(tmpa[j], 4);
         }
         m4 = m4/N;
         
-        // m2 = xix/(double)N;
-
-        /* for (wi = 0; wi < N; ++wi) { */
-        /*     if (bp[wi] == bp[wi+1]) continue; */
-        /*     int wj; */
-        /*     for (wj = bp[wi]; wj < bp[wi+1]; ++wj) { */
-        /*         // Rprintf("W : %f, Zi : %f, Zj : %f\n", bx[wj], tmpa[wi], tmpa[bi[wj]]); */
-        /*         C += bx[wj] * pow(tmpa[wi] - tmpa[bi[wj]],2); */
-        /*     } */
-        /* } */
-
         double varI = 0;
         if (rand) { // random
-            //m2 = xix/N;
-            //m4 = m4/N;
             double b2 = m4/pow(m2,2);
             varI = N*(tmp1*S1 - N*S2 + 3*S02) - b2*(tmp3*S1 - 2*N*S2 + 6*S02);
             varI = varI/(tmp2*S02) - EI2;
-            //varC = N1*S1*(NN-3*N+3-N1*b2) - N1*S2*(NN+3*N-6-(NN-N+2)*b2)/4 + S02*(NN-3-N1*N1*b2);
-            //varC = varC/(N*N2*N3*S02);
         }
 
         double xij = 0;
@@ -198,36 +172,24 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
                 if (ISNAN(bx[j])) continue;
                 int cid = bi[j];
                 if (i == cid) continue; // i != j
-                //xij += (bx[j] * (tmpa[i]-mn) * (tmpa[cid]-mn));
                 xij += bx[j] * tmpa[i] *tmpa[cid];
             }
         }
 
         double I = (N*xij)/(N1*S0);
-        //Rprintf("N : %d, xij : %f, S0 : %f, mn : %f\n", N, xij, S0, mn);
-        
-        //Rprintf("wC : %f, sigma : %f, S0 : %f\n", C, sigma2, S0);
-        // C = C/(2*sigma2*S0);
-        //Rprintf("Cvar : %f, %f\n", varC, varC_norm);
         R_Free(tmpa);
 #pragma omp critical
         {
             REAL(Ival)[ci] = I;
-            // REAL(Cval)[ci] = C;
             REAL(IZval)[ci] = rand ? (I-EI)/sqrt(varI) : (I-EI)/sqrt(varI_norm);
-            // REAL(CXval)[ci] = rand ? (C-1)/sqrt(varC) : (C-1)/sqrt(varC_norm);
         }
     }
 
-
     M_cholmod_free_sparse(&A, &c);
-    // M_cholmod_free_sparse(&W, &c);
     
     SEXP ta = PROTECT(allocVector(VECSXP, 2));
     SET_VECTOR_ELT(ta, 0, Ival);
-    // SET_VECTOR_ELT(ta, 1, Cval);
     SET_VECTOR_ELT(ta, 1, IZval);
-    // SET_VECTOR_ELT(ta, 3, CXval);
 
     UNPROTECT(3);
     return ta;
@@ -245,8 +207,6 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     if (A->stype) return mkString("A cannot be symmetric");
     if (W->stype) return mkString("W cannot be symmetric");
     
-    //double one[] = {1, 0};
-
     if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
     if (A->ncol < 2) return mkString("Too few cells."); // to do
