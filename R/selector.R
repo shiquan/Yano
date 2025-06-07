@@ -6,10 +6,11 @@
 #' @param ... Parameters pass to DimPlot()
 #' @importFrom Seurat DimPlot
 #' @export
-DimSelector <- function(object, ...
+DimSelector <- function(object, 
                         return.object = FALSE,
                         plot.selected = TRUE,
-                        combine = FALSE
+                        combine = FALSE,
+                        ...
                         )
 {
   p <- DimPlot(object, combine=FALSE, ...)
@@ -50,10 +51,11 @@ DimSelector <- function(object, ...
 #' @inheritParams DimSelector
 #' @export
 FeatureSelector <- function(object,
-                            feature, ...,
+                            feature, 
                             return.object = FALSE,
                             plot.selected = TRUE,
-                            combine = FALSE
+                            combine = FALSE,
+                            ...
                             )
 {
   if (length(feature) == 0) {
@@ -106,10 +108,10 @@ FeatureSelector <- function(object,
 #' @importFrom grid current.vpTree current.vpPath seekViewport upViewport current.transform convertX convertY unit grid.draw
 #' @importFrom scales hue_pal
 #' @export
-SpatialSelector <- function(object, group.by = NULL,
-                            ...,
+SpatialSelector <- function(object, group.by = NULL,                            
                             return.object = FALSE,
-                            plot.selected = TRUE
+                            plot.selected = TRUE,
+                            ...
                             )
 {
   if (length(feature) > 1) {
@@ -155,10 +157,11 @@ SpatialSelector <- function(object, group.by = NULL,
 #' @importFrom Seurat ImageDimPlot
 #' @export
 ImageDimSelector <- function(object,
-                             group.by = NULL, ...,
+                             group.by = NULL, 
                              return.object = FALSE,
                              plot.selected = TRUE,
-                             combine = FALSE
+                             combine = FALSE,
+                             ...
                              )
 {
   p <- ImageDimPlot(object,...,
@@ -202,11 +205,12 @@ ImageDimSelector <- function(object,
 #' @export
 SpatialConcaveHull <- function(
   object,
-  group.by = NULL, ...,
+  group.by = NULL,
   return.object = FALSE,
   plot.selected = TRUE,
   knn = 3,
-  combine = FALSE
+  combine = FALSE,
+  ...
   ) {
   if (length(feature) > 1) {
     warning("SpatialSelector only support plot one feature.")
