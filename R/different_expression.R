@@ -23,10 +23,7 @@
 #' @param dims Dimensions of reduction used to construct SNN graph.
 #' @param k.param Defines k for the k-nearest neighbor algorithm.
 #' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.
-#' @param nn.method Method for nearest neighbor finding. Options include: rann, annoy(default).
-#' @param annoy.metric Distance metric for annoy. Options include: euclidean (default), cosine, manhattan, and hamming
-#' @param n.trees More trees gives higher precision when using annoy approximate nearest neighbor search. Default is 50.
-#' @param nn.eps Error bound when performing nearest neighbor seach using RANN; default of 0.0 implies exact nearest neighbor search
+#' @param ... Parameters pass to FindNeighbors().
 #' @importFrom Matrix sparseMatrix
 #' @export
 FindDEP <- function(object = NULL,
@@ -154,7 +151,6 @@ FindDEP <- function(object = NULL,
             assay = assay,
             features = features,
             layer = layer,
-            #wm.name = wm.name,
             mode = mode[1L],
             min.cells = min.cells,
             return.thresh = return.thresh,
@@ -163,14 +159,11 @@ FindDEP <- function(object = NULL,
             dims = dims,
             k.param = k.param,
             prune.SNN = prune.SNN,
-            n.trees = n.trees,
-            nn.eps = nn.eps,
-            nn.method = nn.method,
-            annoy.metric = annoy.metric,
             perm = perm,
             seed = seed,
             debug = debug,
-            setLog = FALSE
+            setLog = FALSE,
+            ...
           )
         },
         error = function(cond) {
@@ -235,11 +228,8 @@ FindDEP <- function(object = NULL,
     ng <- FindNeighbors(object = data.use,
                         k.param = k.param,
                         compute.SNN = TRUE,
-                        prune.SNN = prune.SNN,
-                        nn.method = nn.method,
-                        annoy.metric = annoy.metric,
-                        nn.eps = 0,
-                        l2.norm = FALSE, cache.index = FALSE, verbose = FALSE)
+                        prune.SNN = prune.SNN, ...,
+                        cache.index = FALSE, verbose = verbose)
     snn <- ng[['snn']]
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
     
@@ -263,10 +253,8 @@ FindDEP <- function(object = NULL,
                         k.param = k.param,
                         compute.SNN = TRUE,
                         prune.SNN = prune.SNN,
-                        nn.method = nn.method,
-                        annoy.metric = annoy.metric,
-                        nn.eps = 0,
-                        l2.norm = FALSE, cache.index = FALSE, verbose = FALSE)
+                        ...,
+                        cache.index = FALSE, verbose = FALSE)
     snn <- ng[['snn']]
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
     
