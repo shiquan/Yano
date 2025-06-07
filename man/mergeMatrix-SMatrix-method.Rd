@@ -7,7 +7,7 @@
 \S4method{mergeMatrix}{SMatrix}(x = NULL, y = NULL, ...)
 }
 \arguments{
-\item{x}{Matrix 1}
+\item{x}{Matrix 1 or a list of Matrix}
 
 \item{y}{Matrix 2}
 

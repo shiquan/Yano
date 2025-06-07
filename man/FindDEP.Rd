@@ -75,15 +75,9 @@ FindDEP(
 
 \item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
 
-\item{n.trees}{More trees gives higher precision when using annoy approximate nearest neighbor search. Default is 50.}
-
-\item{nn.eps}{Error bound when performing nearest neighbor seach using RANN; default of 0.0 implies exact nearest neighbor search}
-
-\item{nn.method}{Method for nearest neighbor finding. Options include: rann, annoy(default).}
-
-\item{annoy.metric}{Distance metric for annoy. Options include: euclidean (default), cosine, manhattan, and hamming}
-
 \item{versbose}{Print log message. Default is TRUE.}
+
+\item{...}{Parameters pass to FindNeighbors().}
 }
 \description{
 Find different expression pattern of same feature in different cell groups. Only used for integrated data.
