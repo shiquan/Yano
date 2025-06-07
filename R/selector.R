@@ -1,60 +1,19 @@
 #' @title DimSelector
 #' @description Select cells from dimension plot. Parameters most inhert from Seurat::DimPlot().
-#' 
+#' @param object Seurat object.
+#' @param return.object Return Seurat object. Default return selected cell IDs.
+#' @param plot.selected Plot the selected cells.
+#' @param ... Parameters pass to DimPlot()
 #' @importFrom Seurat DimPlot
 #' @export
-DimSelector <- function(object,
-                        dims = c(1, 2),
-                        cells = NULL,
-                        cols = NULL,
-                        pt.size = NULL,
-                        reduction = NULL,
-                        group.by = NULL,
-                        shape.by = NULL,
-                        order = NULL,
-                        shuffle = FALSE,
-                        seed = 1,
-                        label = FALSE,
-                        label.size = 4,
-                        label.color = 'black',
-                        label.box = FALSE,
-                        repel = FALSE,
-                        alpha = 1,
-                        cells.highlight = NULL,
-                        cols.highlight = '#DE2D26',
-                        sizes.highlight = 1,
-                        na.value = 'grey50',
-                        raster = NULL,
-                        raster.dpi = c(512, 512),
+DimSelector <- function(object, ...
                         return.object = FALSE,
-                        plot.selected = TRUE
+                        plot.selected = TRUE,
+                        combine = FALSE
                         )
 {
-  p <- DimPlot(object,
-               dims = dims,
-               cells = cells,
-               cols = cols,
-               pt.size = pt.size,
-               reduction = reduction,
-               group.by = group.by,
-               shape.by = shape.by,
-               order = order,
-               shuffle = shuffle,
-               seed = seed,
-               label = label,
-               label.size = label.size,
-               label.color = label.color,
-               label.box = label.box,
-               repel = repel,
-               alpha = alpha,
-               cells.highlight = cells.highlight,
-               cols.highlight = cols.highlight,
-               sizes.highlight = sizes.highlight,
-               na.value = na.value,
-               raster = raster,
-               raster.dpi = raster.dpi,
-               combine=FALSE
-               )
+  p <- DimPlot(object, combine=FALSE, ...)
+
   if (is.list(p)) {
     p <- p[[1]]
   }
@@ -74,28 +33,7 @@ DimSelector <- function(object,
     object[['selector']] <- 'unselect'
     object[['selector']][cells0,] <- 'selected'
     
-    p <- DimPlot(object, group.by = 'selector',
-                 dims = dims,
-                 cells = cells,
-                 cols = cols,
-                 pt.size = pt.size,
-                 reduction = reduction,
-                 shape.by = shape.by,
-                 order = order,
-                 shuffle = shuffle,
-                 seed = seed,
-                 label = label,
-                 label.size = label.size,
-                 label.color = label.color,
-                 label.box = label.box,
-                 repel = repel,
-                 alpha = alpha,
-                 cells.highlight = cells.highlight,
-                 cols.highlight = cols.highlight,
-                 sizes.highlight = sizes.highlight,
-                 na.value = na.value,
-                 raster = raster,
-                 raster.dpi = raster.dpi)
+    p <- DimPlot(object, group.by = 'selector',...)
     print(p)
   }
 
@@ -106,38 +44,16 @@ DimSelector <- function(object,
   }  
 }
 
+#' @title FeatureSelector
+#' @description Select cells from Feature plot. Parameters most inhert from Seurat::FeaturePlot().
+#' @param ... Parameters pass to FeaturePlot.
+#' @inheritParams DimSelector
 #' @export
 FeatureSelector <- function(object,
-                            feature,
-                            dims = c(1, 2),
-                            cells = NULL,
-                            cols = if (blend) {
-                              c('lightgrey', '#ff0000', '#00ff00')
-                            } else {
-                              c('lightgrey', 'blue')
-                            },
-                            pt.size = NULL,
-                            alpha = 1,
-                            order = FALSE,
-                            min.cutoff = NA,
-                            max.cutoff = NA,
-                            reduction = NULL,
-                            keep.scale = "feature",
-                            shape.by = NULL,
-                            slot = 'data',
-                            blend = FALSE,
-                            blend.threshold = 0.5,
-                            label = FALSE,
-                            label.size = 4,
-                            label.color = "black",
-                            repel = FALSE,
-                            ncol = NULL,
-                            coord.fixed = FALSE,
-                            raster = NULL,
-                            raster.dpi = c(512, 512),
+                            feature, ...,
                             return.object = FALSE,
-                            plot.selected = TRUE
-
+                            plot.selected = TRUE,
+                            combine = FALSE
                             )
 {
   if (length(feature) == 0) {
@@ -149,27 +65,7 @@ FeatureSelector <- function(object,
   }
   p <- FeaturePlot(object,
                    features = feature,
-                   dims = dims,
-                   cells = cells,
-                   cols = cols,
-                   pt.size = pt.size,
-                   alpha = alpha,
-                   order = order,
-                   min.cutoff = min.cutoff,
-                   max.cutoff = max.cutoff,
-                   reduction = reduction,
-                   keep.scale = keep.scale,
-                   shape.by = shape.by,
-                   slot = slot,
-                   blend = blend,
-                   blend.threshold = blend.threshold,
-                   label = label,
-                   label.size = label.size,
-                   label.color = label.color,
-                   repel = repel,
-                   coord.fixed = coord.fixed,
-                   raster = raster,
-                   raster.dpi = c(512, 512),
+                   ...,
                    combine = FALSE)
   if (is.list(p)) {
     p <- p[[1]]
@@ -200,52 +96,27 @@ FeatureSelector <- function(object,
   }
   
 }
+
+#' @title SpatialSelector
+#' @description Select cells from Spatial plot. Parameters most inhert from Seurat::SpatialPlot().
+#' @inheritParams DimSelector
+#' @param ... Parameters pass to SpatialPlot.
 #' @importFrom ggplot2 scale_fill_gradientn ggtitle theme element_text ggplot_build last_plot
 #' @importFrom Seurat Cells Images DefaultAssay Idents SpatialPlot
 #' @importFrom grid current.vpTree current.vpPath seekViewport upViewport current.transform convertX convertY unit grid.draw
 #' @importFrom scales hue_pal
 #' @export
-SpatialSelector <- function(
-  object,
-  group.by = NULL,
-  feature = NULL,
-  image = NULL,
-  cols = NULL,
-  image.alpha = 1,
-  image.scale = "lowres",
-  crop = TRUE,
-  slot = 'data',
-  label = FALSE,
-  label.size = 5,
-  label.color = 'white',
-  label.box = TRUE,
-  repel = FALSE,
-  pt.size.factor = 1.6,
-  alpha = c(1, 1),
-  shape = 21,
-  return.object = FALSE,
-  plot.selected = TRUE
-  ) {
+SpatialSelector <- function(object, group.by = NULL,
+                            ...,
+                            return.object = FALSE,
+                            plot.selected = TRUE
+                            )
+{
   if (length(feature) > 1) {
     warning("SpatialSelector only support plot one feature.")
     feature <- feature[1]
   }
-  p <- SpatialPlot(object,
-                   group.by = group.by,
-                   features = feature,
-                   images = image,
-                   cols = cols,
-                   image.alpha = image.alpha,
-                   image.scale = image.scale,
-                   crop = crop,
-                   slot = slot,
-                   label = label,
-                   label.size = label.size,
-                   label.color = label.color,
-                   repel = repel,
-                   pt.size.factor = pt.size.factor,
-                   alpha = alpha,
-                   shape = shape,
+  p <- SpatialPlot(object, group.by = group.by, ...,
                    combine = FALSE
                    )
   if (is.list(p)) {
@@ -266,7 +137,7 @@ SpatialSelector <- function(
   if (plot.selected) {
     object[['selector']] <- 'unselect'
     object[['selector']][cells,] <- 'selected'
-    p <- SpatialPlot(object, group.by = 'selector', images = image)
+    p <- SpatialPlot(object, group.by = 'selector', ...)
     print(p)
   }
 
@@ -277,60 +148,20 @@ SpatialSelector <- function(
   }
 }
 
+#' @title ImageDimSelector
+#' @description Select cells from Image dimension plot. Parameters most inhert from Seurat::SpatialPlot().
+#' @param ... Parameters pass to ImageDimPlot.
+#' @inheritParams DimSelector
 #' @importFrom Seurat ImageDimPlot
 #' @export
 ImageDimSelector <- function(object,
-                             fov = NULL,
-                             boundaries = NULL,
-                             group.by = NULL,
-                             split.by = NULL,
-                             cols = NULL,
-                             shuffle.cols = FALSE,
-                             size = 0.5,
-                             molecules = NULL,
-                             mols.size = 0.1,
-                             mols.cols = NULL,
-                             mols.alpha = 1.0,
-                             nmols = 1000,
-                             alpha = 1.0,
-                             border.color = 'white',
-                             border.size = NULL,
-                             na.value = 'grey50',
-                             dark.background = TRUE,
-                             crop = FALSE,
-                             cells = NULL,
-                             overlap = FALSE,
-                             axes = FALSE,
-                             combine = TRUE,
-                             coord.fixed = TRUE,
-                             flip_xy = TRUE,
+                             group.by = NULL, ...,
                              return.object = FALSE,
-                             plot.selected = TRUE
+                             plot.selected = TRUE,
+                             combine = FALSE
                              )
 {
-  p <- ImageDimPlot(object,
-                    fov=fov,
-                    boundaries = boundaries,
-                    group.by = group.by,
-                    cols = cols,
-                    shuffle.cols = shuffle.cols,
-                    size = size,
-                    molecules = molecules,
-                    mols.size = mole.size,
-                    mols.cols = mols.cols,
-                    mols.alpha = mols.alpha,
-                    nmols = nmols,
-                    alpha = alpha,
-                    border.color = border.color,
-                    border.size = border.size,
-                    na.value = na.value,
-                    dark.background = dark.background,
-                    crop = crop,
-                    cells = cells,
-                    overlap = overlap,
-                    axes = axes,
-                    coord.fixed = coord.fixed,
-                    flip_xy = flip_xy,
+  p <- ImageDimPlot(object,...,
                     combine = FALSE)
 
   if (is.list(p)) {
@@ -356,28 +187,7 @@ ImageDimSelector <- function(object,
     object[['selector']] <- 'unselect'
     object[['selector']][cells0,] <- 'selected'
     
-    p <- ImageDimPlot(object, group.by = 'selector',
-                      fov=fov,
-                      boundaries = boundaries,
-                      cols = cols,
-                      shuffle.cols = shuffle.cols,
-                      size = size,
-                      molecules = molecules,
-                      mols.size = mole.size,
-                      mols.cols = mols.cols,
-                      mols.alpha = mols.alpha,
-                      nmols = nmols,
-                      alpha = alpha,
-                      border.color = border.color,
-                      border.size = border.size,
-                      na.value = na.value,
-                      dark.background = dark.background,
-                      crop = crop,
-                      cells = cells,
-                      overlap = overlap,
-                      axes = axes,
-                      coord.fixed = coord.fixed,
-                      flip_xy = flip_xy)
+    p <- ImageDimPlot(object, group.by = 'selector', ...)
     print(p)
   }
 
@@ -392,25 +202,11 @@ ImageDimSelector <- function(object,
 #' @export
 SpatialConcaveHull <- function(
   object,
-  group.by = NULL,
-  feature = NULL,
-  image = NULL,
-  cols = NULL,
-  image.alpha = 1,
-  image.scale = "lowres",
-  crop = TRUE,
-  slot = 'data',
-  label = FALSE,
-  label.size = 5,
-  label.color = 'white',
-  label.box = TRUE,
-  repel = FALSE,
-  pt.size.factor = 1.6,
-  alpha = c(1, 1),
-  shape = 21,
+  group.by = NULL, ...,
   return.object = FALSE,
   plot.selected = TRUE,
-  knn = 3
+  knn = 3,
+  combine = FALSE
   ) {
   if (length(feature) > 1) {
     warning("SpatialSelector only support plot one feature.")
@@ -418,20 +214,6 @@ SpatialConcaveHull <- function(
   }
   p <- SpatialPlot(object,
                    group.by = group.by,
-                   features = feature,
-                   images = image,
-                   cols = cols,
-                   image.alpha = image.alpha,
-                   image.scale = image.scale,
-                   crop = crop,
-                   slot = slot,
-                   label = label,
-                   label.size = label.size,
-                   label.color = label.color,
-                   repel = repel,
-                   pt.size.factor = pt.size.factor,
-                   alpha = alpha,
-                   shape = shape,
                    combine = FALSE
                    )
   if (is.list(p)) {
@@ -466,7 +248,7 @@ SpatialConcaveHull <- function(
     object[['selector']] <- 'unselect'
     object[['selector']][cells,] <- 'selected'
     
-    p <- SpatialPlot(object, group.by = 'selector', images = image)
+    p <- SpatialPlot(object, group.by = 'selector', ...)
     print(p)
   }
 
