@@ -49,11 +49,8 @@ FindDEP <- function(object = NULL,
                    dims = 1:20,
                    k.param = 20,
                    prune.SNN = 1/50,
-                   n.trees = 50,
-                   nn.eps = 0,
-                   nn.method = "annoy",
-                   annoy.metric = "euclidean",
-                   setLog = TRUE
+                   setLog = TRUE,
+                   ...
                    )
 {
   if (is.null(object)) stop("No object specified.")
@@ -228,7 +225,7 @@ FindDEP <- function(object = NULL,
     ng <- FindNeighbors(object = data.use,
                         k.param = k.param,
                         compute.SNN = TRUE,
-                        prune.SNN = prune.SNN, ...,
+                        prune.SNN = prune.SNN, 
                         cache.index = FALSE, verbose = verbose)
     snn <- ng[['snn']]
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
@@ -257,7 +254,6 @@ FindDEP <- function(object = NULL,
                         k.param = k.param,
                         compute.SNN = TRUE,
                         prune.SNN = prune.SNN,
-                        ...,
                         cache.index = FALSE, verbose = FALSE)
     snn <- ng[['snn']]
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
