@@ -232,9 +232,13 @@ FindDEP <- function(object = NULL,
                         cache.index = FALSE, verbose = verbose)
     snn <- ng[['snn']]
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
-    
-    y <- x %*% W
-    y0 <- y[,cells.1]
+
+    idx <- match(cells.1, colnames(x))
+    y0 <- .Call("imputation1", x, idx, W)
+    colnames(y0) <- cells.1
+    rownames(y0) <- rownames(x)
+    #y <- x %*% W
+    #y0 <- y[,cells.1]
     
     rs <- Matrix::rowSums(x0>0)
     idx <- which(rs >= min.cells)
