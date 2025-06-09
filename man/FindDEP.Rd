@@ -27,11 +27,8 @@ FindDEP(
   dims = 1:20,
   k.param = 20,
   prune.SNN = 1/50,
-  n.trees = 50,
-  nn.eps = 0,
-  nn.method = "annoy",
-  annoy.metric = "euclidean",
-  setLog = TRUE
+  setLog = TRUE,
+  ...
 )
 }
 \arguments{
@@ -75,9 +72,9 @@ FindDEP(
 
 \item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
 
-\item{versbose}{Print log message. Default is TRUE.}
-
 \item{...}{Parameters pass to FindNeighbors().}
+
+\item{versbose}{Print log message. Default is TRUE.}
 }
 \description{
 Find different expression pattern of same feature in different cell groups. Only used for integrated data.

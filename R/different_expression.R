@@ -226,16 +226,15 @@ FindDEP <- function(object = NULL,
                         k.param = k.param,
                         compute.SNN = TRUE,
                         prune.SNN = prune.SNN, 
-                        cache.index = FALSE, verbose = verbose)
+                        cache.index = FALSE, verbose = FALSE)
     snn <- ng[['snn']]
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
 
-    idx <- match(cells.1, colnames(x))
-    y0 <- .Call("imputation1", x, idx, W)
-    colnames(y0) <- cells.1
-    rownames(y0) <- rownames(x)
-    #y <- x %*% W
-    #y0 <- y[,cells.1]
+    if (verbose & setLog) {
+      message("Imputate group 1 cells ..")
+    }
+
+    y0 <- ImputationByWeight(X = x, cells = cells.1, W = W)
     
     rs <- Matrix::rowSums(x0>0)
     idx <- which(rs >= min.cells)
@@ -247,7 +246,11 @@ FindDEP <- function(object = NULL,
     
     idx <- match(features, rownames(x0))
     cs <- colSums(x0)
-    
+
+    if (verbose & setLog) {
+      message("Reconstruct SNN graph for group 1 cells only.")
+    }
+
     data.use <- Embeddings(object[[reduction]])
     data.use <- data.use[cells.1, dims]
     ng <- FindNeighbors(object = data.use,
@@ -257,7 +260,11 @@ FindDEP <- function(object = NULL,
                         cache.index = FALSE, verbose = FALSE)
     snn <- ng[['snn']]
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
-    
+
+    if (verbose & setLog) {
+      message("Performing spatial dissimilarity test from group 1 to group 2..")
+    }
+
     ta <- .Call("D_test", x0, y0, W, 1, perm, threads, idx, idx, cs, 0, 1, FALSE, FALSE, seed, debug)
     
     rm(x)
