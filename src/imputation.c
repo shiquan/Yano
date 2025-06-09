@@ -60,16 +60,18 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W)
 
     int i;
     for (i = 0; i < nl; ++i) { // foreach cell
-        if (n >= m - nfeature) {
-            m = m*2;
-            yi = realloc(yi, sizeof(int)*m);
-            yx = realloc(yx, sizeof(double)*m);
-        }
-
         yp[i] = n;
         int ii = INTEGER(idx)[i]-1;
         int j;
         for (j = wp[ii]; j < wp[ii+1]; ++j) {
+            if (n >= m - nfeature) {
+                m = m*2;
+                if (m < 0) error("Failed to allocate data.");
+                yi = realloc(yi, sizeof(int)*m);
+                yx = realloc(yx, sizeof(double)*m);
+
+                if (yi == NULL || yx == NULL) error("Failed to allocate data.");
+            }
             n = scatter(x, wi[j], wx[j], w0, x0, ii+1, yi, n);
         }
         for (j = yp[i]; j < n; ++j) yx[j] = x0[yi[j]];
