@@ -3,7 +3,7 @@
 #' @param cells Cells to imputate.
 #' @param W Weight matrix.
 #' @export
-ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL)
+ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.1)
 {
   if (is.null(X) || is.null(W)) {
     stop("X and/or W is not set.")
@@ -34,7 +34,7 @@ ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL)
   names(idx) <- cells
   idx <- sort(idx)
   new.cells <- names(idx)
-  X0 <- .Call("imputation1", X, idx, W)
+  X0 <- .Call("imputation1", X, idx, W, filter)
   rownames(X0) <- rownames(X)
   colnames(X0) <- new.cells
   X0[,cells]

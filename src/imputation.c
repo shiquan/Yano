@@ -26,8 +26,9 @@ size_t scatter(CHM_SP A, size_t j, double beta, size_t *w, double *x, size_t mar
     }
     return nz;
 }
-SEXP imputation1(SEXP _x, SEXP idx, SEXP _W)
+SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
 {
+    double filter = asReal(_filter);
     CHM_SP x = AS_CHM_SP__(_x);
     CHM_SP W = AS_CHM_SP__(_W);
     if (W->stype) return mkString("W cannot be symmetric");
@@ -52,15 +53,20 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W)
     int yp[nl+1];    
     int w0[nfeature];
     double x0[nfeature];
+    int i0[nfeature];
     memset(w0, 0, sizeof(int)*nfeature);
     memset(x0, 0, sizeof(double)*nfeature);
-
+    memset(i0, 0, sizeof(int)*nfeature);
     int i;
+    int n1;
     for (i = 0; i < nl; ++i) { // foreach cell
         yp[i] = n;
+        
         int ii = INTEGER(idx)[i]-1;
-        Rprintf("cell, %u\n", ii);
+        // Rprintf("cell, %u\n", ii);
         int j;
+        int n1 = 0;
+        
         for (j = wp[ii]; j < wp[ii+1]; ++j) {
             int k, p;
             int idx = wi[j];
@@ -68,27 +74,39 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W)
             for (p = xp[idx]; p < xp[idx+1]; ++p) {
                 k = xi[p];
                 //Rprintf("feature idx, %u\n", k);
-                if (w0[k] < ii+1) {
-                    if (n ==m) {
-                        m = m*2;
-                        Rprintf("%u\n", m);
-                        yi = realloc(yi, sizeof(int)*m);
-                        yx = realloc(yx, sizeof(double)*m);
-                        if (yi == NULL || yx == NULL)
-                            error("Failed to allocate data.");
-                    }
-                    
+                if (w0[k] < ii+1) {                    
                     w0[k] = ii+1;
-                    yi[n] = k;
+                    //yi[n] = k;
+                    i0[n1] = k;
                     x0[k] = wx[j]*xx[p];
-                    n++;
+                    n1++;
+                    // n++;
                 } else {
                     x0[k] += wx[j]*xx[p];
                 }                                      
             }
             // n = scatter(x, wi[j], wx[j], w0, x0, ii+1, yi, n);
         }
-        for (j = yp[i]; j < n; ++j) yx[j] = x0[yi[j]];
+        for (j = 0; j < n1; ++j) {
+            int k = i0[j];
+            if (x0[k] < filter) continue;
+            if (n ==m) {
+                m = m*2;
+                Rprintf("%u\n", m);
+                yi = realloc(yi, sizeof(int)*m);
+                yx = realloc(yx, sizeof(double)*m);
+                if (yi == NULL || yx == NULL)
+                    error("Failed to allocate data.");
+            }
+
+            yi[n] = k;
+            yx[n] = x0[k];
+            n++;
+        }
+        /* for (j = yp[i]; j < n1; ++j) { */
+        /*     if (x0[yi[j]]) */
+        /*     yx[j] = x0[yi[j]];    */
+        /* } */
     }
     yp[i] = n;
     
