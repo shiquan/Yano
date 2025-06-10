@@ -209,10 +209,8 @@ FindDEP <- function(object = NULL,
     ValidateCellGroups(object, cells.1, cells.2, min.cells)
   
     x <- GetAssayData1(object, assay = assay, layer = layer)
-    x <- x[features,]
     cells <- c(cells.1,cells.2)
-    x <- x[,cells]
-    x0 <- x[,cells.1]
+    x <- x[features,cells]    
     if (mode == 2) {
       x[,cells.1] <- 0
     }
@@ -234,18 +232,13 @@ FindDEP <- function(object = NULL,
       message("Imputate group 1 cells ..")
     }
 
-    y0 <- ImputationByWeight(X = x, cells = cells.1, W = W)
-    
     rs <- Matrix::rowSums(x0>0)
     idx <- which(rs >= min.cells)
-    features1 <- rownames(object)[idx]
+    features1 <- rownames(x0)[idx]
     features <- intersect(features, features1)
-    
-    x0 <- x0[features,]
-    y0 <- y0[features,]
-    
-    idx <- match(features, rownames(x0))
-    cs <- colSums(x0)
+    x <- x[features,]
+    y0 <- ImputationByWeight(X = x, cells = cells.1, W = W)
+    x0 <- x[,cells.1]
 
     if (verbose & setLog) {
       message("Reconstruct SNN graph for group 1 cells only.")
@@ -264,6 +257,9 @@ FindDEP <- function(object = NULL,
     if (verbose & setLog) {
       message("Performing spatial dissimilarity test from group 1 to group 2..")
     }
+
+    idx <- match(features, rownames(x0))
+    cs <- colSums(x0)
 
     ta <- .Call("D_test", x0, y0, W, 1, perm, threads, idx, idx, cs, 0, 1, FALSE, FALSE, seed, debug)
     
