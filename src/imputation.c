@@ -8,11 +8,11 @@
 
 static cholmod_common c;
 
-int scatter(CHM_SP A, int j, double beta, int *w, double *x, int mark, int *yi, int nz)
+size_t scatter(CHM_SP A, size_t j, double beta, size_t *w, double *x, size_t mark, size_t *yi, size_t nz)
 {
-    int i, p;
-    int *Ap = A->p;
-    int *Ai = A->i;
+    size_t i, p;
+    size_t *Ap = A->p;
+    size_t *Ai = A->i;
     double *Ax = A->x;
     for (p = Ap[j]; p < Ap[j+1]; ++p) {
         i = Ai[p];
@@ -32,42 +32,40 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W)
     CHM_SP W = AS_CHM_SP__(_W);
     if (W->stype) return mkString("W cannot be symmetric");
 
-    const int * xp = (int*)x->p;
-    const int * xi = (int*)x->i;
+    const size_t * xp = (size_t*)x->p;
+    const size_t * xi = (size_t*)x->i;
     const double * xx = (double*)x->x;
 
-    const int * wp = (int*)W->p;
-    const int * wi = (int*)W->i;
+    const size_t * wp = (size_t*)W->p;
+    const size_t * wi = (size_t*)W->i;
     const double * wx = (double*)W->x;
 
-    R_CheckUserInterrupt();
-
-    int ncells = W->nrow;
-    int nfeature = x->nrow;
+    size_t ncells = W->nrow;
+    size_t nfeature = x->nrow;
     
-    uint64_t n = 0, m = 10000;
+    size_t n = 0, m = 10000;
     if (m < nfeature) m = nfeature;
-    int *yi = malloc(m*sizeof(int));
+    size_t *yi = malloc(m*sizeof(size_t));
     double *yx = malloc(m*sizeof(double));
     
-    int nl = length(idx);
+    size_t nl = length(idx);
 
-    int yp[nl+1];    
-    int w0[nfeature];
+    size_t yp[nl+1];    
+    size_t w0[nfeature];
     double x0[nfeature];
-    memset(w0, 0, sizeof(int)*nfeature);
+    memset(w0, 0, sizeof(size_t)*nfeature);
     memset(x0, 0, sizeof(double)*nfeature);
 
-    int i;
+    size_t i;
     for (i = 0; i < nl; ++i) { // foreach cell
         yp[i] = n;
-        int ii = INTEGER(idx)[i]-1;
-        int j;
+        size_t ii = INTEGER(idx)[i]-1;
+        size_t j;
         for (j = wp[ii]; j < wp[ii+1]; ++j) {
             if (n >= m - nfeature) {
                 m = m*2;
                 if (m < 0) error("Failed to allocate data.");
-                yi = realloc(yi, sizeof(int)*m);
+                yi = realloc(yi, sizeof(size_t)*m);
                 yx = realloc(yx, sizeof(double)*m);
 
                 if (yi == NULL || yx == NULL) error("Failed to allocate data.");
@@ -80,11 +78,11 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W)
     
     CHM_SP ans = M_cholmod_allocate_sparse(nfeature, nl, n, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
     if (ans == NULL) return(mkString("Failed to create sparse matrix"));
-    int *ap = (int *)ans->p;
-    int *ai = (int *)ans->i;
+    size_t *ap = (size_t *)ans->p;
+    size_t *ai = (size_t *)ans->i;
     double *ax = (double *)ans->x;
-    memcpy(ap, yp, sizeof(int)*(nl+1));
-    memcpy(ai, yi, sizeof(int)*n);
+    memcpy(ap, yp, sizeof(size_t)*(nl+1));
+    memcpy(ai, yi, sizeof(size_t)*n);
     memcpy(ax, yx, sizeof(double)*n);
     free(yi);
     free(yx);
