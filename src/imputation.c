@@ -64,7 +64,7 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W)
         for (j = wp[ii]; j < wp[ii+1]; ++j) {
             if (n >= m - nfeature) {
                 m = m*2;
-                if (m < 0) error("Failed to allocate data.");
+                Rprintf("%u\n", m);
                 yi = realloc(yi, sizeof(size_t)*m);
                 yx = realloc(yx, sizeof(double)*m);
 
