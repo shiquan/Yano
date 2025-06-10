@@ -62,15 +62,29 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W)
         size_t ii = INTEGER(idx)[i]-1;
         size_t j;
         for (j = wp[ii]; j < wp[ii+1]; ++j) {
-            if (n >= m - nfeature) {
-                m = m*2;
-                Rprintf("%u\n", m);
-                yi = realloc(yi, sizeof(size_t)*m);
-                yx = realloc(yx, sizeof(double)*m);
-
-                if (yi == NULL || yx == NULL) error("Failed to allocate data.");
+            size_t k, p;
+            size_t idx = wi[j];
+            for (p = xp[idx]; p < xp[idx+1]; ++p) {
+                k = xi[p];
+                if (w0[k] < ii+1) {
+                    if (n ==m) {
+                        m = m*2;
+                        Rprintf("%u\n", m);
+                        yi = realloc(yi, sizeof(size_t)*m);
+                        yx = realloc(yx, sizeof(double)*m);
+                        if (yi == NULL || yx == NULL)
+                            error("Failed to allocate data.");
+                    }
+                    
+                    w0[k] = ii+1;
+                    yi[n] = k;
+                    x0[k] =wx[j]*xx[p];
+                    n++;
+                } else {
+                    x0[k] += wx[j]*xx[p];
+                }                                      
             }
-            n = scatter(x, wi[j], wx[j], w0, x0, ii+1, yi, n);
+            // n = scatter(x, wi[j], wx[j], w0, x0, ii+1, yi, n);
         }
         for (j = yp[i]; j < n; ++j) yx[j] = x0[yi[j]];
     }
