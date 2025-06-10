@@ -45,7 +45,7 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W)
     int ncells = W->nrow;
     int nfeature = x->nrow;
     
-    int n = 0, m = 10000;
+    uint64_t n = 0, m = 10000;
     if (m < nfeature) m = nfeature;
     int *yi = malloc(m*sizeof(int));
     double *yx = malloc(m*sizeof(double));
