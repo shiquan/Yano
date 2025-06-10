@@ -232,14 +232,15 @@ FindDEP <- function(object = NULL,
       message("Imputate group 1 cells ..")
     }
 
+    x0 <- x[,cells.1]
     rs <- Matrix::rowSums(x0>0)
     idx <- which(rs >= min.cells)
     features1 <- rownames(x0)[idx]
     features <- intersect(features, features1)
     x <- x[features,]
+    x0 <- x[,cells.1]    
     y0 <- ImputationByWeight(X = x, cells = cells.1, W = W)
-    x0 <- x[,cells.1]
-
+    
     if (verbose & setLog) {
       message("Reconstruct SNN graph for group 1 cells only.")
     }
