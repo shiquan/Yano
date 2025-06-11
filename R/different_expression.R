@@ -229,7 +229,7 @@ FindDEP <- function(object = NULL,
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
 
     if (verbose & setLog) {
-      message("Imputate group 1 cells ..")
+      message("Imputate pesudo-cells ..")
     }
 
     x0 <- x[,cells.1]
@@ -242,7 +242,7 @@ FindDEP <- function(object = NULL,
     y0 <- ImputationByWeight(X = x, cells = cells.1, W = W)
     
     if (verbose & setLog) {
-      message("Reconstruct SNN graph for group 1 cells only.")
+      message("Reconstruct SNN graph for test cells only.")
     }
 
     data.use <- Embeddings(object[[reduction]])
@@ -256,7 +256,7 @@ FindDEP <- function(object = NULL,
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
 
     if (verbose & setLog) {
-      message("Performing spatial dissimilarity test from group 1 to group 2..")
+      message("Performing spatial dissimilarity test from test cells to pesudo-cells ..")
     }
 
     idx <- match(features, rownames(x0))
@@ -264,8 +264,6 @@ FindDEP <- function(object = NULL,
 
     ta <- .Call("D_test", x0, y0, W, 1, perm, threads, idx, idx, cs, 0, 1, FALSE, FALSE, seed, debug)
     
-    rm(x)
-    rm(y)
     rm(x0)
     rm(y0)
     
