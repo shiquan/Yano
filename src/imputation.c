@@ -92,7 +92,6 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
             if (x0[k] < filter) continue;
             if (n ==m) {
                 m = m*2;
-                Rprintf("%u\n", m);
                 yi = realloc(yi, sizeof(int)*m);
                 yx = realloc(yx, sizeof(double)*m);
                 if (yi == NULL || yx == NULL)
