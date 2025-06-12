@@ -160,6 +160,7 @@ FindDEP <- function(object = NULL,
             perm = perm,
             seed = seed,
             debug = debug,
+            filter=filter,
             setLog = FALSE,
             ...
           )
