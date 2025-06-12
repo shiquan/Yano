@@ -267,7 +267,7 @@ FindDEP <- function(object = NULL,
     }
 
     if (verbose & setLog) {
-      message(paste0("Reconstruct SNN graph for test cells only, ", k.param = ", k.param, ", prune.SNN = ", prune.SNN, ".))
+      message(paste0("Reconstruct SNN graph for test cells only, k.param = ", k.param0, ", prune.SNN = ", prune.SNN, "."))
     }
 
     data.use <- Embeddings(object[[reduction]])
