@@ -22,7 +22,8 @@
 #' @param debug Print debug message. Will auto set thread to 1. Default is FALSE.
 #' @param dims Dimensions of reduction used to construct SNN graph.
 #' @param k.param Defines k for the k-nearest neighbor algorithm.
-#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.
+#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/30.
+#' @param filter Cutoff value for imputation. Value smaller than this cutoff will be removed.
 #' @param ... Parameters pass to FindNeighbors().
 #' @importFrom Matrix sparseMatrix
 #' @export
@@ -37,6 +38,7 @@ FindDEP <- function(object = NULL,
                    idents = NULL,
                    node = NULL,
                    min.cells = 10,
+                   n.meta = 0,
                    layer = "data",
                    #wm.name = NULL,
                    mode = c(1,2),
@@ -48,7 +50,8 @@ FindDEP <- function(object = NULL,
                    debug = FALSE,
                    dims = 1:20,
                    k.param = 20,
-                   prune.SNN = 1/50,
+                   prune.SNN = 1/30,
+                   filter=0.5,
                    setLog = TRUE,
                    ...
                    )
@@ -81,8 +84,6 @@ FindDEP <- function(object = NULL,
   features <- intersect(features, rownames(object))
     
   threads <- getCores(threads)
-
-  ## tab <- object[[assay]][[]]
 
   if (isTRUE(verbose) & isTRUE(setLog)) {
     message("Processing ", length(features), " features.")
@@ -228,6 +229,14 @@ FindDEP <- function(object = NULL,
     snn <- ng[['snn']]
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
 
+    if (n.meta > 0) {
+      if (verbose & setLog) {
+        message("Selecting meta cells..")
+      }
+      meta.cells <- makeMetaCells(object, ncell = n.meta, cells = cells.1, verbose = verbose)
+      cells.1 <- meta.cells
+    }
+    
     if (verbose & setLog) {
       message("Imputate pesudo-cells ..")
     }
@@ -239,10 +248,10 @@ FindDEP <- function(object = NULL,
     features <- intersect(features, features1)
     x <- x[features,]
     x0 <- x[,cells.1]    
-    y0 <- ImputationByWeight(X = x, cells = cells.1, W = W)
+    y0 <- ImputationByWeight(X = x, cells = cells.1, W = W, filter=filter)
     
     if (verbose & setLog) {
-      message("Reconstruct SNN graph for test cells only.")
+      message("Reconstruct SNN graph for test cells now.")
     }
 
     data.use <- Embeddings(object[[reduction]])
@@ -256,7 +265,7 @@ FindDEP <- function(object = NULL,
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
 
     if (verbose & setLog) {
-      message("Performing spatial dissimilarity test from test cells to pesudo-cells ..")
+      message("Performing spatial dissimilarity test ..")
     }
 
     idx <- match(features, rownames(x0))

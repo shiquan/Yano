@@ -8,24 +8,6 @@
 
 static cholmod_common c;
 
-size_t scatter(CHM_SP A, size_t j, double beta, size_t *w, double *x, size_t mark, size_t *yi, size_t nz)
-{
-    size_t i, p;
-    size_t *Ap = A->p;
-    size_t *Ai = A->i;
-    double *Ax = A->x;
-    for (p = Ap[j]; p < Ap[j+1]; ++p) {
-        i = Ai[p];
-        if (w[i] < mark) { // init w and x
-            w[i] = mark;
-            yi[nz++] = i;
-            x[i] = beta*Ax[p];
-        } else {
-            x[i] += beta*Ax[p];
-        }
-    }
-    return nz;
-}
 SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
 {
     double filter = asReal(_filter);
@@ -63,29 +45,23 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
         yp[i] = n;
         
         int ii = INTEGER(idx)[i]-1;
-        // Rprintf("cell, %u\n", ii);
         int j;
         int n1 = 0;
         
         for (j = wp[ii]; j < wp[ii+1]; ++j) {
             int k, p;
             int idx = wi[j];
-            //Rprintf("cell idx, %u\n", idx);
             for (p = xp[idx]; p < xp[idx+1]; ++p) {
                 k = xi[p];
-                //Rprintf("feature idx, %u\n", k);
                 if (w0[k] < ii+1) {                    
                     w0[k] = ii+1;
-                    //yi[n] = k;
                     i0[n1] = k;
                     x0[k] = wx[j]*xx[p];
                     n1++;
-                    // n++;
                 } else {
                     x0[k] += wx[j]*xx[p];
                 }                                      
             }
-            // n = scatter(x, wi[j], wx[j], w0, x0, ii+1, yi, n);
         }
         for (j = 0; j < n1; ++j) {
             int k = i0[j];
@@ -102,10 +78,6 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
             yx[n] = x0[k];
             n++;
         }
-        /* for (j = yp[i]; j < n1; ++j) { */
-        /*     if (x0[yi[j]]) */
-        /*     yx[j] = x0[yi[j]];    */
-        /* } */
     }
     yp[i] = n;
     

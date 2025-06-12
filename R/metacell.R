@@ -1,7 +1,19 @@
+#' @title makeMetaCells
+#' @param object Seurat object.
+#' @param features Features used to calculate leverage score.
+#' @param ncell Number of meta cells. Or ratio of meta cells in all cells.
+#' @param assay Working assay.
+#' @param cells Candidate cells to select.
+#' @param leverage.name Name of leverage score in the meta table.
+#' @param seed For reproduce sampling result.
+#' @param verbose Print log message.
 #' @export
-makeMetaCells <- function(object, features = NULL, ncell = 5000L, assay = NULL, leverage.name = "leverage.score", seed = 123, verbose = TRUE)
+makeMetaCells <- function(object, features = NULL, ncell = 5000L, assay = NULL, cells = NULL, leverage.name = "leverage.score", seed = 123, verbose = TRUE)
 {
-  ncols <- ncol(object)
+  if (is.null(cells)) {
+    cells <- colnames(object)
+  }
+  ncols <- length(x = cells)
   
   if (ncell < 1) {
     ncell <- ncell * ncols
@@ -13,17 +25,18 @@ makeMetaCells <- function(object, features = NULL, ncell = 5000L, assay = NULL, 
   ## for v5
   assay <- match.arg(arg = assay, choices = Assays(object = object))
   features <- features %||% VariableFeatures(object)
-  object <- LeverageScore(object = object, assay = assay, features = features, var.name = leverage.name, nsketch = ncell)
+  object <- LeverageScore(object = object, assay = assay, var.name = leverage.name, nsketch = ncell, features = features)
   leverage.score <- object[[leverage.name]]
 
   ## the following coding edited from Seurat/R/sketch.R
   layers.data <- Layers(object = object[[assay]], search = 'data')
 
-  cells <- lapply(
+  cells0 <- lapply(
     X = seq_along(along.with = layers.data),
     FUN = function(i, seed) {
       set.seed(seed = seed)
       lcells <- Cells(x = object[[assay]], layer = layers.data[i])
+      lcells <- intersect(cells, lcells)
       if (length(x = lcells) < ncell) {
         return(lcells)
       }
@@ -36,9 +49,14 @@ makeMetaCells <- function(object, features = NULL, ncell = 5000L, assay = NULL, 
     seed = seed
   )
 
-  cells <- unlist(cells)
+  cells0 <- unlist(cells0)
 
-  cells
+  cells0
+}
+
+AggregateMatrixByMetaCell <- function(matrix = NULL, label = NULL, method = c("mean", "sum", "median"))
+{
+  method <- match.arg(method)
 }
 #' @export
 addMetaCells <- function(object, assays = NULL, meta.cells = NULL, reduction = "pca", dims = 1:30, meta.name = "meta_cells", k.param = 1, ncell = 5000L, features = NULL, seed = 123, verbose = TRUE)
