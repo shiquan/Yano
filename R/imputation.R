@@ -2,6 +2,7 @@
 #' @param X Expression counts.
 #' @param cells Cells to imputate.
 #' @param W Weight matrix.
+#' @param filter Value below this cutoff will be filtered. Used to reduce density of matrix.
 #' @export
 ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.1)
 {
@@ -37,5 +38,6 @@ ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.1)
   X0 <- .Call("imputation1", X, idx, W, filter)
   rownames(X0) <- rownames(X)
   colnames(X0) <- new.cells
+  
   X0[,cells]
 }
