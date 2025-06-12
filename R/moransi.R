@@ -30,6 +30,7 @@ RunAutoCorr <- function(object = NULL,
                         dims=1:20,
                         k.param = 20,
                         prune.SNN = 1/30,
+                        ident = NULL,
                         cells = NULL,
                         min.cells = 10,
                         snn = NULL,
@@ -59,10 +60,27 @@ RunAutoCorr <- function(object = NULL,
     stop("Only support to set one of image, snn, and order.cells.")
   }
 
-  cells <- order.cells %||% cells
-  cells <- cells %||% colnames(object)
-  cells <- intersect(cells,colnames(object))
+  if (!is.null(ident) && !is.null(cells)) {
+    stop("ident is conflict with cells")
+  }
 
+  if (!is.null(order.cells) && !is.null(cells)) {
+    stop("order.cells is conflict with cells")
+  }
+
+  if (!is.null(order.cells) && !is.null(ident)) {
+    stop("order.cells is conflict with cells")
+  }
+
+  if (!is.null(ident)) {
+    cells <- colnames(object)[which(Idents(object) == ident)]
+    if (is.null(cells)) stop("No ident found")
+  } else {
+    cells <- order.cells %||% cells
+    cells <- cells %||% colnames(object)
+    cells <- intersect(cells,colnames(object))
+  }
+  
   if (check.par == 0) {
     if (reduction %ni% Reductions(object)) {
       stop(paste0("No reduction ", reduction, " found. You should perform RunPCA first."))

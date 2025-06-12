@@ -38,7 +38,6 @@ FindDEP <- function(object = NULL,
                    idents = NULL,
                    node = NULL,
                    min.cells = 10,
-                   n.meta = 0,
                    layer = "data",
                    #wm.name = NULL,
                    mode = c(1,2),
@@ -230,13 +229,13 @@ FindDEP <- function(object = NULL,
     snn <- ng[['snn']]
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
 
-    if (n.meta > 0) {
-      if (verbose & setLog) {
-        message("Selecting meta cells..")
-      }
-      meta.cells <- makeMetaCells(object, ncell = n.meta, cells = cells.1, verbose = verbose)
-      cells.1 <- meta.cells
-    }
+    ## if (n.meta > 0) {
+    ##   if (verbose & setLog) {
+    ##     message("Selecting meta cells..")
+    ##   }
+    ##   meta.cells <- makeMetaCells(object, ncell = n.meta, cells = cells.1, verbose = verbose)
+    ##   cells.1 <- meta.cells
+    ## }
     
     if (verbose & setLog) {
       message("Imputate pesudo-cells ..")
