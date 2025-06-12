@@ -18,11 +18,11 @@
 #' @param seed Seed for generate random number. Default is 999.
 #' @param threads Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.
 #' @param versbose Print log message. Default is TRUE.
-#' @param return.thresh Only return markers that have a p-value < return.thresh. Default is 0.01.
+#' @param return.thresh Only return markers that have a raw p-value < return.thresh. Default is 0.01.
 #' @param debug Print debug message. Will auto set thread to 1. Default is FALSE.
 #' @param dims Dimensions of reduction used to construct SNN graph.
-#' @param k.param Defines k for the k-nearest neighbor algorithm.
-#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/30.
+#' @param k.param Defines k for the k-nearest neighbor algorithm. In default, k = N_cell*0.001 < 20 ? 20 : N_cell*0.001. N_cell is the number of input cells.
+#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/(2*k-1).
 #' @param filter Cutoff value for imputation. Value smaller than this cutoff will be removed.
 #' @param ... Parameters pass to FindNeighbors().
 #' @importFrom Matrix sparseMatrix
@@ -48,8 +48,8 @@ FindDEP <- function(object = NULL,
                    verbose = TRUE,
                    debug = FALSE,
                    dims = 1:20,
-                   k.param = 20,
-                   prune.SNN = 1/30,
+                   k.param = 0,
+                   prune.SNN = 0,
                    filter=0.5,
                    setLog = TRUE,
                    ...
@@ -216,13 +216,21 @@ FindDEP <- function(object = NULL,
       x[,cells.1] <- 0
     }
     
-    if (verbose & setLog) {
-      message("Construct SNN graph for cells with \"", reduction, "\"", ".")
-    }
     data.use <- Embeddings(object[[reduction]])
     data.use <- data.use[cells, dims]
+    if (k.param == 0) {
+      k.param0 <- as.integer(length(cells)*0.001)
+      if (k.param0 < 20) {
+        k.param0 <- 20
+      }
+      prune.SNN <- 1/(2*k.param0 - 1)
+    }
+    if (verbose & setLog) {
+      message(paste0("Construct SNN graph for all cells with \"", reduction, "\"", ", k.param = ", k.param0, ", prune.SNN = ", prune.SNN, "."))
+    }
+
     ng <- FindNeighbors(object = data.use,
-                        k.param = k.param,
+                        k.param = k.param0,
                         compute.SNN = TRUE,
                         prune.SNN = prune.SNN, 
                         cache.index = FALSE, verbose = FALSE)
@@ -238,7 +246,7 @@ FindDEP <- function(object = NULL,
     ## }
     
     if (verbose & setLog) {
-      message("Imputate pesudo-cells ..")
+      message("Imputating pesudo-cells ..")
     }
 
     x0 <- x[,cells.1]
@@ -249,15 +257,23 @@ FindDEP <- function(object = NULL,
     x <- x[features,]
     x0 <- x[,cells.1]    
     y0 <- ImputationByWeight(X = x, cells = cells.1, W = W, filter=filter)
-    
+
+    if (k.param == 0) {
+      k.param0 <- as.integer(length(cells.1)*0.001)
+      if (k.param0 < 20) {
+        k.param0 <- 20
+      }
+      prune.SNN <- 1/(2*k.param0 - 1)
+    }
+
     if (verbose & setLog) {
-      message("Reconstruct SNN graph for test cells now.")
+      message(paste0("Reconstruct SNN graph for test cells only, ", k.param = ", k.param, ", prune.SNN = ", prune.SNN, ".))
     }
 
     data.use <- Embeddings(object[[reduction]])
     data.use <- data.use[cells.1, dims]
     ng <- FindNeighbors(object = data.use,
-                        k.param = k.param,
+                        k.param = k.param0,
                         compute.SNN = TRUE,
                         prune.SNN = prune.SNN,
                         cache.index = FALSE, verbose = FALSE)
@@ -265,7 +281,7 @@ FindDEP <- function(object = NULL,
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
 
     if (verbose & setLog) {
-      message("Performing spatial dissimilarity test ..")
+      message("Performing spatial dissimilarity test..")
     }
 
     idx <- match(features, rownames(x0))
@@ -304,7 +320,7 @@ FindDEP <- function(object = NULL,
   }
 
   if (!is.null(return.thresh)) {
-    df <- subset(df, padj < return.thresh)
+    df <- subset(df, pval < return.thresh)
   }
 
   df
