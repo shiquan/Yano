@@ -218,6 +218,7 @@ FindDEP <- function(object = NULL,
     
     data.use <- Embeddings(object[[reduction]])
     data.use <- data.use[cells, dims]
+    k.param0 <- k.param
     if (k.param == 0) {
       k.param0 <- as.integer(length(cells)*0.001)
       if (k.param0 < 20) {
@@ -257,7 +258,7 @@ FindDEP <- function(object = NULL,
     x <- x[features,]
     x0 <- x[,cells.1]    
     y0 <- ImputationByWeight(X = x, cells = cells.1, W = W, filter=filter)
-
+    
     if (k.param == 0) {
       k.param0 <- as.integer(length(cells.1)*0.001)
       if (k.param0 < 20) {
