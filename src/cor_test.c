@@ -75,21 +75,21 @@ void smooth_W2(double * const a, double *s, const int N, CHM_SP W)
     }
 }
 
-SEXP D_test(SEXP _A,
-            SEXP _B,
-            SEXP _W,
-            SEXP _method,
-            SEXP _permut,
-            SEXP _threads,
-            SEXP idx,
-            SEXP bidx,
-            SEXP cs,
-            SEXP _factor,
-            SEXP _mode,
-            SEXP _scale,
-            SEXP _norm,
-            SEXP _seed,
-            SEXP _debug)
+SEXP D_test_v1(SEXP _A,
+               SEXP _B,
+               SEXP _W,
+               SEXP _method,
+               SEXP _permut,
+               SEXP _threads,
+               SEXP idx,
+               SEXP bidx,
+               SEXP cs,
+               SEXP _factor,
+               SEXP _mode,
+               SEXP _scale,
+               SEXP _norm,
+               SEXP _seed,
+               SEXP _debug)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
@@ -154,11 +154,11 @@ SEXP D_test(SEXP _A,
     }
     assert (length(bidx) == N_feature);
 
-    SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
+    //SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Dval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
-    SEXP Mval  = PROTECT(allocVector(REALSXP, N_feature));
-    SEXP Vval  = PROTECT(allocVector(REALSXP, N_feature));
+    //SEXP Mval  = PROTECT(allocVector(REALSXP, N_feature));
+    //SEXP Vval  = PROTECT(allocVector(REALSXP, N_feature));
     
     const int * ap = (int*)A->p;
     const int * ai = (int*)A->i;
@@ -184,11 +184,11 @@ SEXP D_test(SEXP _A,
         int ii = INTEGER(idx)[i]  -1;
         int ij = INTEGER(bidx)[i] -1;
         if (ap[ii] == ap[ii+1] || bp[ij] == bp[ij+1]) {
-            REAL(Rval)[i]  = NA_REAL;
+            //REAL(Rval)[i]  = NA_REAL;
             REAL(Dval)[i]  = NA_REAL;
             REAL(Tval)[i]  = NA_REAL;
-            REAL(Mval)[i]  = NA_REAL;
-            REAL(Vval)[i]  = NA_REAL;
+            //REAL(Mval)[i]  = NA_REAL;
+            //REAL(Vval)[i]  = NA_REAL;
             continue;
         }
 
@@ -396,11 +396,11 @@ SEXP D_test(SEXP _A,
         
 #pragma omp critical
         {
-            REAL(Rval)[i]  = r;
+            //REAL(Rval)[i]  = r;
             REAL(Dval)[i]  = e;
             REAL(Tval)[i]  = t;
-            REAL(Mval)[i]  = mean;
-            REAL(Vval)[i]  = var;
+            //REAL(Mval)[i]  = mean;
+            //REAL(Vval)[i]  = var;
         }
 
         if (debug) {
@@ -418,16 +418,230 @@ SEXP D_test(SEXP _A,
     M_cholmod_free_sparse(&B, &c);
     //M_cholmod_free_sparse(&W, &c);
 
-    SEXP ta = PROTECT(allocVector(VECSXP, 5));
+    SEXP ta = PROTECT(allocVector(VECSXP, 2));
     // SET_VECTOR_ELT(ta, 0, LXval);
     // SET_VECTOR_ELT(ta, 1, LYval);
-    SET_VECTOR_ELT(ta, 0, Rval);
-    SET_VECTOR_ELT(ta, 1, Dval);
-    SET_VECTOR_ELT(ta, 2, Tval);
-    SET_VECTOR_ELT(ta, 3, Mval);
-    SET_VECTOR_ELT(ta, 4, Vval);
+    // SET_VECTOR_ELT(ta, 0, Rval);
+    SET_VECTOR_ELT(ta, 0, Dval);
+    SET_VECTOR_ELT(ta, 1, Tval);
+//    SET_VECTOR_ELT(ta, 3, Mval);
+//    SET_VECTOR_ELT(ta, 4, Vval);
 
-    UNPROTECT(6);
+    UNPROTECT(3);
+    return ta;
+}
+
+extern CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter);
+
+SEXP D_test_v2(SEXP _A,
+               SEXP _B,
+               SEXP _W,
+               SEXP _permut,
+               SEXP _threads,
+               SEXP idx,
+               SEXP bidx,
+               SEXP _filter,
+               SEXP _seed,
+               SEXP _debug)
+{
+    CHM_SP A = AS_CHM_SP__(_A);
+    CHM_SP B = AS_CHM_SP__(_B);
+    CHM_SP W = AS_CHM_SP__(_W);
+
+    CHM_SP A2;
+    CHM_SP B2;
+    
+    int freeA = 0;
+    int freeB = 0;
+
+    double filter = asReal(_filter);
+    const int perm = asInteger(_permut);
+    int n_thread = asInteger(_threads);
+
+    Rboolean debug = asLogical(_debug);    
+    const int seed = asInteger(_seed);
+    srand(seed);
+    
+    if (W->stype) return mkString("W cannot be symmetric");
+    if (A->stype) {
+        A2 = M_cholmod_copy(A, 0, TRUE, &c);
+        if (c.status < CHOLMOD_OK) return mkString("Out of memory!");
+        A = A2;
+        freeA = 1;
+    }
+    if (B->stype) {
+        B2 = M_cholmod_copy(B, 0, TRUE, &c);
+        if (c.status < CHOLMOD_OK) return mkString("Out of memory!");        
+        B = B2;
+        freeB = 1;
+    }
+
+    if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
+    if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
+    if (A->ncol < 2) return mkString("Too few cells."); // to do
+
+    A2 = M_cholmod_transpose(A, (int)A->xtype, &c);
+    B2 = M_cholmod_transpose(B, (int)B->xtype, &c);
+
+    if (freeA) M_cholmod_free_sparse(&A, &c);
+    if (freeB) M_cholmod_free_sparse(&B, &c);
+    A = A2;
+    B = B2;
+    
+    const int n_cell = A->nrow;
+    const int N_feature = length(idx);
+
+    if (debug) {
+        Rprintf("n_cell, %d, n_feature, %d\n", n_cell, N_feature);
+        n_thread = 1; // disable multithreads
+    }
+    assert (length(bidx) == N_feature);
+
+    SEXP Dval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
+    
+    const int * ap = (int*)A->p;
+    const int * ai = (int*)A->i;
+    const double * ax = (double*)A->x;
+
+    const int * bp = (int*)B->p;
+    const int * bi = (int*)B->i;
+    const double * bx = (double*)B->x;
+
+    const int * wp = (int*)W->p;
+    const int * wi = (int*)W->i;
+    const double * wx = (double*)W->x;
+
+    random_index_init(perm, n_cell);
+    
+    R_CheckUserInterrupt();
+
+    
+    int i;    
+#pragma omp parallel for num_threads(n_thread)
+    for (i = 0; i < N_feature; ++i) {
+        int ii = INTEGER(idx)[i]  -1;
+        int ij = INTEGER(bidx)[i] -1;
+        if (ap[ii] == ap[ii+1] || bp[ij] == bp[ij+1]) {
+            REAL(Dval)[i]  = NA_REAL;
+            REAL(Tval)[i]  = NA_REAL;
+            continue;
+        }
+
+        // init data for X and permutated Xs
+        int fl = ap[ii+1] - ap[ii];
+        int xnz = fl*(perm+1);
+        CHM_SP XX = M_cholmod_allocate_sparse(perm+1, n_cell, xnz, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
+        XX = init_perm_matrix(XX);
+        CHM_SP SX = imputation0(XX, W, filter);
+        M_cholmod_free_sparse(&XX, &c);
+        CHM_SP SXt = M_cholmod_transpose(SX, (int)SX->xtype, &c);
+        M_cholmod_free_sparse(&SX, &c);
+        double *tx = (double*)SXt->x;
+        int *ti = (int*)SXt->i;
+        int *tp = (int*)SXt->p;
+
+        int j, s, p, k;
+        double mx = 0; // mean of X
+        for (j = tp[0]; j < tp[1]; ++j) {
+            mx += tx[j];
+        }
+        mx = mx/n_cell;
+        
+        // smooth Y
+        double Y[n_cell];
+        memset(Y, 0, sizeof(double)*n_cell);
+        double msy = 0; // mean value of smoothed Y (Y~)
+        for (s = 0; s < n_cell; ++s) {
+            p = bp[i];
+            for (j = wp[s]; j < wp[s+1]; ++j) {
+                int idx = wi[j];
+                for (; p < bp[i+1]; p++) {
+                    if (bi[p] == idx) {
+                        Y[s] += bx[p]*wx[j];
+                    } else if (bi[p] > idx) {
+                        break;
+                    }
+                }
+                if (p == bp[i+1]) break;
+            }
+            msy += Y[s];
+        }
+        
+        // calculate Sx and r
+        msy = msy/n_cell;
+        double Yi[n_cell]; // Y~i - mean(Y~)
+        double Yi2 = 0; // sum(Y~u - mean(Y~))^2
+        for (s = 0; s < n_cell; ++s) {
+            Yi[s] = Y[s] - msy;
+            Yi2 += Yi[s]*Yi[s]; 
+        }
+        Yi2 = sqrt(Yi2);
+        
+        double D[perm+1];
+        double Xi[n_cell];
+        for (j = 0; j < perm+1; ++j) {
+            double Xi2 = 0, Xi3 = 0;
+            double msx = 0;
+            double SS = 0;
+
+            memset(Xi, 0, sizeof(double)*n_cell);
+            for (p = tp[j]; p < tp[j+1]; ++p) {
+                msx += tx[p];
+                Xi[ti[p]] = tx[p];
+            }
+            msx = msx/n_cell;
+            double xi0, xi1, r = 0;
+            for (p = 0; p < n_cell; ++p) {
+                xi0 = Xi[p] - msx;
+                xi1 = Xi[p] - mx;
+                r += xi0*Yi[p];
+                Xi2 += xi0*xi0;
+                Xi3 += xi1*xi1;
+            }
+            SS = Xi2/Xi3;
+            SS = sqrt(SS);
+            Xi2 = sqrt(Xi2);
+            r = r / (Xi2 * Yi2);            
+            D[j] = SS * (1-r);
+        }
+
+        M_cholmod_free_sparse(&SXt, &c);
+        
+        // calculate mean, var
+        double md = 0, var = 0;        
+        for (j = 1; j < perm+1; ++j) {
+            md = D[j];
+        }
+        for (j = 1; j < perm+1; ++j) {
+            var += pow(D[j]-md, 2);
+        }
+        var = sqrt(var/perm);
+
+        double t = (D[0] - md)/var;
+        
+#pragma omp critical
+        {
+            REAL(Dval)[i]  = D[0];
+            REAL(Tval)[i]  = t;
+        }
+
+        if (debug) {
+            Rprintf("t, %f, mean, %f, var, %f \n", t, md, var);
+        }
+    } // end of loop, for each feature
+
+    random_index_free();
+
+    M_cholmod_free_sparse(&A, &c);
+    M_cholmod_free_sparse(&B, &c);
+
+    SEXP ta = PROTECT(allocVector(VECSXP, 2));
+
+    SET_VECTOR_ELT(ta, 0, Dval);
+    SET_VECTOR_ELT(ta, 1, Tval);
+
+    UNPROTECT(3);
     return ta;
 }
 
