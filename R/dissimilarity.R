@@ -165,14 +165,13 @@ RunBlockCorr <- function(object = NULL,
   
   bind.features <- bind.features %||% blocks
   bind.features <- intersect(bind.features, blocks)
+  bind.features <- intersect(bind.features, tab[features, bind.name])
   tab <- tab[which(tab[[bind.name]] %in% bind.features),]
   features <- intersect(features, rownames(tab))
 
   if (length(features) == 0) {
     stop("No features found.")
-  }
-  
-  tab <- tab[features,]
+  } 
   
   if (isTRUE(verbose)) {
     message("Processing ", length(bind.features), " binding features.")
@@ -186,8 +185,9 @@ RunBlockCorr <- function(object = NULL,
       message("Use \"counts\" layer for test features.")
       message("Aggregate counts for binding features.")
     }
-    x <- GetAssayData1(object, assay = assay, layer = "counts")  
-    x0 <- x[features, cells]
+    x <- GetAssayData1(object, assay = assay, layer = "counts")
+    features0 <- rownames(tab)
+    x0 <- x[features0, cells]
     x0 <- as(x0, "TsparseMatrix")
     
     # Aggregate features in the same block
@@ -218,7 +218,7 @@ RunBlockCorr <- function(object = NULL,
     DefaultAssay(object) <- old.assay
 
     features <- intersect(features, rownames(tab))
-    tab <- tab[features,]
+    tab <- tab[features, ]
     bind.features <- unique(tab[[bind.name]])
     
     if (mode == 1) {
@@ -236,6 +236,8 @@ RunBlockCorr <- function(object = NULL,
     }
   }
 
+  tab <- tab[features,]
+  
   bidx <- match(tab[[bind.name]],rownames(y))
   idx <- match(features, rownames(x))
   if (isTRUE(verbose)) {
@@ -410,7 +412,7 @@ RunSDT <- function(object = NULL,
   # skip unannotated records
   tab <- tab[tab[[bind.name]] != "." & !is.na(tab[[bind.name]]),] 
   blocks <- names(which(table(tab[[bind.name]]) >= min.features.per.block))
-  
+  blocks <- intersect(blocks, tab[features, bind.name])
   bind.features <- bind.features %||% blocks
   bind.features <- intersect(bind.features, blocks)
   tab <- tab[which(tab[[bind.name]] %in% bind.features),]
@@ -419,8 +421,6 @@ RunSDT <- function(object = NULL,
   if (length(features) == 0) {
     stop("No features found.")
   }
-  
-  tab <- tab[features,]
   
   if (isTRUE(verbose)) {
     message("Processing ", length(bind.features), " binding features.")
@@ -431,8 +431,9 @@ RunSDT <- function(object = NULL,
       message("Use \"counts\" layer for test features.")
       message("Aggregate counts for binding features.")
     }
-    x <- GetAssayData1(object, assay = assay, layer = "counts")  
-    x0 <- x[features, cells]
+    x <- GetAssayData1(object, assay = assay, layer = "counts")
+    features0 <- rownames(tab)
+    x0 <- x[features0, cells]
     x0 <- as(x0, "TsparseMatrix")
     
     # Aggregate features in the same block
@@ -458,12 +459,11 @@ RunSDT <- function(object = NULL,
     old.assay <- DefaultAssay(object)
     DefaultAssay(object) <- bind.assay
 
-    ## todo
     y <- GetAssayData1(object, assay = bind.assay, layer = "counts")
     y <- y[,cells]
     rs <- Matrix::rowSums(y>0)
     idx <- which(rs >= min.cells.bind)
-    blocks1 <- rownames(object)[idx]
+    blocks1 <- rownames(y)[idx]
 
     tab <- subset(tab, tab[[bind.name]] %in% blocks1)
     
@@ -487,6 +487,9 @@ RunSDT <- function(object = NULL,
     }
   }
 
+  ## only keep features in the table
+  tab <- tab[features,]
+  
   bidx <- match(tab[[bind.name]],rownames(y))
   idx <- match(features, rownames(x))
   if (mode != 1) {
