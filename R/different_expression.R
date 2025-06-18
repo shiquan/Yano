@@ -21,7 +21,7 @@
 #' @param return.thresh Only return markers that have a raw p-value < return.thresh. Default is 0.01.
 #' @param debug Print debug message. Will auto set thread to 1. Default is FALSE.
 #' @param dims Dimensions of reduction used to construct SNN graph.
-#' @param k.param Defines k for the k-nearest neighbor algorithm. In default, k = N_cell*0.001 < 20 ? 20 : N_cell*0.001. N_cell is the number of input cells.
+#' @param k.param Defines k for the k-nearest neighbor algorithm. In default, k.param = 30
 #' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/(2*k-1).
 #' @param filter Cutoff value for imputation. Value smaller than this cutoff will be removed.
 #' @param ... Parameters pass to FindNeighbors().
@@ -48,9 +48,9 @@ FindDEP <- function(object = NULL,
                    verbose = TRUE,
                    debug = FALSE,
                    dims = 1:20,
-                   k.param = 0,
+                   k.param = 30,
                    prune.SNN = 0,
-                   filter=0.5,
+                   filter=0.001,
                    setLog = TRUE,
                    ...
                    )
@@ -238,14 +238,6 @@ FindDEP <- function(object = NULL,
     snn <- ng[['snn']]
     W <- GetWeights(snn = snn, prune.SNN = prune.SNN)
 
-    ## if (n.meta > 0) {
-    ##   if (verbose & setLog) {
-    ##     message("Selecting meta cells..")
-    ##   }
-    ##   meta.cells <- makeMetaCells(object, ncell = n.meta, cells = cells.1, verbose = verbose)
-    ##   cells.1 <- meta.cells
-    ## }
-    
     if (verbose & setLog) {
       message("Imputating pesudo-cells ..")
     }
@@ -286,9 +278,8 @@ FindDEP <- function(object = NULL,
     }
 
     idx <- match(features, rownames(x0))
-    cs <- colSums(x0)
 
-    ta <- .Call("D_test_v1", x0, y0, W, 1, perm, threads, idx, idx, cs, 0, 1, FALSE, FALSE, seed, debug)
+    ta <- .Call("D_test_v2", x0, y0, W, perm, threads, idx, idx, 0, seed, debug)
     
     rm(x0)
     rm(y0)
