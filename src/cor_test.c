@@ -623,7 +623,7 @@ SEXP D_test_v2(SEXP _A,
             r = r / (Xi2 * Yi2);            
             D[j] = SS * (1-r);
 
-            if (debug) {
+            if (debug && j == 0) {
                 Rprintf("smooth_X_mean, %f, Xi^2, %f, SS, %f, r, %f, D, %f \n", msx, Xi2, SS, r, D[j]);
             }
         }
@@ -635,7 +635,7 @@ SEXP D_test_v2(SEXP _A,
         for (j = 1; j < perm+1; ++j) {
             md += D[j];
         }
-        md = md/(perm+1);
+        md = md/perm;
         for (j = 1; j < perm+1; ++j) {
             var += pow(D[j]-md, 2);
         }
@@ -649,7 +649,7 @@ SEXP D_test_v2(SEXP _A,
             REAL(Tval)[i]  = t;
         }
 
-        if (debug && j == 0) {
+        if (debug) {
             Rprintf("t, %f, mean, %f, var, %f \n", t, md, var);
         }
     } // end of loop, for each feature
