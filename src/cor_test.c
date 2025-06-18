@@ -154,11 +154,8 @@ SEXP D_test_v1(SEXP _A,
     }
     assert (length(bidx) == N_feature);
 
-    //SEXP Rval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Dval  = PROTECT(allocVector(REALSXP, N_feature));
     SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
-    //SEXP Mval  = PROTECT(allocVector(REALSXP, N_feature));
-    //SEXP Vval  = PROTECT(allocVector(REALSXP, N_feature));
     
     const int * ap = (int*)A->p;
     const int * ai = (int*)A->i;
@@ -169,11 +166,6 @@ SEXP D_test_v1(SEXP _A,
     const double * bx = (double*)B->x;
 
     random_index_init(perm, n_cell);
-    /* int **ris = NULL; */
-    /* ris = R_Calloc(perm,int*); */
-    /* for (int pi = 0; pi < perm; ++pi) { */
-    /*     ris[pi] = random_idx(n_cell); */
-    /* } */
     
     R_CheckUserInterrupt();
 
@@ -184,11 +176,8 @@ SEXP D_test_v1(SEXP _A,
         int ii = INTEGER(idx)[i]  -1;
         int ij = INTEGER(bidx)[i] -1;
         if (ap[ii] == ap[ii+1] || bp[ij] == bp[ij+1]) {
-            //REAL(Rval)[i]  = NA_REAL;
             REAL(Dval)[i]  = NA_REAL;
             REAL(Tval)[i]  = NA_REAL;
-            //REAL(Mval)[i]  = NA_REAL;
-            //REAL(Vval)[i]  = NA_REAL;
             continue;
         }
 
@@ -318,8 +307,6 @@ SEXP D_test_v1(SEXP _A,
         // mean, var
         double mean = 0, var = 0;
         double *es = R_Calloc(perm, double);
-        // double *es = alloca(perm *sizeof(double));
-        // R_CheckStack();
         
         for (int k = 0; k < perm; ++k) {
             if (method == 1 || method == 3) {
@@ -396,11 +383,8 @@ SEXP D_test_v1(SEXP _A,
         
 #pragma omp critical
         {
-            //REAL(Rval)[i]  = r;
             REAL(Dval)[i]  = e;
             REAL(Tval)[i]  = t;
-            //REAL(Mval)[i]  = mean;
-            //REAL(Vval)[i]  = var;
         }
 
         if (debug) {
@@ -409,24 +393,14 @@ SEXP D_test_v1(SEXP _A,
 
     }
 
-    /* for (int pi = 0; pi < perm; ++pi) R_Free(ris[pi]); */
-    /* R_Free(ris); */
-
     random_index_free();
     
     M_cholmod_free_sparse(&A, &c);
     M_cholmod_free_sparse(&B, &c);
-    //M_cholmod_free_sparse(&W, &c);
 
     SEXP ta = PROTECT(allocVector(VECSXP, 2));
-    // SET_VECTOR_ELT(ta, 0, LXval);
-    // SET_VECTOR_ELT(ta, 1, LYval);
-    // SET_VECTOR_ELT(ta, 0, Rval);
     SET_VECTOR_ELT(ta, 0, Dval);
     SET_VECTOR_ELT(ta, 1, Tval);
-    //    SET_VECTOR_ELT(ta, 3, Mval);
-    //    SET_VECTOR_ELT(ta, 4, Vval);
-
     UNPROTECT(3);
     return ta;
 }
@@ -577,8 +551,6 @@ SEXP D_test_v2(SEXP _A,
             X2 += pow(xxx[j] - mx,2);
         }
 
-        // Rprintf("mx, %f\n", mx);
-
         XX = init_perm_matrix(XX, perm);
         CHM_SP tmp = XX;
         XX = M_cholmod_transpose(XX, (int)XX->xtype, &c1);
@@ -642,10 +614,8 @@ SEXP D_test_v2(SEXP _A,
             double r = 0;
             for (p = 0; p < n_cell; ++p) {
                 double xi0 = Xi[p] - msx;
-                //double xi1 = Xi[p] - mx;
                 r += xi0*Yi[p];
                 Xi2 += pow(xi0, 2);
-                //Xi3 += pow(xi1, 2);
             }
             SS = Xi2/X2;
             SS = sqrt(SS);
@@ -679,7 +649,7 @@ SEXP D_test_v2(SEXP _A,
             REAL(Tval)[i]  = t;
         }
 
-        if (debug) {
+        if (debug && j == 0) {
             Rprintf("t, %f, mean, %f, var, %f \n", t, md, var);
         }
     } // end of loop, for each feature
@@ -753,7 +723,6 @@ SEXP D_distribution_test_v2(SEXP _A,
     }
     Rprintf("X2, %f\n", X2);
     int xnz = nl*(perm+1);
-    //CHM_SP XX = M_cholmod_allocate_sparse(perm+1, n_cell, xnz, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
     CHM_SP XX = M_cholmod_allocate_sparse(n_cell, perm+1,xnz, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
 
     int *xxp = (int*)XX->p;
@@ -770,21 +739,8 @@ SEXP D_distribution_test_v2(SEXP _A,
         }
     }
 
-    /* for (i = 0; i < n_cell; ++i) { */
-    /*     if (X[i] == 0) continue; */
-    /*     xxp[i] = n; */
-    /*     for (j = 0; j < perm+1; ++j, ++n) { */
-    /*         xxi[n] = j; */
-    /*         xxx[n] = X[i]; */
-    /*     }         */
-    /* }        */
     xxp[i] = n;
     assert(n == xnz);
-    Rprintf("xnz, %d\n", n);
-    
-    /* CHM_SP tmp = XX; */
-    /* XX = M_cholmod_transpose(XX, (int)XX->xtype, &c); */
-    /* M_cholmod_free_sparse(&tmp, &c); */
 
     Rprintf("init perm\n");
     XX = init_perm_matrix(XX, perm);
