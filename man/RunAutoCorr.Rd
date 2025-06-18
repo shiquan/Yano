@@ -12,6 +12,7 @@ RunAutoCorr(
   dims = 1:20,
   k.param = 20,
   prune.SNN = 1/30,
+  ident = NULL,
   cells = NULL,
   min.cells = 10,
   snn = NULL,

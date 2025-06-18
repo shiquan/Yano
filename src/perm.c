@@ -47,19 +47,7 @@ double *shuffle_index(double *tmp, int index, int length)
     return tmp;
 }
 
-CHM_SP init_perm_matrix(CHM_SP X)
-{
-    static cholmod_common c;
-    
-    int *xi = (int*)X->i;
-    int *xp = (int*)X->p;
-    int i, p;
-    for (i = 1; i < permutation+1; ++i) { // start from 1, because 0 is orginal X
-        int *idx = ris[i];
-        for (p = xp[i]; p < xp[i+1]; ++p) {
-            xi[p] = idx[xi[p]];
-        }
-    }
-
-    M_cholmod_sort(X, &c);
+int get_perm_idx(int i, int j) {
+    if (i >= permutation) error("Out of range.");
+    return ris[i][j];
 }

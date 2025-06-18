@@ -288,20 +288,17 @@ FindDEP <- function(object = NULL,
     idx <- match(features, rownames(x0))
     cs <- colSums(x0)
 
-    ta <- .Call("D_test", x0, y0, W, 1, perm, threads, idx, idx, cs, 0, 1, FALSE, FALSE, seed, debug)
+    ta <- .Call("D_test_v1", x0, y0, W, 1, perm, threads, idx, idx, cs, 0, 1, FALSE, FALSE, seed, debug)
     
     rm(x0)
     rm(y0)
     
     if (length(ta) == 1) stop(ta[[1]])
 
-    #r <- ta[[1]]
-    #e <- ta[[2]]
-    tval <- ta[[3]]
-    #mval <- ta[[4]]
-    #vval <- ta[[5]]
+    e <- ta[[1]]
+    tval <- ta[[2]]
     pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
-    df <- data.frame("feature" = features, "pval" = pval, "padj" = p.adjust(pval, method = "BH"))
+    df <- data.frame("feature" = features, "D" = e,"pval" = pval, "padj" = p.adjust(pval, method = "BH"))
     
     rownames(df) <- features
 

@@ -22,7 +22,8 @@ RunBlockCorr(
   seed = 999,
   threads = 0,
   verbose = TRUE,
-  debug = FALSE
+  debug = FALSE,
+  force = FALSE
 )
 }
 \arguments{
@@ -57,6 +58,8 @@ RunBlockCorr(
 \item{threads}{Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.}
 
 \item{debug}{Print debug message. Will auto set thread to 1. Default is FALSE.}
+
+\item{force}{Force to use this function.}
 
 \item{versbose}{Print log message. Default is TRUE.}
 }

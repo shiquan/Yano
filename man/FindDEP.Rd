@@ -25,8 +25,9 @@ FindDEP(
   verbose = TRUE,
   debug = FALSE,
   dims = 1:20,
-  k.param = 20,
-  prune.SNN = 1/50,
+  k.param = 0,
+  prune.SNN = 0,
+  filter = 0.5,
   setLog = TRUE,
   ...
 )
@@ -56,7 +57,7 @@ FindDEP(
 
 \item{mode}{Test mode.}
 
-\item{return.thresh}{Only return markers that have a p-value < return.thresh. Default is 0.01.}
+\item{return.thresh}{Only return markers that have a raw p-value < return.thresh. Default is 0.01.}
 
 \item{perm}{Permutations for evaluating mean and sd of D/L scores. Default is 100.}
 
@@ -68,9 +69,11 @@ FindDEP(
 
 \item{dims}{Dimensions of reduction used to construct SNN graph.}
 
-\item{k.param}{Defines k for the k-nearest neighbor algorithm.}
+\item{k.param}{Defines k for the k-nearest neighbor algorithm. In default, k = N_cell*0.001 < 20 ? 20 : N_cell*0.001. N_cell is the number of input cells.}
 
-\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
+\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/(2*k-1).}
+
+\item{filter}{Cutoff value for imputation. Value smaller than this cutoff will be removed.}
 
 \item{...}{Parameters pass to FindNeighbors().}
 

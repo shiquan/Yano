@@ -8,4 +8,5 @@ void random_index_free();
 
 double *shuffle_index(double *tmp, int index, int length);
 
-CHM_SP init_perm_matrix(CHM_SP X);
+int get_perm_idx(int i, int j);
+
