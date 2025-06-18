@@ -426,9 +426,6 @@ RunSDT <- function(object = NULL,
     message("Processing ", length(bind.features), " binding features.")
   }
 
-  cs <- library.size %||% colSums(object, slot = "counts")
-
-  norm <- TRUE
   if (bind.assay %ni% names(object)) {
     if (isTRUE(verbose)) {
       message("Use \"counts\" layer for test features.")
@@ -449,6 +446,7 @@ RunSDT <- function(object = NULL,
     if (mode == 1) {
       x <- GetAssayData1(object, assay = assay, layer = "data")
       x <- x[features, cells]
+      cs <- library.size %||% colSums(object, slot = "counts")
       y0 <- lognorm(y, cs[cells], scale.factor)
       rm(y)
       y <- y0
@@ -483,7 +481,6 @@ RunSDT <- function(object = NULL,
       y <- GetAssayData1(object, assay = bind.assay, layer = "data")
       x <- x[features, cells]
       y <- y[bind.features, cells]
-      norm <- FALSE
     } else {
       x <- GetAssayData1(object, assay = assay, layer = "counts")
       x <- x[features, cells]
@@ -493,12 +490,14 @@ RunSDT <- function(object = NULL,
   bidx <- match(tab[[bind.name]],rownames(y))
   idx <- match(features, rownames(x))
   if (mode != 1) {
+    cs <- library.size %||% colSums(object, slot = "counts")      
     y <- makeModeData(y, x, idx, bidx, mode)
     y0 <- lognorm(y, cs[cells], scale.factor)
     rm(y)
     y <- y0
-    x <- lognorm(x, cs[cells], scale.factor)
-    bidx <- idx
+    x <- lognorm(x[idx,], cs[cells], scale.factor)
+    idx <- 1:nrow(x)
+    bidx <- 1:nrow(y)
   }
   
   if (isTRUE(verbose)) {
