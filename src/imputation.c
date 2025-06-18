@@ -6,10 +6,10 @@
 #include<Rdefines.h>
 #include <Matrix.h>
 
-static cholmod_common c;
-
 SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
 {
+    cholmod_common c;
+    M_R_cholmod_start(&c);        
     double filter = asReal(_filter);
     CHM_SP x = AS_CHM_SP__(_x);
     CHM_SP W = AS_CHM_SP__(_W);
@@ -23,7 +23,7 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
     const int * wi = (int*)W->i;
     const double * wx = (double*)W->x;
 
-    int ncells = W->nrow;
+    int n_cells = W->nrow;
     int nfeature = x->nrow;
     
     size_t n = 0, m = 1000;
@@ -98,8 +98,11 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
 
 CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter)
 {
-    if (W->stype) error("W cannot be symmetric");
-
+    cholmod_common c;
+    M_R_cholmod_start(&c);
+    if (x->ncol != W->nrow)
+        error("Inconsistance dims for multiplication.");
+    
     const int * xp = (int*)x->p;
     const int * xi = (int*)x->i;
     const double * xx = (double*)x->x;
@@ -108,14 +111,14 @@ CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter)
     const int * wi = (int*)W->i;
     const double * wx = (double*)W->x;
 
-    int ncell = W->nrow;
+    int n_cell = W->nrow;
     int nfeature = x->nrow;
     
     size_t n = 0, m = 1000;
     int *yi = malloc(m*sizeof(int));
     double *yx = malloc(m*sizeof(double));
     
-    int yp[ncell+1];    
+    int yp[n_cell+1];    
     int w0[nfeature];
     double x0[nfeature];
     int i0[nfeature];
@@ -124,7 +127,8 @@ CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter)
     memset(i0, 0, sizeof(int)*nfeature);
     int i;
     int n1;
-    for (i = 0; i < ncell; ++i) { // foreach cell
+    for (i = 0; i < n_cell; ++i) { // foreach cell
+        yp[i] = n;
         int j;
         int n1 = 0;
         
@@ -161,12 +165,12 @@ CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter)
     }
     yp[i] = n;
     
-    CHM_SP ans = M_cholmod_allocate_sparse(nfeature, ncell, n, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
+    CHM_SP ans = M_cholmod_allocate_sparse(nfeature, n_cell, n, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
     if (ans == NULL) error("Failed to create sparse matrix");
     int *ap = (int *)ans->p;
     int *ai = (int *)ans->i;
     double *ax = (double *)ans->x;
-    memcpy(ap, yp, sizeof(int)*(ncell+1));
+    memcpy(ap, yp, sizeof(int)*(n_cell+1));
     memcpy(ai, yi, sizeof(int)*n);
     memcpy(ax, yx, sizeof(double)*n);
     free(yi);

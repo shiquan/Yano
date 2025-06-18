@@ -13,9 +13,6 @@
 #include "Matrix_stubs.c"
 #endif
 
-// # nocov end
-static cholmod_common c;
-
 #define CACHE_PER_BATCH 10000
 #define MIN_HIT 1
 
@@ -91,6 +88,9 @@ SEXP D_test_v1(SEXP _A,
                SEXP _seed,
                SEXP _debug)
 {
+    cholmod_common c;
+    M_R_cholmod_start(&c);
+            
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
     CHM_SP W = AS_CHM_SP__(_W);
@@ -424,14 +424,31 @@ SEXP D_test_v1(SEXP _A,
     // SET_VECTOR_ELT(ta, 0, Rval);
     SET_VECTOR_ELT(ta, 0, Dval);
     SET_VECTOR_ELT(ta, 1, Tval);
-//    SET_VECTOR_ELT(ta, 3, Mval);
-//    SET_VECTOR_ELT(ta, 4, Vval);
+    //    SET_VECTOR_ELT(ta, 3, Mval);
+    //    SET_VECTOR_ELT(ta, 4, Vval);
 
     UNPROTECT(3);
     return ta;
 }
 
 extern CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter);
+
+CHM_SP init_perm_matrix(CHM_SP X, int perm)
+{
+    cholmod_common c;
+    M_R_cholmod_start(&c);    
+    int *xi = (int*)X->i;
+    int *xp = (int*)X->p;
+    int i, p;
+    for (i = 0; i < perm; ++i) { // start from 1, because 0 is orginal X
+        for (p = xp[i+1]; p < xp[i+2]; ++p) {
+            xi[p] = get_perm_idx(i, xi[p]);
+        }
+    }
+    
+    M_cholmod_sort(X, &c);
+    return X;
+}
 
 SEXP D_test_v2(SEXP _A,
                SEXP _B,
@@ -461,7 +478,10 @@ SEXP D_test_v2(SEXP _A,
     Rboolean debug = asLogical(_debug);    
     const int seed = asInteger(_seed);
     srand(seed);
-    
+
+    cholmod_common c;
+    M_R_cholmod_start(&c);
+
     if (W->stype) return mkString("W cannot be symmetric");
     if (A->stype) {
         A2 = M_cholmod_copy(A, 0, TRUE, &c);
@@ -516,10 +536,11 @@ SEXP D_test_v2(SEXP _A,
     
     R_CheckUserInterrupt();
 
-    
     int i;    
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < N_feature; ++i) {
+        cholmod_common c1;
+        M_R_cholmod_start(&c1);
         int ii = INTEGER(idx)[i]  -1;
         int ij = INTEGER(bidx)[i] -1;
         if (ap[ii] == ap[ii+1] || bp[ij] == bp[ij+1]) {
@@ -531,39 +552,63 @@ SEXP D_test_v2(SEXP _A,
         // init data for X and permutated Xs
         int fl = ap[ii+1] - ap[ii];
         int xnz = fl*(perm+1);
-        CHM_SP XX = M_cholmod_allocate_sparse(perm+1, n_cell, xnz, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
-        XX = init_perm_matrix(XX);
+        CHM_SP XX = M_cholmod_allocate_sparse(n_cell, perm+1, xnz, FALSE, TRUE, 0, CHOLMOD_REAL, &c1);
+        int j, s, p, k;
+        int *xxp = (int*)XX->p;
+        int *xxi = (int*)XX->i;
+        double *xxx = (double*)XX->x;
+        int n = 0;
+        for (j = 0; j < perm+1; ++j) {
+            xxp[j] = n;
+            for (p = ap[ii]; p <ap[ii+1]; ++p, ++n) {
+                xxi[n] = ai[p];
+                xxx[n] = ax[p];
+            }
+        }
+        xxp[j] = n;
+
+        double mx = 0; // mean of X
+        for (j = 0; j < xxp[1]; ++j) {
+            mx += xxx[j];
+        }
+        mx = mx/n_cell;
+        double X2 = 0;
+        for (j = 0; j < xxp[1]; ++j) {
+            X2 += pow(xxx[j] - mx,2);
+        }
+
+        // Rprintf("mx, %f\n", mx);
+
+        XX = init_perm_matrix(XX, perm);
+        CHM_SP tmp = XX;
+        XX = M_cholmod_transpose(XX, (int)XX->xtype, &c1);
+        M_cholmod_free_sparse(&tmp, &c1);
+
         CHM_SP SX = imputation0(XX, W, filter);
-        M_cholmod_free_sparse(&XX, &c);
-        CHM_SP SXt = M_cholmod_transpose(SX, (int)SX->xtype, &c);
-        M_cholmod_free_sparse(&SX, &c);
+        M_cholmod_free_sparse(&XX, &c1);
+        CHM_SP SXt = M_cholmod_transpose(SX, (int)SX->xtype, &c1);
+        M_cholmod_free_sparse(&SX, &c1);
+
         double *tx = (double*)SXt->x;
         int *ti = (int*)SXt->i;
         int *tp = (int*)SXt->p;
 
-        int j, s, p, k;
-        double mx = 0; // mean of X
-        for (j = tp[0]; j < tp[1]; ++j) {
-            mx += tx[j];
-        }
-        mx = mx/n_cell;
-        
         // smooth Y
         double Y[n_cell];
         memset(Y, 0, sizeof(double)*n_cell);
         double msy = 0; // mean value of smoothed Y (Y~)
         for (s = 0; s < n_cell; ++s) {
-            p = bp[i];
+            p = bp[ij];
             for (j = wp[s]; j < wp[s+1]; ++j) {
-                int idx = wi[j];
-                for (; p < bp[i+1]; p++) {
-                    if (bi[p] == idx) {
+                int id = wi[j];
+                for (; p < bp[ij+1]; p++) {
+                    if (bi[p] == id) {
                         Y[s] += bx[p]*wx[j];
-                    } else if (bi[p] > idx) {
+                    } else if (bi[p] > id) {
                         break;
                     }
                 }
-                if (p == bp[i+1]) break;
+                if (p == bp[ij+1]) break;
             }
             msy += Y[s];
         }
@@ -574,45 +619,53 @@ SEXP D_test_v2(SEXP _A,
         double Yi2 = 0; // sum(Y~u - mean(Y~))^2
         for (s = 0; s < n_cell; ++s) {
             Yi[s] = Y[s] - msy;
-            Yi2 += Yi[s]*Yi[s]; 
+            Yi2 += pow(Yi[s],2); 
         }
         Yi2 = sqrt(Yi2);
-        
+
+        if (debug) {
+            Rprintf("X_mean, %f, smooth_Y_mean, %f, Yi^2, %f \n", mx, msy, Yi2);
+        }
+
         double D[perm+1];
         double Xi[n_cell];
         for (j = 0; j < perm+1; ++j) {
-            double Xi2 = 0, Xi3 = 0;
+            double Xi2 = 0;//, Xi3 = 0;
             double msx = 0;
             double SS = 0;
-
             memset(Xi, 0, sizeof(double)*n_cell);
             for (p = tp[j]; p < tp[j+1]; ++p) {
                 msx += tx[p];
                 Xi[ti[p]] = tx[p];
             }
             msx = msx/n_cell;
-            double xi0, xi1, r = 0;
+            double r = 0;
             for (p = 0; p < n_cell; ++p) {
-                xi0 = Xi[p] - msx;
-                xi1 = Xi[p] - mx;
+                double xi0 = Xi[p] - msx;
+                //double xi1 = Xi[p] - mx;
                 r += xi0*Yi[p];
-                Xi2 += xi0*xi0;
-                Xi3 += xi1*xi1;
+                Xi2 += pow(xi0, 2);
+                //Xi3 += pow(xi1, 2);
             }
-            SS = Xi2/Xi3;
+            SS = Xi2/X2;
             SS = sqrt(SS);
             Xi2 = sqrt(Xi2);
             r = r / (Xi2 * Yi2);            
             D[j] = SS * (1-r);
+
+            if (debug) {
+                Rprintf("smooth_X_mean, %f, Xi^2, %f, SS, %f, r, %f, D, %f \n", msx, Xi2, SS, r, D[j]);
+            }
         }
 
-        M_cholmod_free_sparse(&SXt, &c);
-        
+        M_cholmod_free_sparse(&SXt, &c1);
+
         // calculate mean, var
         double md = 0, var = 0;        
         for (j = 1; j < perm+1; ++j) {
-            md = D[j];
+            md += D[j];
         }
+        md = md/(perm+1);
         for (j = 1; j < perm+1; ++j) {
             var += pow(D[j]-md, 2);
         }
@@ -643,6 +696,177 @@ SEXP D_test_v2(SEXP _A,
 
     UNPROTECT(3);
     return ta;
+}
+
+SEXP D_distribution_test_v2(SEXP _A,
+                            SEXP _B,
+                            SEXP _W,
+                            SEXP _permut,
+                            SEXP _filter,
+                            SEXP _seed,
+                            SEXP _debug)
+{
+    int la = length(_A);
+    int lb = length(_B);
+    
+    CHM_SP W = AS_CHM_SP__(_W);
+    double filter = asReal(_filter);
+    const int perm = asInteger(_permut);
+    
+    if (W->stype) return mkString("W cannot be symmetric");
+    if (la != lb) return mkString("Unequal length of A and B");
+   
+    const int n_cell = W->nrow;
+    
+    if (la != n_cell) return mkString("Unequal length of A and W");
+    
+    Rboolean debug = asLogical(_debug);    
+    const int seed = asInteger(_seed);
+    srand(seed);
+
+    cholmod_common c;
+    M_R_cholmod_start(&c);
+    
+    const int *wp = (int*)W->p;
+    const int *wi = (int*)W->i;
+    const double *wx = (double*)W->x;
+
+    random_index_init(perm, n_cell);
+
+    int i, j, s, p, k;
+    double X[n_cell];
+    double Y[n_cell];
+    double mx = 0;
+    int nl = 0;
+    for (i = 0; i < n_cell; ++i) {
+        X[i] = REAL(_A)[i];
+        Y[i] = REAL(_B)[i];
+        if (X[i] == 0) continue;
+        nl++;
+        mx += X[i];
+    }
+    mx = mx/n_cell;
+    Rprintf("mx, %f\n", mx);
+    double X2 = 0;
+    for (i = 0; i < n_cell; ++i) {
+        X2 += pow(X[i] - mx,2);
+    }
+    Rprintf("X2, %f\n", X2);
+    int xnz = nl*(perm+1);
+    //CHM_SP XX = M_cholmod_allocate_sparse(perm+1, n_cell, xnz, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
+    CHM_SP XX = M_cholmod_allocate_sparse(n_cell, perm+1,xnz, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
+
+    int *xxp = (int*)XX->p;
+    int *xxi = (int*)XX->i;
+    double *xxx = (double*)XX->x;
+    int n = 0;
+    for (i = 0; i < perm+1; ++i) {
+        xxp[i] = n;
+        for (j = 0; j < n_cell; ++j) {
+            if (X[j] == 0) continue;
+            xxi[n] = j;
+            xxx[n] = X[j];
+            n++;
+        }
+    }
+
+    /* for (i = 0; i < n_cell; ++i) { */
+    /*     if (X[i] == 0) continue; */
+    /*     xxp[i] = n; */
+    /*     for (j = 0; j < perm+1; ++j, ++n) { */
+    /*         xxi[n] = j; */
+    /*         xxx[n] = X[i]; */
+    /*     }         */
+    /* }        */
+    xxp[i] = n;
+    assert(n == xnz);
+    Rprintf("xnz, %d\n", n);
+    
+    /* CHM_SP tmp = XX; */
+    /* XX = M_cholmod_transpose(XX, (int)XX->xtype, &c); */
+    /* M_cholmod_free_sparse(&tmp, &c); */
+
+    Rprintf("init perm\n");
+    XX = init_perm_matrix(XX, perm);
+
+    CHM_SP tmp = XX;
+    XX = M_cholmod_transpose(XX, (int)XX->xtype, &c);
+    M_cholmod_free_sparse(&tmp, &c);
+
+    CHM_SP SX = imputation0(XX, W, filter);
+    M_cholmod_free_sparse(&XX, &c);
+    CHM_SP SXt = M_cholmod_transpose(SX, (int)SX->xtype, &c);
+    M_cholmod_free_sparse(&SX, &c);
+
+    double *tx = (double*)SXt->x;
+    int *ti = (int*)SXt->i;
+    int *tp = (int*)SXt->p;
+
+    double Ys[n_cell];
+    memset(Ys, 0, sizeof(double)*n_cell);
+    double msy = 0; // mean value of smoothed Y (Y~)
+    for (s = 0; s < n_cell; ++s) {
+        for (j = wp[s]; j < wp[s+1]; ++j) {
+            int id = wi[j];
+            if (Y[id] == 0) continue;
+            Ys[s] += Y[id]*wx[j];
+        }
+        msy += Ys[s];
+    }
+    // calculate Sx and r
+    msy = msy/n_cell;
+    double Yi[n_cell]; // Y~i - mean(Y~)
+    double Yi2 = 0; // sum(Y~u - mean(Y~))^2
+    for (s = 0; s < n_cell; ++s) {
+        Yi[s] = Ys[s] - msy;
+        Yi2 += pow(Yi[s],2); 
+    }
+    Yi2 = sqrt(Yi2);
+
+    if (debug) {
+        Rprintf("X_mean, %f, smooth_Y_mean, %f, Yi^2, %f \n", mx, msy, Yi2);
+    }
+
+    double D[perm+1];
+    double Xi[n_cell];
+    for (j = 0; j < perm+1; ++j) {
+        double Xi2 = 0;//, Xi3 = 0;
+        double msx = 0;
+        double SS = 0;
+        memset(Xi, 0, sizeof(double)*n_cell);
+        for (p = tp[j]; p < tp[j+1]; ++p) {
+            msx += tx[p];
+            Xi[ti[p]] = tx[p];
+        }
+        msx = msx/n_cell;
+        double r = 0;
+        for (p = 0; p < n_cell; ++p) {
+            double xi0 = Xi[p] - msx;
+            //double xi1 = Xi[p] - mx;
+            r += xi0*Yi[p];
+            Xi2 += pow(xi0, 2);
+            //Xi3 += pow(xi1, 2);
+        }
+        SS = Xi2/X2;
+        SS = sqrt(SS);
+        Xi2 = sqrt(Xi2);
+        r = r / (Xi2 * Yi2);            
+        D[j] = SS * (1-r);
+        
+        if (debug && j == 0) {
+            Rprintf("smooth_X_mean, %f, Xi^2, %f, SS, %f, r, %f, D, %f \n", msx, Xi2, SS, r, D[j]);
+        }
+    }
+    
+    M_cholmod_free_sparse(&SXt, &c);
+    
+    SEXP DD = PROTECT(allocVector(REALSXP, perm+1));
+    for (i = 0; i < perm+1; ++i) {
+        REAL(DD)[i] = D[i];
+    }
+
+    UNPROTECT(1);
+    return DD;
 }
 
 SEXP D_distribution_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
@@ -778,7 +1002,6 @@ SEXP D_distribution_test2(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads
 {
     int la = length(_A);
     int lb = length(_B);
-    
     CHM_SP W = AS_CHM_SP__(_W);
     
     const int perm = asInteger(_permut);
