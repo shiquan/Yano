@@ -7,7 +7,7 @@
 #include <Matrix.h>
 #include <assert.h>
 
-static cholmod_common c;
+
 
 #define CACHE_PER_BATCH 10000
 #define MIN_HIT 1
@@ -44,6 +44,8 @@ double *sp_colsums(CHM_SP A, Rboolean mn)
 */
 SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
 {
+    cholmod_common c;
+    M_R_cholmod_start(&c);
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP W = AS_CHM_SP__(_W);
     Rboolean rand = asLogical(_random);
@@ -111,7 +113,6 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     CHM_SP WWt;
     WWt = M_cholmod_add(W, Wt, one, one, TRUE, TRUE, &c);
     M_cholmod_free_sparse(&Wt, &c);
-    free(Wt);
     
     double *WWtx = (double*)WWt->x;
     for (i = 0; i < WWt->nzmax; ++i) S1 += pow(WWtx[i],2);
@@ -122,7 +123,6 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     R_Free(cs);
     R_Free(rs);    
     M_cholmod_free_sparse(&WWt, &c);
-    free(WWt);
     
     const double varI_norm = (NN*S1-N*S2+3*S02)/(S02*(NN-1)) - EI2;
 
@@ -189,7 +189,7 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     }
 
     M_cholmod_free_sparse(&A, &c);
-    free(A);
+    M_cholmod_finish(&c);
     SEXP ta = PROTECT(allocVector(VECSXP, 2));
     SET_VECTOR_ELT(ta, 0, Ival);
     SET_VECTOR_ELT(ta, 1, IZval);
@@ -213,6 +213,9 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     if (A->ncol != W->nrow) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
     if (A->ncol < 2) return mkString("Too few cells."); // to do
+
+    cholmod_common c;
+    M_R_cholmod_start(&c);
 
     if (tr) {
         A = M_cholmod_transpose(A, (int)A->xtype, &c);
@@ -349,8 +352,9 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     
     if (tr) {
         M_cholmod_free_sparse(&A, &c);
-        free(A);
     }
+
+    M_cholmod_finish(&c);
 
     SEXP ta = PROTECT(allocVector(VECSXP, 5));
     SET_VECTOR_ELT(ta, 0, Ival);
@@ -372,6 +376,9 @@ SEXP moransi_perm_test(SEXP _A, SEXP _W, SEXP _scaled, SEXP _threads, SEXP _bina
     if (W->stype) return mkString("W cannot be symmetric");
 
     R_CheckStack();
+
+    cholmod_common c;
+    M_R_cholmod_start(&c);        
 
     if (A->ncol != W->ncol) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix");
@@ -515,7 +522,9 @@ SEXP moransi_perm_test(SEXP _A, SEXP _W, SEXP _scaled, SEXP _threads, SEXP _bina
     }
 
     M_cholmod_free_sparse(&A, &c);
-    free(A);
+
+    M_cholmod_finish(&c);
+
     SEXP ta = PROTECT(allocVector(VECSXP, 2));
     SET_VECTOR_ELT(ta, 0, Ival);
     SET_VECTOR_ELT(ta, 1, Tval);
