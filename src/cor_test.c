@@ -405,12 +405,11 @@ SEXP D_test_v1(SEXP _A,
     return ta;
 }
 
-extern CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter);
+extern CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter, cholmod_common *c);
 
-CHM_SP init_perm_matrix(CHM_SP X, int perm)
+CHM_SP init_perm_matrix(CHM_SP X, int perm, cholmod_common *c)
 {
-    cholmod_common c;
-    M_R_cholmod_start(&c);    
+    // M_R_cholmod_start(&c);    
     int *xi = (int*)X->i;
     int *xp = (int*)X->p;
     int i, p;
@@ -420,7 +419,7 @@ CHM_SP init_perm_matrix(CHM_SP X, int perm)
         }
     }
     
-    M_cholmod_sort(X, &c);
+    M_cholmod_sort(X, c);
     return X;
 }
 
@@ -491,9 +490,6 @@ SEXP D_test_v2(SEXP _A,
     }
     assert (length(bidx) == N_feature);
 
-    SEXP Dval  = PROTECT(allocVector(REALSXP, N_feature));
-    SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
-    
     const int * ap = (int*)A->p;
     const int * ai = (int*)A->i;
     const double * ax = (double*)A->x;
@@ -510,6 +506,9 @@ SEXP D_test_v2(SEXP _A,
     
     R_CheckUserInterrupt();
 
+    SEXP Dval  = PROTECT(allocVector(REALSXP, N_feature));
+    SEXP Tval  = PROTECT(allocVector(REALSXP, N_feature));
+    
     int i;    
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < N_feature; ++i) {
@@ -551,12 +550,12 @@ SEXP D_test_v2(SEXP _A,
             X2 += pow(xxx[j] - mx,2);
         }
 
-        XX = init_perm_matrix(XX, perm);
+        XX = init_perm_matrix(XX, perm, &c1);
         CHM_SP tmp = XX;
         XX = M_cholmod_transpose(XX, (int)XX->xtype, &c1);
         M_cholmod_free_sparse(&tmp, &c1);
 
-        CHM_SP SX = imputation0(XX, W, filter);
+        CHM_SP SX = imputation0(XX, W, filter, &c1);
         M_cholmod_free_sparse(&XX, &c1);
         CHM_SP SXt = M_cholmod_transpose(SX, (int)SX->xtype, &c1);
         M_cholmod_free_sparse(&SX, &c1);
@@ -620,7 +619,7 @@ SEXP D_test_v2(SEXP _A,
             SS = Xi2/X2;
             SS = sqrt(SS);
             Xi2 = sqrt(Xi2);
-            r = r / (Xi2 * Yi2);            
+            r = r / (Xi2 * Yi2);
             D[j] = SS * (1-r);
 
             if (debug && j == 0) {
@@ -643,11 +642,11 @@ SEXP D_test_v2(SEXP _A,
 
         double t = (D[0] - md)/var;
         
-#pragma omp critical
-        {
-            REAL(Dval)[i]  = D[0];
-            REAL(Tval)[i]  = t;
-        }
+/* #pragma omp critical */
+/*         { */
+        REAL(Dval)[i]  = D[0];
+        REAL(Tval)[i]  = t;
+        /* } */
 
         if (debug) {
             Rprintf("t, %f, mean, %f, var, %f \n", t, md, var);
@@ -659,6 +658,8 @@ SEXP D_test_v2(SEXP _A,
     M_cholmod_free_sparse(&A, &c);
     M_cholmod_free_sparse(&B, &c);
 
+    R_CheckStack();
+    
     SEXP ta = PROTECT(allocVector(VECSXP, 2));
 
     SET_VECTOR_ELT(ta, 0, Dval);
@@ -743,13 +744,13 @@ SEXP D_distribution_test_v2(SEXP _A,
     assert(n == xnz);
 
     Rprintf("init perm\n");
-    XX = init_perm_matrix(XX, perm);
+    XX = init_perm_matrix(XX, perm, &c);
 
     CHM_SP tmp = XX;
     XX = M_cholmod_transpose(XX, (int)XX->xtype, &c);
     M_cholmod_free_sparse(&tmp, &c);
 
-    CHM_SP SX = imputation0(XX, W, filter);
+    CHM_SP SX = imputation0(XX, W, filter, &c);
     M_cholmod_free_sparse(&XX, &c);
     CHM_SP SXt = M_cholmod_transpose(SX, (int)SX->xtype, &c);
     M_cholmod_free_sparse(&SX, &c);

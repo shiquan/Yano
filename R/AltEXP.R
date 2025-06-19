@@ -408,14 +408,6 @@ FindAltExp <- function(object = NULL,
 #' @inheritParams FindAltExp
 #' @param node A node to find markers for and all its children; requires \code{\link{BuildClusterTree}} to have been run previously. Only can be used if test all groups.
 #' @return Data frame containing p values.
-#' @export
-#'
-#' @examples
-#' data("glbt_small")
-#' DefaultAssay(glbt_small) <- "exon"
-#' alt.exon <- FindAllAltExp(object = glbt_small, bind.assay = "RNA", bind.name = "gene_name", features = rownames(glbt_small))
-#' head(alt.exon)
-#' 
 #' @importFrom SeuratObject PackageCheck
 #' @importFrom Seurat Tool
 #' @export

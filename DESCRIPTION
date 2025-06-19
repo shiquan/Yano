@@ -1,5 +1,5 @@
 Package: Yano
-Title: Yet Another Package for Single Cell Genomics
+Title: Yet Another Package for Single Cell Omics
 Version: 1.2
 Author: Quan Shi
 Maintainer: Quan Shi <shiquan.biomed@icloud.com>
@@ -31,6 +31,7 @@ Imports:
     patchwork,
     reshape2,
     rlang,
-    scales
+    scales,
+    stringr
 NeedsCompilation: yes
 SystemRequirements: GNU make
