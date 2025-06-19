@@ -111,6 +111,8 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     CHM_SP WWt;
     WWt = M_cholmod_add(W, Wt, one, one, TRUE, TRUE, &c);
     M_cholmod_free_sparse(&Wt, &c);
+    free(Wt);
+    
     double *WWtx = (double*)WWt->x;
     for (i = 0; i < WWt->nzmax; ++i) S1 += pow(WWtx[i],2);
     S1 = S1/2;
@@ -120,7 +122,8 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     R_Free(cs);
     R_Free(rs);    
     M_cholmod_free_sparse(&WWt, &c);
-
+    free(WWt);
+    
     const double varI_norm = (NN*S1-N*S2+3*S02)/(S02*(NN-1)) - EI2;
 
     int ci;
@@ -186,7 +189,7 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     }
 
     M_cholmod_free_sparse(&A, &c);
-    
+    free(A);
     SEXP ta = PROTECT(allocVector(VECSXP, 2));
     SET_VECTOR_ELT(ta, 0, Ival);
     SET_VECTOR_ELT(ta, 1, IZval);
@@ -346,6 +349,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     
     if (tr) {
         M_cholmod_free_sparse(&A, &c);
+        free(A);
     }
 
     SEXP ta = PROTECT(allocVector(VECSXP, 5));
@@ -511,7 +515,7 @@ SEXP moransi_perm_test(SEXP _A, SEXP _W, SEXP _scaled, SEXP _threads, SEXP _bina
     }
 
     M_cholmod_free_sparse(&A, &c);
-
+    free(A);
     SEXP ta = PROTECT(allocVector(VECSXP, 2));
     SET_VECTOR_ELT(ta, 0, Ival);
     SET_VECTOR_ELT(ta, 1, Tval);

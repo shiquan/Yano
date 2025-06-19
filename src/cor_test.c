@@ -476,8 +476,14 @@ SEXP D_test_v2(SEXP _A,
     A2 = M_cholmod_transpose(A, (int)A->xtype, &c);
     B2 = M_cholmod_transpose(B, (int)B->xtype, &c);
 
-    if (freeA) M_cholmod_free_sparse(&A, &c);
-    if (freeB) M_cholmod_free_sparse(&B, &c);
+    if (freeA) {
+        M_cholmod_free_sparse(&A, &c);
+        free(A);
+    }
+    if (freeB) {
+        M_cholmod_free_sparse(&B, &c);
+        free(B);
+    }
     A = A2;
     B = B2;
     
@@ -554,12 +560,16 @@ SEXP D_test_v2(SEXP _A,
         CHM_SP tmp = XX;
         XX = M_cholmod_transpose(XX, (int)XX->xtype, &c1);
         M_cholmod_free_sparse(&tmp, &c1);
-
+        free(tmp);
+        
         CHM_SP SX = imputation0(XX, W, filter, &c1);
         M_cholmod_free_sparse(&XX, &c1);
+        free(XX);
+        
         CHM_SP SXt = M_cholmod_transpose(SX, (int)SX->xtype, &c1);
         M_cholmod_free_sparse(&SX, &c1);
-
+        free(SX);
+        
         double *tx = (double*)SXt->x;
         int *ti = (int*)SXt->i;
         int *tp = (int*)SXt->p;
@@ -628,7 +638,8 @@ SEXP D_test_v2(SEXP _A,
         }
 
         M_cholmod_free_sparse(&SXt, &c1);
-
+        free(SXt);
+        
         // calculate mean, var
         double md = 0, var = 0;        
         for (j = 1; j < perm+1; ++j) {
@@ -655,8 +666,8 @@ SEXP D_test_v2(SEXP _A,
 
     random_index_free();
 
-    M_cholmod_free_sparse(&A, &c);
-    M_cholmod_free_sparse(&B, &c);
+    M_cholmod_free_sparse(&A, &c); free(A);
+    M_cholmod_free_sparse(&B, &c); free(B);
 
     R_CheckStack();
     
