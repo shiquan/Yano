@@ -96,10 +96,8 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
     return M_chm_sparse_to_SEXP(ans, 1, 0, 0, "N", R_NilValue);
 }
 
-CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter)
+CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter, cholmod_common *c)
 {
-    cholmod_common c;
-    M_R_cholmod_start(&c);
     if (x->ncol != W->nrow)
         error("Inconsistance dims for multiplication.");
     
@@ -165,7 +163,7 @@ CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter)
     }
     yp[i] = n;
     
-    CHM_SP ans = M_cholmod_allocate_sparse(nfeature, n_cell, n, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
+    CHM_SP ans = M_cholmod_allocate_sparse(nfeature, n_cell, n, FALSE, TRUE, 0, CHOLMOD_REAL, c);
     if (ans == NULL) error("Failed to create sparse matrix");
     int *ap = (int *)ans->p;
     int *ai = (int *)ans->i;
@@ -176,6 +174,6 @@ CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter)
     free(yi);
     free(yx);
 
-    M_cholmod_sort(ans, &c);
+    M_cholmod_sort(ans, c);
     return ans;
 }

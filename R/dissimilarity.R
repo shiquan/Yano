@@ -45,12 +45,6 @@ SDT <- function(x, y, idx, bidx, W, cs, threads, perm, scale.factor, mode, scale
   ta
 }
 
-RunSTDwithMetaCells <- function(object, assay, n.meta = 0, reduction = "pca")
-{
-  if (n.meta == 0) {
-    stop("")
-  }
-}
 #' @title RunBlockCorr
 #' @description Run spatial dissimilarity test for features and their binding features in parallel.
 #' @param object Seurat object
@@ -326,6 +320,15 @@ lognorm <- function(mat = NULL, cs = NULL, scale.factor = 1e5)
 #' @param threads Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.
 #' @param versbose Print log message. Default is TRUE.
 #' @param debug Print debug message. Will auto set thread to 1. Default is FALSE.
+#' @examples
+#' data("glbt_small")
+#' DefaultAssay(glbt_small) <- "RNA"
+#' glbt_small <- NormalizeData(glbt_small) %>% RunUMAP(dim = 1:20)
+#' DefaultAssay(glbt_small) <- "exon"
+#' glbt_small <- NormalizeData(glbt_small)
+#' glbt_small <- ParseExonName(glbt_small)
+#' glbt_small <- RunSDT(glbt_small, bind.name = "gene_name", bind.assay = "RNA")
+#'
 #' @importFrom Matrix sparseMatrix
 #' @export
 RunSDT <- function(object = NULL,
