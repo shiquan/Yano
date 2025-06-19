@@ -327,6 +327,7 @@ lognorm <- function(mat = NULL, cs = NULL, scale.factor = 1e5)
 #' DefaultAssay(glbt_small) <- "exon"
 #' glbt_small <- NormalizeData(glbt_small)
 #' glbt_small <- ParseExonName(glbt_small)
+#' glbt_small <- RunAutoCorr(glbt_small)
 #' glbt_small <- RunSDT(glbt_small, bind.name = "gene_name", bind.assay = "RNA")
 #'
 #' @importFrom Matrix sparseMatrix
