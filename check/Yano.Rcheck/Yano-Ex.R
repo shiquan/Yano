@@ -6,26 +6,6 @@ library('Yano')
 base::assign(".oldSearch", base::search(), pos = 'CheckExEnv')
 base::assign(".old_wd", base::getwd(), pos = 'CheckExEnv')
 cleanEx()
-nameEx("FindAllAltExp")
-### * FindAllAltExp
-
-flush(stderr()); flush(stdout())
-
-### Name: FindAllAltExp
-### Title: Test alternative expression for all cell groups
-### Aliases: FindAllAltExp
-
-### ** Examples
-
-data("glbt_small")
-DefaultAssay(glbt_small) <- "exon"
-alt.exon <- FindAllAltExp(object = glbt_small, bind.assay = "RNA", bind.name = "gene_name", features = rownames(glbt_small))
-head(alt.exon)
-
-
-
-
-cleanEx()
 nameEx("ParseExonName")
 ### * ParseExonName
 
@@ -46,6 +26,30 @@ glbt_small <- ParseExonName(glbt_small)
 
 # Now see the meta table after parsing
 head(glbt_small[['exon']][[]])
+
+
+
+
+cleanEx()
+nameEx("RunSDT")
+### * RunSDT
+
+flush(stderr()); flush(stdout())
+
+### Name: RunSDT
+### Title: RunSDT
+### Aliases: RunSDT
+
+### ** Examples
+
+data("glbt_small")
+DefaultAssay(glbt_small) <- "RNA"
+glbt_small <- NormalizeData(glbt_small) %>% RunUMAP(dim = 1:20)
+DefaultAssay(glbt_small) <- "exon"
+glbt_small <- NormalizeData(glbt_small)
+glbt_small <- ParseExonName(glbt_small)
+glbt_small <- RunAutoCorr(glbt_small)
+glbt_small <- RunSDT(glbt_small, bind.name = "gene_name", bind.assay = "RNA")
 
 
 

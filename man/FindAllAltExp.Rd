@@ -58,10 +58,3 @@ Data frame containing p values.
 \description{
 Test alternative expression for all cell groups
 }
-\examples{
-data("glbt_small")
-DefaultAssay(glbt_small) <- "exon"
-alt.exon <- FindAllAltExp(object = glbt_small, bind.assay = "RNA", bind.name = "gene_name", features = rownames(glbt_small))
-head(alt.exon)
-
-}
