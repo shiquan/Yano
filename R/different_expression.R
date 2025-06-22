@@ -313,3 +313,179 @@ FindDEP <- function(object = NULL,
 
   df
 }
+
+#' @title FindDEP_v2
+#' @description Find different expression pattern of same feature in different cell groups. Only used for integrated data.
+#' @param object Seurat object.
+#' @param ident.1 Identify class to test, if not set will compare all groups one by one
+#' @param ident.2 A second class for comparsion. If NULL (default), use all other cells for comparison.
+#' @param cells.1 Vector of cell names belong to group 1. Conflict with ident.1
+#' @param cells.2 Vector of cell names for comparsion. Conflict with ident.2
+#' @param assay Assay for test features. Default assay will be used if not set.
+#' @param reduction Dimension reduction name for constructing SNN graph and weight matrix. Default is 'pca'. This and following parameters only actived when cells is set, because need to recalculate the SNN graph for the defined cells. 
+#' @param features Vector of features to calculate. Default is AutoCorrFeatures(object).
+#' @param assay Work assay.
+#' @param idents Specify idents to compare. If not set will use Idents(object).
+#' @param min.cells Features detected in few than minimal number of cells will be skipped. Default is 10.
+#' @param layer Data layer to use, default is 'data'.
+#' @param perm Permutations for evaluating mean and sd of D scores. Default is 100.
+#' @param seed Seed for generate random number. Default is 999.
+#' @param threads Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.
+#' @param versbose Print log message. Default is TRUE.
+#' @param return.thresh Only return markers that have a raw p-value < return.thresh. Default is 0.
+#' @param debug Print debug message. Will auto set thread to 1. Default is FALSE.
+#' @param dims Dimensions of reduction used to construct SNN graph.
+#' @param k.param Defines k for the k-nearest neighbor algorithm. In default, k.param = 30
+#' @param ... Parameters pass to FindNeighbors().
+#' @importFrom Matrix sparseMatrix
+#' @export
+FindDEP_v2 <- function(object = NULL,
+                       ident.1 = NULL,
+                       ident.2 = NULL,
+                       cells.1 = NULL,
+                       cells.2 = NULL,
+                       reduction = "pca",
+                       features = NULL,
+                       assay = NULL,
+                       idents = NULL,
+                       min.cells = 10,
+                       layer = "data",
+                       return.thresh =0,
+                       perm=100,
+                       seed=999,
+                       threads = 0,
+                       verbose = TRUE,
+                       debug = FALSE,
+                       dims = 1:20,
+                       k.param = 30,
+                       labels = c("orphan", "test", "control"),
+                       name = "FindDEP.label",
+                       prefix = "FindDEP",
+                       ...
+                       )
+{
+  if (is.null(object)) stop("No object specified.")
+
+  assay <- assay %||% DefaultAssay(object)
+  tt <- Sys.time()
+  
+  if (!is.null(ident.1) & !is.null(cells.1)) {
+    stop("cells.1 is conflict with ident.1.")
+  }
+
+  if (!is.null(ident.2) & !is.null(cells.2)) {
+    stop("cells.2 is conflict with ident.2.")
+  }
+
+  if (!is.null(ident.1)) {
+    cells.1 <- colnames(object)[which(Idents(object) == ident.1)]
+    if (is.null(cells.1)) stop("No ident.1 found")
+  }
+
+  if (!is.null(ident.2)) {
+    cells.2 <- colnames(object)[which(Idents(object) == ident.2)]
+    if (is.null(cells.2)) stop("No ident.2 found")
+  }
+
+  if (is.null(cells.1)) {
+    stop("No cells.1 or ident.1 specified.")
+  }
+  
+  features <- features %||% AutoCorrFeatures(object)
+  features <- intersect(features, rownames(object))
+  
+  threads <- getCores(threads)
+
+  if (isTRUE(verbose)) {
+    message("Processing ", length(features), " features.")
+  }
+  
+  if (is.null(cells.2)) {
+    cells.2 <- setdiff(colnames(object), cells.1)
+  }
+    
+  ValidateCellGroups(object, cells.1, cells.2, min.cells)
+  
+  dat <- GetAssayData1(object, assay = assay, layer = layer)
+  cells <- c(cells.1,cells.2)
+  dat <- dat[features,]    
+    
+  data.use <- Embeddings(object[[reduction]])[, dims]
+
+  l1 <- length(cells.1)
+  l2 <- length(cells.2)
+  knn1 <- buildKNN(data = data.use[cells.1,], query = data.use[cells.2, ], k.param = k.param)
+  mat1 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.2))) * k.param ), j = as.vector(t(knn1$idx)), x = 1, dims = c(l2,l1))
+  knn2 <- buildKNN(data = data.use[cells.2,], query = data.use[cells.1, ], k.param = k.param)
+  mat2 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.1))) * k.param ), j = as.vector(t(knn2$idx)), x = 1, dims = c(l1,l2))
+
+  rm(knn1)
+  rm(knn2)
+
+  mat <- t(mat1) + mat2
+  rm(mat1)
+  rm(mat2)
+  
+  mat <- mat > 1
+  rownames(mat) <- cells.1
+  colnames(mat) <- cells.2
+
+  mat <- mat[which(rowSums(mat) > 0), which(colSums(mat) > 0)]
+  #W <- t(W)  
+  W <- mat/rowSums(mat)
+  new.1 <- rownames(W)  
+  new.2 <- colnames(W)
+  
+  dat2 <- ImputationByWeight(X = dat[,new.2], W = W, filter = 0.0001)
+  dat1 <- dat[, new.1]
+
+  W0 <- GetWeights(emb = data.use[new.1,])
+
+  if ("dgCMatrix" %ni% class(dat1)) {
+    dat1 <- as(dat1, "dgCMatrix")
+  }
+
+  if ("dgCMatrix" %ni% class(dat2)) {
+    dat2 <- as(dat1, "dgCMatrix")
+  }
+
+  idx <- 1:length(features)
+  ta <- .Call("D_test_v2", dat1, dat2, W0, perm, threads, idx, idx, 0, seed, debug)
+  
+  rm(dat1)
+  rm(dat2)
+    
+  if (length(ta) == 1) stop(ta[[1]])
+
+  e <- ta[[1]]
+  tval <- ta[[2]]
+  pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
+  padj <- p.adjust(pval, method = "BH")
+  
+  names(e) <- features
+  names(pval)<- features
+  names(padj) <- features
+  df <- Meta(object, assay = assay)
+  object[[assay]][[paste0(prefix,".e")]] <- e[rownames(object)]
+  object[[assay]][[paste0(prefix,".pval")]] <- pval[rownames(object)]
+  object[[assay]][[paste0(prefix,".padj")]] <- padj[rownames(object)]
+
+  rm(ta)
+  gc()
+
+  cells <- rep(labels[1], length(cells))
+  names(cells) <- colnames(object)
+  cells[new.1] <- labels[2]
+  cells[new.2] <- labels[3]
+  object[[name]] <- cells
+  
+  features <- head(features)
+  object <- LogSeuratCommand(object)
+  
+  tt <- Sys.time()-tt
+  if (isTRUE(verbose)) {
+    message("Runtime : ",format(tt), ".");
+  }
+  
+  object
+}

@@ -7,8 +7,6 @@
 #include <Matrix.h>
 #include <assert.h>
 
-static cholmod_common c;
-
 SEXP knn2snn(SEXP _knn, SEXP prune)
 {
     switch(TYPEOF(_knn)) {
@@ -65,6 +63,9 @@ SEXP knn2snn(SEXP _knn, SEXP prune)
     }
     xi[i] = n;
 
+    cholmod_common c;
+    M_R_cholmod_start(&c);
+        
     CHM_SP ans = M_cholmod_allocate_sparse(ncell, ncell, n, TRUE, TRUE, 0, CHOLMOD_REAL, &c);
 
     int *ap = (int *)ans->p;
@@ -77,6 +78,7 @@ SEXP knn2snn(SEXP _knn, SEXP prune)
 
     free(xj);
     free(xx);
+    M_cholmod_finish(&c);
 
     UNPROTECT(1);
     

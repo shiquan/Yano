@@ -16,7 +16,7 @@ ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.1)
   if ("dgCMatrix" %ni% class(W)) {
     W <- as(x, "CsparseMatrix")
   }
-
+  
   wcells <- colnames(W)
   cells0 <- colnames(X)
   cells1 <- intersect(cells0, wcells)
@@ -27,10 +27,11 @@ ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.1)
     X <- X[,cells1]
   }
   
-  if (is.null(cells)) {
-    cells <- colnames(X)
+  cells <- cells %||% colnames(X)
+  cells0 <- intersect(cells, colnames(X))
+  if (length(cells) != length(cells0)) {
+    stop("Cells not all in X or W")
   }
-
   idx <- match(cells, colnames(X))
   names(idx) <- cells
   idx <- sort(idx)
