@@ -278,7 +278,7 @@ FindDEP <- function(object = NULL,
 
     idx <- match(features, rownames(x0))
 
-    ta <- .Call("D_test_v2", x0, y0, W, perm, threads, idx, idx, 0, seed, debug)
+    ta <- .Call("D_test_v2", x0, y0, W, perm, threads, idx, idx, 0, FALSE, seed, debug)
     
     rm(x0)
     rm(y0)
@@ -332,7 +332,6 @@ FindDEP <- function(object = NULL,
 #' @param seed Seed for generate random number. Default is 999.
 #' @param threads Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.
 #' @param versbose Print log message. Default is TRUE.
-#' @param return.thresh Only return markers that have a raw p-value < return.thresh. Default is 0.
 #' @param debug Print debug message. Will auto set thread to 1. Default is FALSE.
 #' @param dims Dimensions of reduction used to construct SNN graph.
 #' @param k.param Defines k for the k-nearest neighbor algorithm. In default, k.param = 30
@@ -347,10 +346,8 @@ FindDEP_v2 <- function(object = NULL,
                        reduction = "pca",
                        features = NULL,
                        assay = NULL,
-                       idents = NULL,
                        min.cells = 10,
                        layer = "data",
-                       return.thresh =0,
                        perm=100,
                        seed=999,
                        threads = 0,
@@ -415,30 +412,33 @@ FindDEP_v2 <- function(object = NULL,
   l1 <- length(cells.1)
   l2 <- length(cells.2)
   knn1 <- buildKNN(data = data.use[cells.1,], query = data.use[cells.2, ], k.param = k.param)
-  mat1 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.2))) * k.param ), j = as.vector(t(knn1$idx)), x = 1, dims = c(l2,l1))
+  mat1 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.2))) * k.param ), j = as.vector(t(knn1$idx)), x = as.vector(t(knn1$dist)), dims = c(l2,l1))
   knn2 <- buildKNN(data = data.use[cells.2,], query = data.use[cells.1, ], k.param = k.param)
-  mat2 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.1))) * k.param ), j = as.vector(t(knn2$idx)), x = 1, dims = c(l1,l2))
+  mat2 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.1))) * k.param ), j = as.vector(t(knn2$idx)), x = as.vector(t(knn2$dist)), dims = c(l1,l2))
 
   rm(knn1)
   rm(knn2)
 
-  mat <- t(mat1) + mat2
-  rm(mat1)
-  rm(mat2)
-  
+  mat <- t(mat1 >0) + (mat2 >0)  
   mat <- mat > 1
   rownames(mat) <- cells.1
   colnames(mat) <- cells.2
+  mat <- mat * mat2
+  rm(mat1)
+  rm(mat2)
 
+  mat <- drop0(mat)
   mat <- mat[which(rowSums(mat) > 0), which(colSums(mat) > 0)]
-  #W <- t(W)  
-  W <- mat/rowSums(mat)
-  new.1 <- rownames(W)  
-  new.2 <- colnames(W)
-  
-  dat2 <- ImputationByWeight(X = dat[,new.2], W = W, filter = 0.0001)
-  dat1 <- dat[, new.1]
 
+  mat@x <- 1/mat@x
+  mat <- t(mat)
+  W <- mat/rowSums(mat)
+  W <- t(W)
+  new.1 <- colnames(W)
+  new.2 <- rownames(W)
+  dat1 <- dat[, new.1]
+  dat2 <- dat[, new.2] %*% W
+  
   W0 <- GetWeights(emb = data.use[new.1,])
 
   if ("dgCMatrix" %ni% class(dat1)) {
@@ -446,11 +446,11 @@ FindDEP_v2 <- function(object = NULL,
   }
 
   if ("dgCMatrix" %ni% class(dat2)) {
-    dat2 <- as(dat1, "dgCMatrix")
+    dat2 <- as(dat2, "dgCMatrix")
   }
 
   idx <- 1:length(features)
-  ta <- .Call("D_test_v2", dat1, dat2, W0, perm, threads, idx, idx, 0, seed, debug)
+  ta <- .Call("D_test_v2", dat1, dat2, W0, perm, threads, idx, idx, 0, FALSE, seed, debug)
   
   rm(dat1)
   rm(dat2)
@@ -488,4 +488,97 @@ FindDEP_v2 <- function(object = NULL,
   }
   
   object
+}
+
+#'@export
+DEPdemo <- function(object = NULL,
+                    ident.1 = NULL,
+                    ident.2 = NULL,
+                    cells.1 = NULL,
+                    cells.2 = NULL,
+                    reduction = "pca",
+                    feature = NULL,
+                    assay = NULL,
+                    min.cells = 10,
+                    layer = "data",
+                    dims = 1:20,
+                    k.param = 30)
+{
+  if (is.null(object)) stop("No object specified.")
+
+  assay <- assay %||% DefaultAssay(object)
+  
+  if (!is.null(ident.1) & !is.null(cells.1)) {
+    stop("cells.1 is conflict with ident.1.")
+  }
+
+  if (!is.null(ident.2) & !is.null(cells.2)) {
+    stop("cells.2 is conflict with ident.2.")
+  }
+
+  if (!is.null(ident.1)) {
+    cells.1 <- colnames(object)[which(Idents(object) == ident.1)]
+    if (is.null(cells.1)) stop("No ident.1 found")
+  }
+
+  if (!is.null(ident.2)) {
+    cells.2 <- colnames(object)[which(Idents(object) == ident.2)]
+    if (is.null(cells.2)) stop("No ident.2 found")
+  }
+
+  if (is.null(cells.1)) {
+    stop("No cells.1 or ident.1 specified.")
+  }
+
+  if (is.null(feature)) {
+    stop("No feature specified")
+  }
+  
+  if (is.null(cells.2)) {
+    cells.2 <- setdiff(colnames(object), cells.1)
+  }
+    
+  ValidateCellGroups(object, cells.1, cells.2, min.cells)
+  
+  dat <- GetAssayData1(object, assay = assay, layer = layer)
+  cells <- c(cells.1,cells.2)
+    
+  data.use <- Embeddings(object[[reduction]])[, dims]
+
+  l1 <- length(cells.1)
+  l2 <- length(cells.2)
+  knn1 <- buildKNN(data = data.use[cells.1,], query = data.use[cells.2, ], k.param = k.param)
+  mat1 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.2))) * k.param ), j = as.vector(t(knn1$idx)), x = as.vector(t(knn1$dist)), dims = c(l2,l1))
+  knn2 <- buildKNN(data = data.use[cells.2,], query = data.use[cells.1, ], k.param = k.param)
+  mat2 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.1))) * k.param ), j = as.vector(t(knn2$idx)), x = as.vector(t(knn2$dist)), dims = c(l1,l2))
+
+  rm(knn1)
+  rm(knn2)
+
+  mat <- t(mat1 >0) + (mat2 >0)  
+  mat <- mat > 1
+  rownames(mat) <- cells.1
+  colnames(mat) <- cells.2
+  mat <- mat * mat2
+  rm(mat1)
+  rm(mat2)
+
+  mat <- drop0(mat)
+  mat <- mat[which(rowSums(mat) > 0), which(colSums(mat) > 0)]
+
+  mat@x <- 1/mat@x
+  mat <- t(mat)
+  W <- mat/rowSums(mat)
+  W <- t(W)
+
+  new.1 <- colnames(W)
+  new.2 <- rownames(W)
+  dat <- as.matrix(FetchData(object, vars = feature))
+  
+  dat1 <- dat[new.1,]
+  dat2 <- t(dat[new.2,]) %*% W
+
+  df <- data.frame(ori = as.vector(dat1), smooth = as.vector(dat2))
+  rownames(df) <- new.1
+  list(df = df, W = W)
 }
