@@ -432,13 +432,14 @@ SEXP D_test_v2(SEXP _A,
                SEXP idx,
                SEXP bidx,
                SEXP _filter,
+               SEXP _smoothY,
                SEXP _seed,
                SEXP _debug)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
     CHM_SP W = AS_CHM_SP__(_W);
-
+    Rboolean s_y = asLogical(_smoothY);
     CHM_SP A2;
     CHM_SP B2;
     
@@ -571,20 +572,28 @@ SEXP D_test_v2(SEXP _A,
         double Y[n_cell];
         memset(Y, 0, sizeof(double)*n_cell);
         double msy = 0; // mean value of smoothed Y (Y~)
-        for (s = 0; s < n_cell; ++s) {
-            p = bp[ij];
-            for (j = wp[s]; j < wp[s+1]; ++j) {
-                int id = wi[j];
-                for (; p < bp[ij+1]; p++) {
-                    if (bi[p] == id) {
-                        Y[s] += bx[p]*wx[j];
-                    } else if (bi[p] > id) {
-                        break;
+        if (s_y) {
+            for (s = 0; s < n_cell; ++s) {
+                p = bp[ij];
+                for (j = wp[s]; j < wp[s+1]; ++j) {
+                    int id = wi[j];
+                    for (; p < bp[ij+1]; p++) {
+                        if (bi[p] == id) {
+                            Y[s] += bx[p]*wx[j];
+                        } else if (bi[p] > id) {
+                            break;
+                        }
                     }
+                    if (p == bp[ij+1]) break;
                 }
-                if (p == bp[ij+1]) break;
+                msy += Y[s];
             }
-            msy += Y[s];
+        } else {
+            for (p = bp[ij]; p < bp[ij+1]; ++p) {
+                s = bi[p];
+                Y[s] = bx[p];
+                msy += Y[s];
+            }
         }
         
         // calculate Sx and r
@@ -676,13 +685,15 @@ SEXP D_distribution_test_v2(SEXP _A,
                             SEXP _B,
                             SEXP _W,
                             SEXP _permut,
+                            SEXP _smoothY,
                             SEXP _filter,
                             SEXP _seed,
                             SEXP _debug)
 {
     int la = length(_A);
     int lb = length(_B);
-    
+    Rboolean s_y = asLogical(_smoothY);
+
     CHM_SP W = AS_CHM_SP__(_W);
     double filter = asReal(_filter);
     const int perm = asInteger(_permut);
@@ -720,12 +731,12 @@ SEXP D_distribution_test_v2(SEXP _A,
         mx += X[i];
     }
     mx = mx/n_cell;
-    Rprintf("mx, %f\n", mx);
+
     double X2 = 0;
     for (i = 0; i < n_cell; ++i) {
         X2 += pow(X[i] - mx,2);
     }
-    Rprintf("X2, %f\n", X2);
+
     int xnz = nl*(perm+1);
     CHM_SP XX = M_cholmod_allocate_sparse(n_cell, perm+1,xnz, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
 
@@ -746,7 +757,6 @@ SEXP D_distribution_test_v2(SEXP _A,
     xxp[i] = n;
     assert(n == xnz);
 
-    Rprintf("init perm\n");
     XX = init_perm_matrix(XX, perm, &c);
 
     CHM_SP tmp = XX;
@@ -765,15 +775,23 @@ SEXP D_distribution_test_v2(SEXP _A,
     double Ys[n_cell];
     memset(Ys, 0, sizeof(double)*n_cell);
     double msy = 0; // mean value of smoothed Y (Y~)
-    for (s = 0; s < n_cell; ++s) {
-        for (j = wp[s]; j < wp[s+1]; ++j) {
-            int id = wi[j];
-            if (Y[id] == 0) continue;
-            Ys[s] += Y[id]*wx[j];
+    if (s_y) {
+        for (s = 0; s < n_cell; ++s) {
+            for (j = wp[s]; j < wp[s+1]; ++j) {
+                int id = wi[j];
+                if (Y[id] == 0) continue;
+                Ys[s] += Y[id]*wx[j];
+            }
+            msy += Ys[s];
         }
-        msy += Ys[s];
+    } else {
+        for (s = 0; s < n_cell; ++s) {
+            Ys[s] = Y[s];
+            msy += Ys[s];
+        }
     }
-    // calculate Sx and r
+        
+   // calculate Sx and r
     msy = msy/n_cell;
     double Yi[n_cell]; // Y~i - mean(Y~)
     double Yi2 = 0; // sum(Y~u - mean(Y~))^2
@@ -828,6 +846,7 @@ SEXP D_distribution_test_v2(SEXP _A,
     UNPROTECT(1);
     return DD;
 }
+
 
 SEXP D_distribution_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
 {

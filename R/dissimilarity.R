@@ -1,6 +1,12 @@
-DScore <- function(x = NULL, y = NULL, W = NULL)
+DScore <- function(x = NULL, y = NULL, W = NULL, perm = 100, filter = 0, seed = 999, debug = FALSE, smooth_Y = TRUE)
 {
-  d <- .Call("D_score_lite", x, y, W)
+  d <- .Call("D_distribution_test_v2", x, y, W, perm, smooth_Y, filter, seed, debug)
+  hist(d[2:(perm+1)])
+  abline(v=d[1], col="red")
+
+  tval <- (d[1] - mean(d[2:(perm+1)]))/var(d[2:(perm+1)])
+  pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
+  message(paste0("D score = ", d[1], ", p value = ", pval, "."))
   d
 }
 
@@ -41,7 +47,7 @@ IdentToCells <- function(
 SDT <- function(x, y, idx, bidx, W, cs, threads, perm, scale.factor, mode, scale, norm, seed, debug)
 {
   cells <- colnames(W)
-  ta <- .Call("D_test", x[,cells], y[,cells], W, 1, perm, threads, idx, bidx, cs[cells], scale.factor, mode, scale, norm, seed, debug)
+  ta <- .Call("D_test_v1", x[,cells], y[,cells], W, 1, perm, threads, idx, bidx, cs[cells], scale.factor, mode, scale, norm, seed, debug)
   ta
 }
 
@@ -514,7 +520,7 @@ RunSDT <- function(object = NULL,
   
   tab <- object0[[]]
   
-  ta <- .Call("D_test_v2", x, y, W, perm, threads, idx, bidx, 0, seed, debug)
+  ta <- .Call("D_test_v2", x, y, W, perm, threads, idx, bidx, 0, TRUE, seed, debug)
   if (length(ta) == 1) stop(ta[[1]])
   
   d <- ta[[1]]
