@@ -4,7 +4,7 @@
 #' @param W Weight matrix.
 #' @param filter Value below this cutoff will be filtered. Used to reduce density of matrix.
 #' @export
-ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.1)
+ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.001)
 {
   if (is.null(X) || is.null(W)) {
     stop("X and/or W is not set.")
@@ -17,15 +17,14 @@ ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.1)
     W <- as(x, "CsparseMatrix")
   }
   
-  wcells <- colnames(W)
+  wcells <- rownames(W)
   cells0 <- colnames(X)
   cells1 <- intersect(cells0, wcells)
   if (length(cells1) != length(wcells)) {
     stop("Weight matrix has cells not in X.")
   }
-  if (length(cells0) > length(cells1)) {
-    X <- X[,cells1]
-  }
+
+  X <- X[,wcells]
   
   cells <- cells %||% colnames(X)
   cells0 <- intersect(cells, colnames(X))

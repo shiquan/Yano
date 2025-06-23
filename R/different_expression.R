@@ -437,10 +437,8 @@ FindDEP_v2 <- function(object = NULL,
   new.1 <- colnames(W)
   new.2 <- rownames(W)
   dat1 <- dat[, new.1]
-  dat2 <- dat[, new.2] %*% W
-  
-  W0 <- GetWeights(emb = data.use[new.1,])
-
+  dat2 <- dat[, new.2] 
+ 
   if ("dgCMatrix" %ni% class(dat1)) {
     dat1 <- as(dat1, "dgCMatrix")
   }
@@ -448,6 +446,11 @@ FindDEP_v2 <- function(object = NULL,
   if ("dgCMatrix" %ni% class(dat2)) {
     dat2 <- as(dat2, "dgCMatrix")
   }
+
+  #dat2 <- dat2 %*% W
+  dat2 <- ImputationByWeight(dat2, W = W)
+  
+  W0 <- GetWeights(emb = data.use[new.1,])
 
   idx <- 1:length(features)
   ta <- .Call("D_test_v2", dat1, dat2, W0, perm, threads, idx, idx, 0, FALSE, seed, debug)
