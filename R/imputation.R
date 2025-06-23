@@ -26,12 +26,9 @@ ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.001)
 
   X <- X[,wcells]
   
-  cells <- cells %||% colnames(X)
+  cells <- cells %||% colnames(W)
   cells0 <- intersect(cells, colnames(X))
-  if (length(cells) != length(cells0)) {
-    stop("Cells not all in X or W")
-  }
-  idx <- match(cells, colnames(X))
+  idx <- match(cells, colnames(W))
   names(idx) <- cells
   idx <- sort(idx)
   new.cells <- names(idx)
