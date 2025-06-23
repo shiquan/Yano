@@ -6,60 +6,60 @@
 #include<Rdefines.h>
 #include <Matrix.h>
 
-SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
+SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
 {
     cholmod_common c;
-    M_R_cholmod_start(&c);        
+    M_R_cholmod_start(&c);
+    
     double filter = asReal(_filter);
-    CHM_SP x = AS_CHM_SP__(_x);
+    CHM_SP X = AS_CHM_SP__(_X);
     CHM_SP W = AS_CHM_SP__(_W);
     if (W->stype) return mkString("W cannot be symmetric");
 
-    const int * xp = (int*)x->p;
-    const int * xi = (int*)x->i;
-    const double * xx = (double*)x->x;
+    const int *Xp = (int*)X->p;
+    const int *Xi = (int*)X->i;
+    const double *Xx = (double*)X->x;
 
-    const int * wp = (int*)W->p;
-    const int * wi = (int*)W->i;
-    const double * wx = (double*)W->x;
+    const int * Wp = (int*)W->p;
+    const int * Wi = (int*)W->i;
+    const double * Wx = (double*)W->x;
 
-    int n_cells = W->nrow;
-    int nfeature = x->nrow;
+    int nl = length(idx);
+    int n_cell = W->nrow;
+    int n_feature = X->nrow;
     
+    if (X->ncol != n_cell) error("Unequal length of cells.");
+    if (nl > n_cell) error("There more cells than nrow(W).");
+
     size_t n = 0, m = 1000;
     int *yi = malloc(m*sizeof(int));
     double *yx = malloc(m*sizeof(double));
-    
-    int nl = length(idx);
-
-    int yp[nl+1];    
-    int w0[nfeature];
-    double x0[nfeature];
-    int i0[nfeature];
-    memset(w0, 0, sizeof(int)*nfeature);
-    memset(x0, 0, sizeof(double)*nfeature);
-    memset(i0, 0, sizeof(int)*nfeature);
+    int yp[nl+1];
+    int w0[n_feature];
+    double x0[n_feature];
+    int i0[n_feature];
+    memset(w0, 0, sizeof(int)*n_feature);
+    memset(x0, 0, sizeof(double)*n_feature);
+    memset(i0, 0, sizeof(int)*n_feature);
     int i;
-    int n1;
     for (i = 0; i < nl; ++i) { // foreach cell
         yp[i] = n;
-        
         int ii = INTEGER(idx)[i]-1;
+        Rprintf("cell, %d, n, %d\n", ii, n);
         int j;
         int n1 = 0;
-        
-        for (j = wp[ii]; j < wp[ii+1]; ++j) {
+        for (j = Wp[ii]; j < Wp[ii+1]; ++j) {
             int k, p;
-            int idx = wi[j];
-            for (p = xp[idx]; p < xp[idx+1]; ++p) {
-                k = xi[p];
+            int ix = Wi[j];
+            for (p = Xp[ix]; p < Xp[ix+1]; ++p) {
+                k = Xi[p];
                 if (w0[k] < ii+1) {                    
                     w0[k] = ii+1;
                     i0[n1] = k;
-                    x0[k] = wx[j]*xx[p];
+                    x0[k] = Wx[j]*Xx[p];
                     n1++;
                 } else {
-                    x0[k] += wx[j]*xx[p];
+                    x0[k] += Wx[j]*Xx[p];
                 }                                      
             }
         }
@@ -81,7 +81,7 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
     }
     yp[i] = n;
     
-    CHM_SP ans = M_cholmod_allocate_sparse(nfeature, nl, n, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
+    CHM_SP ans = M_cholmod_allocate_sparse(n_feature, nl, n, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
     if (ans == NULL) return(mkString("Failed to create sparse matrix"));
     int *ap = (int *)ans->p;
     int *ai = (int *)ans->i;
@@ -93,6 +93,7 @@ SEXP imputation1(SEXP _x, SEXP idx, SEXP _W, SEXP _filter)
     free(yx);
 
     M_cholmod_sort(ans, &c);
+    M_cholmod_finish(&c);
     return M_chm_sparse_to_SEXP(ans, 1, 0, 0, "N", R_NilValue);
 }
 
@@ -110,30 +111,28 @@ CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter, cholmod_common *c)
     const double * wx = (double*)W->x;
 
     int n_cell = W->nrow;
-    int nfeature = x->nrow;
+    int n_feature = x->nrow;
     
     size_t n = 0, m = 1000;
     int *yi = malloc(m*sizeof(int));
     double *yx = malloc(m*sizeof(double));
     
     int yp[n_cell+1];    
-    int w0[nfeature];
-    double x0[nfeature];
-    int i0[nfeature];
-    memset(w0, 0, sizeof(int)*nfeature);
-    memset(x0, 0, sizeof(double)*nfeature);
-    memset(i0, 0, sizeof(int)*nfeature);
+    int w0[n_feature];
+    double x0[n_feature];
+    int i0[n_feature];
+    memset(w0, 0, sizeof(int)*n_feature);
+    memset(x0, 0, sizeof(double)*n_feature);
+    memset(i0, 0, sizeof(int)*n_feature);
     int i;
-    int n1;
     for (i = 0; i < n_cell; ++i) { // foreach cell
         yp[i] = n;
         int j;
         int n1 = 0;
-        
         for (j = wp[i]; j < wp[i+1]; ++j) {
             int k, p;
-            int idx = wi[j];
-            for (p = xp[idx]; p < xp[idx+1]; ++p) {
+            int ix = wi[j];
+            for (p = xp[ix]; p < xp[ix+1]; ++p) {
                 k = xi[p];
                 if (w0[k] < i+1) {                    
                     w0[k] = i+1;
@@ -163,7 +162,7 @@ CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter, cholmod_common *c)
     }
     yp[i] = n;
     
-    CHM_SP ans = M_cholmod_allocate_sparse(nfeature, n_cell, n, FALSE, TRUE, 0, CHOLMOD_REAL, c);
+    CHM_SP ans = M_cholmod_allocate_sparse(n_feature, n_cell, n, FALSE, TRUE, 0, CHOLMOD_REAL, c);
     if (ans == NULL) error("Failed to create sparse matrix");
     int *ap = (int *)ans->p;
     int *ai = (int *)ans->i;
