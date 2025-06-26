@@ -314,6 +314,36 @@ FindDEP <- function(object = NULL,
   df
 }
 
+buildNNWeight <- function(data, cells.1, cells.2, k.param)
+{
+  l1 <- length(cells.1)
+  l2 <- length(cells.2)
+  knn1 <- buildKNN(data = data[cells.1,], query = data[cells.2, ], k.param = k.param)
+  mat1 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.2))) * k.param ), j = as.vector(t(knn1$idx)), x = as.vector(t(knn1$dist)), dims = c(l2,l1))
+  knn2 <- buildKNN(data = data[cells.2,], query = data[cells.1, ], k.param = k.param)
+  mat2 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.1))) * k.param ), j = as.vector(t(knn2$idx)), x = as.vector(t(knn2$dist)), dims = c(l1,l2))
+
+  rm(knn1)
+  rm(knn2)
+
+  mat <- t(mat1 >0) + (mat2 >0)  
+  mat <- mat > 1
+  rownames(mat) <- cells.1
+  colnames(mat) <- cells.2
+  mat <- mat * mat2
+  rm(mat1)
+  rm(mat2)
+
+  mat <- drop0(mat)
+  mat <- mat[which(rowSums(mat) > 0), which(colSums(mat) > 0)]
+
+  mat@x <- 1/mat@x
+  mat <- t(mat)
+  W <- mat/rowSums(mat)
+  W <- t(W)
+  W
+}
+
 #' @title FindDEP_v2
 #' @description Find different expression pattern of same feature in different cell groups. Only used for integrated data.
 #' @param object Seurat object.
@@ -409,31 +439,8 @@ FindDEP_v2 <- function(object = NULL,
     
   data.use <- Embeddings(object[[reduction]])[, dims]
 
-  l1 <- length(cells.1)
-  l2 <- length(cells.2)
-  knn1 <- buildKNN(data = data.use[cells.1,], query = data.use[cells.2, ], k.param = k.param)
-  mat1 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.2))) * k.param ), j = as.vector(t(knn1$idx)), x = as.vector(t(knn1$dist)), dims = c(l2,l1))
-  knn2 <- buildKNN(data = data.use[cells.2,], query = data.use[cells.1, ], k.param = k.param)
-  mat2 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.1))) * k.param ), j = as.vector(t(knn2$idx)), x = as.vector(t(knn2$dist)), dims = c(l1,l2))
-
-  rm(knn1)
-  rm(knn2)
-
-  mat <- t(mat1 >0) + (mat2 >0)  
-  mat <- mat > 1
-  rownames(mat) <- cells.1
-  colnames(mat) <- cells.2
-  mat <- mat * mat2
-  rm(mat1)
-  rm(mat2)
-
-  mat <- drop0(mat)
-  mat <- mat[which(rowSums(mat) > 0), which(colSums(mat) > 0)]
-
-  mat@x <- 1/mat@x
-  mat <- t(mat)
-  W <- mat/rowSums(mat)
-  W <- t(W)
+  W <- buildNNWeight(data.use, cells.1, cells.2, k.param)
+  
   new.1 <- colnames(W)
   new.2 <- rownames(W)
   dat1 <- dat[, new.1]
@@ -548,32 +555,7 @@ DEPdemo <- function(object = NULL,
     
   data.use <- Embeddings(object[[reduction]])[, dims]
 
-  l1 <- length(cells.1)
-  l2 <- length(cells.2)
-  knn1 <- buildKNN(data = data.use[cells.1,], query = data.use[cells.2, ], k.param = k.param)
-  mat1 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.2))) * k.param ), j = as.vector(t(knn1$idx)), x = as.vector(t(knn1$dist)), dims = c(l2,l1))
-  knn2 <- buildKNN(data = data.use[cells.2,], query = data.use[cells.1, ], k.param = k.param)
-  mat2 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.1))) * k.param ), j = as.vector(t(knn2$idx)), x = as.vector(t(knn2$dist)), dims = c(l1,l2))
-
-  rm(knn1)
-  rm(knn2)
-
-  mat <- t(mat1 >0) + (mat2 >0)  
-  mat <- mat > 1
-  rownames(mat) <- cells.1
-  colnames(mat) <- cells.2
-  mat <- mat * mat2
-  rm(mat1)
-  rm(mat2)
-
-  mat <- drop0(mat)
-  mat <- mat[which(rowSums(mat) > 0), which(colSums(mat) > 0)]
-
-  mat@x <- 1/mat@x
-  mat <- t(mat)
-  W <- mat/rowSums(mat)
-  W <- t(W)
-
+  W <- buildNNWeight(data.use, cells.1, cells.2, k.param)
   new.1 <- colnames(W)
   new.2 <- rownames(W)
   dat <- as.matrix(FetchData(object, vars = feature))
