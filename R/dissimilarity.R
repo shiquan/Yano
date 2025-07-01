@@ -255,7 +255,7 @@ RunBlockCorr <- function(object = NULL,
   
   names(tval) <- features
   
-  pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
+  pval <- pt(tval, df = perm - 1, lower.tail = TRUE)
   names(pval) <- features
   prefix <- prefix %||% bind.name
   tab[[paste0(prefix, ".t")]] <- tval[rownames(object)]
@@ -528,7 +528,7 @@ RunSDT <- function(object = NULL,
   names(d) <- features
   names(tval) <- features
   
-  pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
+  pval <- pt(tval, df = perm - 1, lower.tail = TRUE)
   names(pval) <- features
   prefix <- prefix %||% bind.name
   tab[[paste0(prefix, ".D")]] <- d[rownames(object)]

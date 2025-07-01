@@ -373,7 +373,7 @@ SEXP D_test_v1(SEXP _A,
         }
         var = sqrt(var/perm);
         
-        double t = (e - mean)/var;
+        double t = (mean - e)/var;
         
         R_Free(es);
         R_Free(tmpa_s);
@@ -652,7 +652,8 @@ SEXP D_test_v2(SEXP _A,
         }
         var = sqrt(var/perm);
 
-        double t = (D[0] - md)/var;
+        //double t = (D[0] - md)/var;
+        double t = (md - D[0])/var;
         
 /* #pragma omp critical */
 /*         { */
