@@ -287,7 +287,7 @@ FindDEP <- function(object = NULL,
 
     e <- ta[[1]]
     tval <- ta[[2]]
-    pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
+    pval <- pt(tval, df = perm - 1, lower.tail = TRUE)
     df <- data.frame("feature" = features, "D" = e,"pval" = pval, "padj" = p.adjust(pval, method = "BH"))
     
     rownames(df) <- features
@@ -469,7 +469,7 @@ FindDEP_v2 <- function(object = NULL,
 
   e <- ta[[1]]
   tval <- ta[[2]]
-  pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
+  pval <- pt(tval, df = perm - 1, lower.tail = TRUE)
   padj <- p.adjust(pval, method = "BH")
   
   names(e) <- features
