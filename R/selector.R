@@ -8,11 +8,16 @@
 #' @export
 DimSelector <- function(object, 
                         return.object = FALSE,
+                        #return.lines = FALSE,
                         plot.selected = TRUE,
                         combine = FALSE,
                         ...
                         )
 {
+  ## if (return.lines && return.object) {
+  ##   stop("return.lines is conflict with return.object")
+  ## }
+
   p <- DimPlot(object, combine=FALSE, ...)
 
   if (is.list(p)) {
@@ -26,8 +31,8 @@ DimSelector <- function(object,
     cells0 <- colnames(object)
   }
     
-  idx <- ggplot_selector()
-  
+  rl <- ggplot_selector()
+  idx <- rl[['idx']]
   cells0 <- cells0[which(idx)]
   
   if (plot.selected) {
@@ -38,6 +43,10 @@ DimSelector <- function(object,
     print(p)
   }
 
+  ## if (return.lines) {
+  ##   df <- data.frame(x=rl[['x']], y = rl[['y']])
+  ##   return(df)
+  ## }
   if (return.object) {
     object[,cells0]
   } else {
@@ -53,6 +62,7 @@ DimSelector <- function(object,
 FeatureSelector <- function(object,
                             feature, 
                             return.object = FALSE,
+                            #return.lines = FALSE,
                             plot.selected = TRUE,
                             combine = FALSE,
                             ...
@@ -61,6 +71,9 @@ FeatureSelector <- function(object,
   if (length(feature) == 0) {
     stop("No feature specified.")
   }
+  ## if (return.lines && return.object) {
+  ##   stop("return.lines is conflict with return.object")
+  ## }
   if (length(feature) > 1) {
     warning("Only one feature is support. Here only use the first feature.")
     feature <- feature[1]
@@ -79,9 +92,9 @@ FeatureSelector <- function(object,
   if (length(intersect(cells0, colnames(object))) != length(cells0)) {
     cells0 <- colnames(object)
   }
-    
-  idx <- ggplot_selector()
   
+  rl <- ggplot_selector()
+  idx <- rl[['idx']]
   cells0 <- cells0[which(idx)]
   
   if (plot.selected) {
@@ -90,6 +103,11 @@ FeatureSelector <- function(object,
     p <- DimPlot(object, group.by = 'selector', reduction = reduction, cells =cells) 
     print(p)
   }
+
+  ## if (return.lines) {
+  ##   df <- data.frame(x=rl[['x']], y = rl[['y']])
+  ##   return(df)
+  ## }
 
   if (return.object) {
     object[,cells0]
@@ -110,14 +128,15 @@ FeatureSelector <- function(object,
 #' @export
 SpatialSelector <- function(object, group.by = NULL,                            
                             return.object = FALSE,
+                            #return.lines = FALSE,
                             plot.selected = TRUE,
                             ...
                             )
 {
-  if (length(feature) > 1) {
-    warning("SpatialSelector only support plot one feature.")
-    feature <- feature[1]
-  }
+  ## if (return.lines && return.object) {
+  ##   stop("return.lines is conflict with return.object")
+  ## }
+
   p <- SpatialPlot(object, group.by = group.by, ...,
                    combine = FALSE
                    )
@@ -132,8 +151,8 @@ SpatialSelector <- function(object, group.by = NULL,
     cells <- colnames(object)
   }
     
-  idx <- ggplot_selector()
-  
+  rl <- ggplot_selector()
+  idx <- rl[['idx']]
   cells <- cells[which(idx)]
   
   if (plot.selected) {
@@ -142,6 +161,11 @@ SpatialSelector <- function(object, group.by = NULL,
     p <- SpatialPlot(object, group.by = 'selector', ...)
     print(p)
   }
+  
+  ## if (return.lines) {
+  ##   df <- data.frame(x=rl[['x']], y = rl[['y']])
+  ##   return(df)
+  ## }
 
   if (return.object) {
     object[,cells]
@@ -159,11 +183,16 @@ SpatialSelector <- function(object, group.by = NULL,
 ImageDimSelector <- function(object,
                              group.by = NULL, 
                              return.object = FALSE,
+                             #return.lines = FALSE,
                              plot.selected = TRUE,
                              combine = FALSE,
                              ...
                              )
 {
+  ## if (return.lines && return.object) {
+  ##   stop("return.lines is conflict with return.object")
+  ## }
+
   p <- ImageDimPlot(object,...,
                     combine = FALSE)
 
@@ -182,8 +211,8 @@ ImageDimSelector <- function(object,
     cells0 <- colnames(object)
   }
     
-  idx <- ggplot_selector()
-  
+  rl <- ggplot_selector()
+  idx <- rl[['idx']]
   cells0 <- cells0[which(idx)]
   
   if (plot.selected) {
@@ -193,6 +222,11 @@ ImageDimSelector <- function(object,
     p <- ImageDimPlot(object, group.by = 'selector', ...)
     print(p)
   }
+
+  ## if (return.lines) {
+  ##   df <- data.frame(x=rl[['x']], y = rl[['y']])
+  ##   return(df)
+  ## }
 
   if (return.object) {
     object[,cells0]
@@ -212,10 +246,7 @@ SpatialConcaveHull <- function(
   combine = FALSE,
   ...
   ) {
-  if (length(feature) > 1) {
-    warning("SpatialSelector only support plot one feature.")
-    feature <- feature[1]
-  }
+
   p <- SpatialPlot(object,
                    group.by = group.by,
                    combine = FALSE
@@ -231,8 +262,8 @@ SpatialConcaveHull <- function(
     cells <- colnames(object)
   }
     
-  idx <- ggplot_selector()
-
+  rl <- ggplot_selector()
+  idx <- rl[['idx']]
   cells <- cells[which(idx)]
   data <- p$data[which(idx),c("x", "y")]
   data$x <- as.numeric(data$x)
@@ -329,8 +360,8 @@ DimConcaveHull <- function(
     cells0 <- colnames(object)
   }
     
-  idx <- ggplot_selector()
-
+  rl <- ggplot_selector()
+  idx <- rl[['idx']]
   cells0 <- cells0[which(idx)]
   data <- p$data[which(idx),c("x", "y")]
   data$x <- as.numeric(data$x)
@@ -406,8 +437,15 @@ ggplot_selector <- function()
   if (n < 3) {
     stop("Less than 3 edges, cannot select any point.")
   }
-  
+
+  rl <- list()
+  seekViewport(panel_info$vp_name)
+  x1 <- as.numeric(convertX(unit(ta[[1]],"inches"), unitTo = "npc"))
+  y1 <- as.numeric(convertY(unit(ta[[2]],"inches"), unitTo = "npc"))
+  rl[['x']] <- x1 * diff(xrange) + xrange[1]
+  rl[['y']] <- y1 * diff(yrange) + yrange[1]
+
   idx <- .Call("points_in_polygen", ta[[1]], ta[[2]], as.numeric(sl$x), as.numeric(sl$y))
-  
-  idx
+  rl[['idx']] <- idx
+  rl
 }

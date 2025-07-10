@@ -12,10 +12,8 @@ GetWeights(
   k.param = 20,
   prune.distance = -1,
   prune.SNN = 1/30,
-  nn = -1,
   diag.value = 0,
-  cells = NULL,
-  weight.method = c("dist", "average")
+  cells = NULL
 )
 }
 \arguments{
@@ -27,11 +25,9 @@ GetWeights(
 
 \item{emb}{Cell dimesional space (i.e. PCA/ICA/harmony).}
 
-\item{k.param}{K-nearest neighbors, for calculating weight matrix with emb. Default is 20.}
+\item{k.param}{K-nearest neighbors, for calculating weight matrix with emb/pos/order.cells. Default is 20.}
 
-\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/30.}
-
-\item{nn}{Nearest neighbors for pos, based on cell coordinates. Default is 8 for spatial coordinate, 20 for lineage trajectory,}
+\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Default is 1/30.}
 
 \item{diag.value}{Diagnoal value in the weight matrix.}
 
