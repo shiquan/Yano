@@ -18,8 +18,6 @@ RunAutoCorr(
   snn = NULL,
   order.cells = NULL,
   image = NULL,
-  weight.method = c("dist", "average"),
-  nn = -1,
   features = NULL,
   wm.name = NULL,
   prefix = "moransi",
@@ -53,10 +51,6 @@ RunAutoCorr(
 \item{order.cells}{For linear trajetory, input ordered cell names to calculate the cell-cell distance weight matrix. Conflict with sptaial=TRUE and snn.name != NULL.}
 
 \item{image}{Name of 'SpatialImage' object to get coordinates for. If set, use spatial coordinate to calculate the cell-cell weight matrix.}
-
-\item{weight.method}{Weight method for distance, default 1/dist^2. Also support average, use mean weight value for nearby cells.}
-
-\item{nn}{Set the cutoff for nearest neighbors for order cells and spatial coordinates. In default, 50 for order cells, 8 for spatial coordinates.}
 
 \item{features}{List of features to test. Default is all features with that coverage >= min.cells.}
 

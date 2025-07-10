@@ -12,8 +12,6 @@
 #' @param min.cells If a feature can be detect in few than min.cells, will skip to save time. Default is 10.
 #' @param image Name of 'SpatialImage' object to get coordinates for. If set, use spatial coordinate to calculate the cell-cell weight matrix.
 #' @param order.cells For linear trajetory, input ordered cell names to calculate the cell-cell distance weight matrix. Conflict with sptaial=TRUE and snn.name != NULL.
-#' @param weight.method Weight method for distance, default 1/dist^2. Also support average, use mean weight value for nearby cells.
-#' @param nn Set the cutoff for nearest neighbors for order cells and spatial coordinates. In default, 50 for order cells, 8 for spatial coordinates.
 #' @param features List of features to test. Default is all features with that coverage >= min.cells.
 #' @param wm.name Weight matrix/graph name in Seurat object. After this function, the graph can be visited by obj[[wm.name]]. Default name is "$reduction$_wm" for reduction, "trajectory_wm" for order.cells, and "spatial_wm" for spatial coordinate.
 #' @param prefix Prefix for score and p value names. Default prefix is "moransi". If you change the default name, you should specific the new name in SetAutoCorrFeatures.
@@ -36,8 +34,6 @@ RunAutoCorr <- function(object = NULL,
                         snn = NULL,
                         order.cells = NULL,
                         image = NULL,
-                        weight.method = c("dist", "average"),
-                        nn = -1,
                         features = NULL,
                         wm.name = NULL,
                         prefix="moransi",
@@ -123,18 +119,18 @@ RunAutoCorr <- function(object = NULL,
   }
 
   if (!is.null(order.cells)) {
-    W <- GetWeights(order.cells = order.cells, nn = nn, weight.method = weight.method)
+    W <- GetWeights(order.cells = order.cells, k.param = k.param)
     wm.name <- wm.name %||% "trajectory_wm"
   }
 
   if (!is.null(image)) {
-    W <- GetWeightsFromSpatial(object = object, nn = nn, weight.method = weight.method, image = image)
+    W <- GetWeightsFromSpatial(object = object, k.param = k.param, image = image)
     wm.name <- wm.name %||% "spatial_wm"
   }
 
   ncell <- ncol(object)
   cells1 <- colnames(W)
-  cells2 <- setdiff(colnames(object), cells1)
+  cells2 <- setdiff(Cells(object), cells1)
   cells1 <- c(cells1, cells2)
   W <- as(W, "TsparseMatrix")
   W <- Matrix::sparseMatrix(i = W@i+1, j = W@j+1, x = W@x, dims = c(ncell,ncell))

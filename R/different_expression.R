@@ -314,22 +314,66 @@ FindDEP <- function(object = NULL,
   df
 }
 
-buildNNWeight <- function(data, cells.1, cells.2, k.param)
+buildNNWeight <- function(data, cells.1, cells.2, k.param, l2 = FALSE)
 {
   l1 <- length(cells.1)
   l2 <- length(cells.2)
   knn1 <- buildKNN(data = data[cells.1,], query = data[cells.2, ], k.param = k.param)
-  mat1 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.2))) * k.param ), j = as.vector(t(knn1$idx)), x = as.vector(t(knn1$dist)), dims = c(l2,l1))
+  mat1 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.2))) * k.param ), j = as.vector(t(knn1$idx)), x = 1, dims = c(l2,l1))
   knn2 <- buildKNN(data = data[cells.2,], query = data[cells.1, ], k.param = k.param)
-  mat2 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.1))) * k.param ), j = as.vector(t(knn2$idx)), x = as.vector(t(knn2$dist)), dims = c(l1,l2))
+  mat2 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.1))) * k.param ), j = as.vector(t(knn2$idx)), x = 1, dims = c(l1,l2))
+
+  mat <- t(mat1) + mat2
+  mat <- mat > 1
+  rownames(mat) <- cells.1
+  colnames(mat) <- cells.2
+  mat2@x <- as.vector(t(knn2$dist))
+  mat <- mat * mat2
+  rm(mat1)
+  rm(mat2)
+  rm(knn1)
+  rm(knn2)
+
+  mat <- drop0(mat)
+  mat <- mat[which(rowSums(mat) > 0), which(colSums(mat) > 0)]
+
+  mat@x <- 1/mat@x
+  mat <- t(mat)
+  W <- mat/rowSums(mat)
+  W <- t(W)
+  W
+}
+#'@export
+buildNNWeight_v2 <- function(data, cells.1, cells.2, k.param)
+{
+  l1 <- length(cells.1)
+  l2 <- length(cells.2)
+  cells <- rownames(data)
+  lc <- length(cells)
+  
+  knn1 <- buildKNN(data = data, query = data[cells.2, ], k.param = k.param)
+  mat1 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.2))) * k.param ), j = as.vector(t(knn1$idx)), x = 1, dims = c(l2,lc))
+  rownames(mat1) <- cells.2
+  colnames(mat1) <- cells
+  mat1 <- mat1[, cells.1]
+  
+  knn2 <- buildKNN(data = data, query = data[cells.1, ], k.param = k.param)
+  mat2 <- sparseMatrix(p = as.vector(c(0,seq_along(1:length(cells.1))) * k.param ), j = as.vector(t(knn2$idx)), x = 1, dims = c(l1,lc))
+  rownames(mat2) <- cells.1
+  colnames(mat2) <- cells
+  mat2 <- mat2[, cells.2]
+
+  mat <- t(mat1) + mat2
+  mat <- mat > 1
+  
+  rownames(mat) <- cells.1
+  colnames(mat) <- cells.2
+
+  mat2@x <- as.vector(t(knn2$dist))
 
   rm(knn1)
   rm(knn2)
 
-  mat <- t(mat1 >0) + (mat2 >0)  
-  mat <- mat > 1
-  rownames(mat) <- cells.1
-  colnames(mat) <- cells.2
   mat <- mat * mat2
   rm(mat1)
   rm(mat2)
@@ -388,6 +432,7 @@ FindDEP_v2 <- function(object = NULL,
                        labels = c("orphan", "test", "control"),
                        name = "FindDEP.label",
                        prefix = "FindDEP",
+                       v2 = TRUE,
                        ...
                        )
 {
@@ -438,8 +483,11 @@ FindDEP_v2 <- function(object = NULL,
   dat <- dat[features,]    
     
   data.use <- Embeddings(object[[reduction]])[, dims]
-
-  W <- buildNNWeight(data.use, cells.1, cells.2, k.param)
+  if (v2) {
+    W <- buildNNWeight_v2(data.use, cells.1, cells.2, k.param)
+  } else {
+    W <- buildNNWeight(data.use, cells.1, cells.2, k.param)
+  }
   
   new.1 <- colnames(W)
   new.2 <- rownames(W)
@@ -460,7 +508,7 @@ FindDEP_v2 <- function(object = NULL,
   W0 <- GetWeights(emb = data.use[new.1,])
 
   idx <- 1:length(features)
-  ta <- .Call("D_test_v2", dat1, dat2, W0, perm, threads, idx, idx, 0, FALSE, seed, debug)
+  ta <- .Call("D_test_v2", dat1, dat2, W0, perm, threads, idx, idx, 0, TRUE, seed, debug)
   
   rm(dat1)
   rm(dat2)

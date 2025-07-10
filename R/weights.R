@@ -59,13 +59,13 @@ buildSNN <- function(knn, prune.SNN = 1/30) {
 #' @param pos Manually setup cell coordinates, in a matrix format. This matrix requires at least 2 dimensions.
 #' @param order.cells Predefined cell ranks, used for cell lineage analysis.
 #' @param emb Cell dimesional space (i.e. PCA/ICA/harmony).
-#' @param k.param K-nearest neighbors, for calculating weight matrix with emb. Default is 20.
-#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/30.
-#' @param nn Nearest neighbors for pos, based on cell coordinates. Default is 8 for spatial coordinate, 20 for lineage trajectory,
+#' @param k.param K-nearest neighbors, for calculating weight matrix with emb/pos/order.cells. Default is 20.
+#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Default is 1/30.
+## @param nn Nearest neighbors for pos, based on cell coordinates. Default is 8 for spatial coordinate, 20 for lineage trajectory,
 #' @param diag.value Diagnoal value in the weight matrix.
 #' @param cells Cell list. Default use all cells. If set, pre-defined SNN is not appliable.
 #' @returns A column-wise normalised sparse matrix.
-#' @importFrom Matrix rowSums
+#' @importFrom Matrix rowSums sparseMatrix drop0
 #' @export
 GetWeights <- function(snn = NULL,
                        pos = NULL,
@@ -74,10 +74,10 @@ GetWeights <- function(snn = NULL,
                        k.param = 20,
                        prune.distance = -1,
                        prune.SNN = 1/30,
-                       nn = -1,
+                       #nn = -1,
                        diag.value = 0,
-                       cells = NULL,
-                       weight.method = c("dist", "average"))
+                       #weight.method = c("dist", "dist2","average", "label"))
+                       cells = NULL)
 {
   check.par <- 0
   
@@ -85,8 +85,6 @@ GetWeights <- function(snn = NULL,
   if (!is.null(pos)) check.par <- check.par + 1
   if (!is.null(order.cells)) check.par <- check.par + 1
   if (!is.null(emb)) check.par <- check.par + 1
-  
-  weight.method <- match.arg(weight.method)
   
   if (check.par != 1) {
     stop("Should only specify one of snn, pos, emb, or order.cells.")
@@ -98,38 +96,24 @@ GetWeights <- function(snn = NULL,
       snn <- snn[cells, cells]
     }
     snn@x[snn@x <= prune.SNN] <- 0
-    snn <- snn/(rowSums(snn)+0.0001)
+    snn <- drop0(snn)
+    #snn <- snn/(rowSums(snn)+0.0001)
+    snn <- snn/rowSums(snn)
     snn <- t(snn)
     return(snn)
   }
 
   if (!is.null(pos)) {
-    if (nn == -1) {
-      nn <- 8
+    cells <- cells %||% rownames(pos)
+    if (is.null(cells)) {
+      stop("No rownames for positions.")
     }
-    pos <- as.matrix(pos[,1:2])
-    prune.distance <- spatialDistTest(pos, n = nn)
-    message(paste0("Set prune distance to ", prune.distance))    
-    W <- .Call("matrix_distance2", as.matrix(pos), "euclidean", prune.distance)
-    diag(x = W) <- diag.value
-    if (weight.method == "dist") {
-      W@x <- 1/W@x^2
-    } else if (weight.method == "average") {
-      W@x <- (W@x>0)+0.0
-    }
-
-    W <- W/rowSums(W)
-
-    W[is.na(W)] <- 0 
-    W <- as(W, "CsparseMatrix")
-
-    W <- t(W)
-    cells <- rownames(pos)
-
-    if (!is.null(cells)) {
-      colnames(W) <- cells
-      rownames(W) <- cells
-    }
+    pos <- pos[cells,]
+    knn <- buildKNN(pos, pos, k.param = nn)
+    snn <- buildSNN(knn, prune.SNN = prune.SNN)
+    colnames(snn) <- cells
+    rownames(snn) <- cells
+    W <- GetWeights(snn=snn, diag.value = diag.value, prune.SNN = prune.SNN)
     return(W)
   }
 
@@ -145,24 +129,14 @@ GetWeights <- function(snn = NULL,
   }
   
   if (!is.null(order.cells)) {
-    if (nn == -1) {
-      nn = 20
-    }
     pos.dist <- as.matrix(dist(x=c(1:length(order.cells))))
-    pos.dist[pos.dist > nn] <- 0
+    pos.dist[pos.dist > k.param] <- 0
     W <- as(pos.dist, "CsparseMatrix")
-
-    if (weight.method == "dist") {
-      W@x <- 1/W@x^2
-    } else if (weight.method == "average") {
-      W@x <- (W@x>0)+0
-    }
-
     diag(x = W) <- diag.value
     W <- W/rowSums(W)
-    W[is.na(W)] <- 0 
+    W[is.na(W)] <- 0
     W <- as(W, "CsparseMatrix")
-
+    W <- drop0(W)
     W <- t(W)
     colnames(W) <- order.cells
     rownames(W) <- order.cells
@@ -175,16 +149,20 @@ GetWeightsFromSNN <- function(object = NULL, snn = "RNA_snn", prune.SNN = 1/50, 
   if (snn %ni% names(object)) {
     stop(paste0("No ", snn, " found at object. Run FindNeighbors on RNA assay first."))
   }
-
   snn.graph <- object[[snn]]
   W <- GetWeights(snn=snn.graph, prune.SNN = prune.SNN, cells = cells)
   return(W)
 }
-GetWeightsFromSpatial <- function(object = NULL, diag.value = 0, nn = 8, image = NULL, ...) {
-  cells <- colnames(object)
-  emb <- GetTissueCoordinates(object = object, image = image, ...)
-  W <- GetWeights(pos = emb, diag.value = diag.value, nn = nn)
-  colnames(W) <- cells
-  rownames(W) <- cells
+#'@export
+GetWeightsFromSpatial <- function(object = NULL, diag.value = 0, k.param = 20, image = NULL, prune.SNN = 1/30) {
+  wl <- lapply(image, function(im) {    
+    emb <- GetTissueCoordinates(object = object, image = im)
+    W <- GetWeights(pos = emb, diag.value = diag.value, k.param = k.param, prune.SNN=prune.SNN)
+    cells <- rownames(emb)
+    colnames(W) <- cells
+    rownames(W) <- cells
+    W
+  })
+  W <- mergeMatrix(wl)
   return(W)
 }

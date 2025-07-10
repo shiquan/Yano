@@ -4,7 +4,7 @@ setGeneric(
 )
 
 MMerge0 <- function(x = NULL, y = NULL, ...) {
-  if (is.null(x)) stop("X is empty.")
+  if (is.null(x)) stop("x is empty.")
   if (is.null(y)) {
     return(x)
   }
@@ -25,7 +25,7 @@ MMerge0 <- function(x = NULL, y = NULL, ...) {
 setMethod(f = "mergeMatrix",
           signature = signature(x="SMatrix"),
           definition = function(x = NULL, y = NULL, ...) {
-            if (is.null(x)) stop("X is empty.")
+            if (is.null(x)) stop("x is empty.")
             if (is.null(y)) return(x)
 
             mlst <- MMerge0(x, y, ...)
@@ -37,8 +37,8 @@ setMethod(f = "mergeMatrix",
 setMethod(f = "mergeMatrix",
           signature = signature(x="list"),
           definition = function(x = NULL, ...) {
-            if (is.null(x)) stop("X is empty.")
-            O <- .Call("merge_matrix", mlst)
+            if (is.null(x)) stop("x is empty.")
+            O <- .Call("merge_matrix", x)
             as(O, "CsparseMatrix")
           }
           )
