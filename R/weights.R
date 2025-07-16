@@ -109,7 +109,13 @@ GetWeights <- function(snn = NULL,
       stop("No rownames for positions.")
     }
     pos <- pos[cells,]
-    knn <- buildKNN(pos, pos, k.param = nn)
+    for (i in 1:ncol(pos)) {
+      if (!is.numeric(pos[[i]])) {
+        pos[[i]] <- NULL
+      }
+    }
+    pos <- as.matrix(pos)
+    knn <- buildKNN(pos, pos, k.param = k.param)
     snn <- buildSNN(knn, prune.SNN = prune.SNN)
     colnames(snn) <- cells
     rownames(snn) <- cells
@@ -155,14 +161,32 @@ GetWeightsFromSNN <- function(object = NULL, snn = "RNA_snn", prune.SNN = 1/50, 
 }
 #'@export
 GetWeightsFromSpatial <- function(object = NULL, diag.value = 0, k.param = 20, image = NULL, prune.SNN = 1/30) {
-  wl <- lapply(image, function(im) {    
-    emb <- GetTissueCoordinates(object = object, image = im)
+  image <- image %||% Images(object)
+  if (length(image) == 0) {
+    stop("No image found.")
+  }
+
+  if (length(image) == 1) {
+    emb <- GetTissueCoordinates(object = object, image = image)
+    
+    if ("cell" %in% colnames(emb)) {
+      rownames(emb) <- emb[['cell']]
+    }
+
     W <- GetWeights(pos = emb, diag.value = diag.value, k.param = k.param, prune.SNN=prune.SNN)
     cells <- rownames(emb)
     colnames(W) <- cells
     rownames(W) <- cells
-    W
-  })
-  W <- mergeMatrix(wl)
+  } else {
+    wl <- lapply(image, function(im) {    
+      emb <- GetTissueCoordinates(object = object, image = im)
+      W <- GetWeights(pos = emb, diag.value = diag.value, k.param = k.param, prune.SNN=prune.SNN)
+      cells <- rownames(emb)
+      colnames(W) <- cells
+      rownames(W) <- cells
+      W
+    })
+    W <- mergeMatrix(wl)
+  }
   return(W)
 }
