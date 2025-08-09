@@ -4,18 +4,10 @@
 \alias{buildKNN}
 \title{buildKNN}
 \usage{
-buildKNN(
-  data,
-  query = data,
-  k.param = 20,
-  metric = c("euclidean", "cosine", "manhattan", "hamming"),
-  n.trees = 50
-)
+buildKNN(data, query = data, k.param = 20)
 }
 \arguments{
 \item{k.param}{K-nearest neighbors, for calculating weight matrix with emb. Default is 20.}
-
-\item{n.trees}{Number of trees during index build time. More trees gives higher accuracy}
 }
 \description{
 Compute KNN with RcppAnnoy.

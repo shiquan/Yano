@@ -8,50 +8,36 @@ spatialDistTest <- function(coord = NULL, n = 8) {
   m
 }
 
-##
-## This function edited from BPCells::knn_annoy(), credit to orignal authors
-##
 #' @title buildKNN
 #' @description Compute KNN with RcppAnnoy.
 #' @param k.param K-nearest neighbors, for calculating weight matrix with emb. Default is 20.
-#' @param n.trees Number of trees during index build time. More trees gives higher accuracy
+#' @importFrom Matrix sparseMatrix
+#' @importFrom RANN nn2
 #' @export
-buildKNN <- function(data, query = data, k.param = 20, metric = c("euclidean", "cosine", "manhattan", "hamming"), n.trees = 50) {
-  metric <- match.arg(metric)
-  annoy <- switch(metric,
-    "euclidean" = new(RcppAnnoy::AnnoyEuclidean, ncol(data)),
-    "cosine" = new(RcppAnnoy::AnnoyAngular, ncol(data)),
-    "manhattan" = new(RcppAnnoy::AnnoyManhattan, ncol(data)),
-    "hamming" = new(RcppAnnoy::AnnoyHamming, ncol(data)),
-  )
-  for (i in seq_len(nrow(data))) {
-    annoy$addItem(i - 1, data[i, ])
-  }
-  annoy$build(n.trees)
-
-  idx <- matrix(nrow = nrow(query), ncol = k.param)
-  dist <- matrix(nrow = nrow(query), ncol = k.param)
-  rownames(idx) <- rownames(query)
-  rownames(dist) <- rownames(query)
-  for (i in seq_len(nrow(query))) {
-    res <- annoy$getNNsByVectorList(query[i, ], k.param, -1, include_distances = TRUE)
-    idx[i, ] <- res$item + 1
-    dist[i, ] <- res$dist
-  }
-  if (metric == "cosine") dist <- 0.5 * (dist * dist)
-  list(idx = idx, dist = dist)
+buildKNN <- function(data, query = data, k.param = 20) {
+  nn <- nn2(data, query, k = k.param)
+  names(nn) <- c("idx", "dist")
+  rownames(nn$idx) <- rownames(query)
+  rownames(nn$dist) <- rownames(query)
+  nn
 }
-#' @title buildKNN
-#' @description Convert a knn object into a shared nearest neighbors adjacency matrix.
-#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.
+#' @title buildSNN
+#' @description Convert a knn list into a shared nearest neighbors adjacency matrix.
+#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Default is 1/30.
 #' @export
-buildSNN <- function(knn, prune.SNN = 1/30) {
-  snn <- .Call("knn2snn", knn$idx, prune.SNN)
-  snn <- snn + t(snn)
-  diag(snn) <- 1
-  colnames(snn) <- rownames(knn$idx)
-  rownames(snn) <- rownames(knn$idx)
-  snn
+buildSNN <- function(knn, prune.SNN = 1/30, diag.value = 1) {
+  idx <- knn$idx
+  k <- ncol(idx)
+  nr <- nrow(idx)
+  m <- sparseMatrix(p = c(0,c(1:nr)*k), j = as.vector(t(idx)), x=1)
+  m2 <- m %*% t(m)
+  m2@x <- m2@x /(k*2-m2@x)
+  diag(m2) <- diag.value
+  m2@x[m2@x < prune.SNN] <- 0
+  m2 <- drop0(m2)
+  colnames(m2) <- rownames(knn$idx)
+  rownames(m2) <- rownames(knn$idx)
+  m2
 }
 #' @title GetWeights
 #' @description Calcualte cell-cell weight matrix by one of shared nearest neighbour matrix, spatial locations, cell embedding and linear trajectory. In default, if no snn/pos/order.cells/emb set, the weight matrix will be generated with PCA.
@@ -98,7 +84,8 @@ GetWeights <- function(snn = NULL,
     snn@x[snn@x <= prune.SNN] <- 0
     snn <- drop0(snn)
     #snn <- snn/(rowSums(snn)+0.0001)
-    snn <- snn/rowSums(snn)
+    snn <- .Call("norm_by_row", snn)
+    #snn <- snn/rowSums(snn)
     snn <- t(snn)
     return(snn)
   }
@@ -116,7 +103,7 @@ GetWeights <- function(snn = NULL,
     }
     pos <- as.matrix(pos)
     knn <- buildKNN(pos, pos, k.param = k.param)
-    snn <- buildSNN(knn, prune.SNN = prune.SNN)
+    snn <- buildSNN(knn, prune.SNN = prune.SNN, diag.value = diag.value)
     colnames(snn) <- cells
     rownames(snn) <- cells
     W <- GetWeights(snn=snn, diag.value = diag.value, prune.SNN = prune.SNN)
@@ -180,8 +167,8 @@ GetWeightsFromSpatial <- function(object = NULL, diag.value = 0, k.param = 20, i
   } else {
     wl <- lapply(image, function(im) {    
       emb <- GetTissueCoordinates(object = object, image = im)
+      cells <- emb[['cell']]
       W <- GetWeights(pos = emb, diag.value = diag.value, k.param = k.param, prune.SNN=prune.SNN)
-      cells <- rownames(emb)
       colnames(W) <- cells
       rownames(W) <- cells
       W

@@ -96,7 +96,7 @@ RunAutoCorr <- function(object = NULL,
   if (packageVersion("Seurat") >= numeric_version(as.character(5))) {
     layer <- Layers(object = object, search = layer)
     if (is.null(layer)) {
-      abort("No layer found. Please run NormalizeData or RunTFIDF and retry..")
+      stop("No layer found. Please run NormalizeData or RunTFIDF and retry..")
     }
   }
     

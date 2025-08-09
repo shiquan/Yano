@@ -2,13 +2,13 @@
 % Please edit documentation in R/weights.R
 \name{buildSNN}
 \alias{buildSNN}
-\title{buildKNN}
+\title{buildSNN}
 \usage{
-buildSNN(knn, prune.SNN = 1/30)
+buildSNN(knn, prune.SNN = 1/30, diag.value = 1)
 }
 \arguments{
-\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
+\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Default is 1/30.}
 }
 \description{
-Convert a knn object into a shared nearest neighbors adjacency matrix.
+Convert a knn list into a shared nearest neighbors adjacency matrix.
 }

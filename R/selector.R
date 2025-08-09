@@ -223,11 +223,6 @@ ImageDimSelector <- function(object,
     print(p)
   }
 
-  ## if (return.lines) {
-  ##   df <- data.frame(x=rl[['x']], y = rl[['y']])
-  ##   return(df)
-  ## }
-
   if (return.object) {
     object[,cells0]
   } else {
