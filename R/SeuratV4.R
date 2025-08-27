@@ -1,3 +1,4 @@
+#' @export
 GetAssayData1 <- function(object, assay = NULL, layer = "counts")
 {
   assay <- assay %||% DefaultAssay(object)

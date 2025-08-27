@@ -23,9 +23,9 @@ buildKNN <- function(data, query = data, k.param = 20) {
 }
 #' @title buildSNN
 #' @description Convert a knn list into a shared nearest neighbors adjacency matrix.
-#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Default is 1/30.
+#' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Default is \code{0}.
 #' @export
-buildSNN <- function(knn, prune.SNN = 1/30, diag.value = 1) {
+buildSNN <- function(knn, prune.SNN = 0, diag.value = 1) {
   idx <- knn$idx
   k <- ncol(idx)
   nr <- nrow(idx)
@@ -81,12 +81,13 @@ GetWeights <- function(snn = NULL,
     if (!is.null(cells)) {
       snn <- snn[cells, cells]
     }
+    cells <- rownames(snn)
     snn@x[snn@x <= prune.SNN] <- 0
     snn <- drop0(snn)
-    #snn <- snn/(rowSums(snn)+0.0001)
     snn <- .Call("norm_by_row", snn)
-    #snn <- snn/rowSums(snn)
     snn <- t(snn)
+    rownames(snn) <- cells
+    colnames(snn) <- cells
     return(snn)
   }
 

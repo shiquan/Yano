@@ -21,6 +21,7 @@ CheckBindName <- function(object,
 
 # This function copied from Seurta/R/differential_expression.R
 # FindMarkers helper function for cell grouping error checking
+#' @export
 ValidateCellGroups <- function(
   object,
   cells.1,

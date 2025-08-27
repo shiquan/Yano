@@ -23,7 +23,7 @@ SEXP openmp_support()
 #endif
     return ScalarLogical(0);
 }
-double * shuffle_double_arr(double *a, const int n)
+double *shuffle_double_arr(double *a, const int n)
 {
     double *s = R_Calloc(n, double);
     int i;

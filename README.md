@@ -6,7 +6,9 @@
 
 ## Install
 ```
-if (!require("BiocManager")) install.packages('BiocManager') 
+install.packages('BiocManager') 
+install.packages('remotes') 
+install.packages('Seurat') 
 BiocManager::install("shiquan/Yano")
 ```
 
