@@ -90,6 +90,7 @@ annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
     } else {
       df0 <- anno_conseq(chr = df[[chr]], pos = as.integer(df$start), ref = df$ref, alt = df$alt, strand = df$strand, gtf = gtf, fasta=fasta)
       if (length(df0) == 2) {
+        new <- df0[[1]]
         names(new) <- rownames(df)
         objject[[assay]][["gene_name"]] <- new
         new <- df0[[2]]
