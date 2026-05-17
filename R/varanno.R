@@ -92,7 +92,7 @@ annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
       if (length(df0) == 2) {
         new <- df0[[1]]
         names(new) <- rownames(df)
-        objject[[assay]][["gene_name"]] <- new
+        object[[assay]][["gene_name"]] <- new
         new <- df0[[2]]
         names(new) <- rownames(df)
         object[[assay]][["consequence"]] <- new
