@@ -19,11 +19,13 @@ USE_LZMA ?= $(shell echo 'int main(){return 0;}' | $(CC) -include lzma.h -x c - 
 USE_CURL ?= $(shell echo 'int main(){return 0;}' | $(CC) -include curl/curl.h -x c - -lcurl -o /dev/null 2>/dev/null && echo 1 || echo 0)
 
 # ---- required flags ----
-# -fPIC is required for linking into R's shared library (.so) on x86_64
 CFLAGS   ?= -g -O2
-CFLAGS   += -fPIC
 CPPFLAGS := -I. $(CPPFLAGS)
 LDFLAGS  ?= -fPIC
+# -fPIC is required for linking into R's shared library on x86_64.
+# Baked into recipes (not +=) because command-line CFLAGS overrides
+# can bypass the append operator in some make implementations.
+PICFLAGS = -fPIC
 
 # ---- platform detection ----
 PLATFORM := $(shell uname -s)
@@ -174,18 +176,18 @@ ALL_CPPFLAGS = -I. $(CPPFLAGS)
 
 # ---- explicit rules for SIMD objects (bypass default .c.o to add ISA flag) ----
 htscodecs/htscodecs/rANS_static32x16pr_sse4.o: htscodecs/htscodecs/rANS_static32x16pr_sse4.c
-	$(CC) $(CFLAGS) $(HTS_CFLAGS_SSE4) $(ALL_CPPFLAGS) -c -o $@ $<
+	$(CC) $(PICFLAGS) $(CFLAGS) $(HTS_CFLAGS_SSE4) $(ALL_CPPFLAGS) -c -o $@ $<
 
 htscodecs/htscodecs/rANS_static32x16pr_avx2.o: htscodecs/htscodecs/rANS_static32x16pr_avx2.c
-	$(CC) $(CFLAGS) $(HTS_CFLAGS_AVX2) $(ALL_CPPFLAGS) -c -o $@ $<
+	$(CC) $(PICFLAGS) $(CFLAGS) $(HTS_CFLAGS_AVX2) $(ALL_CPPFLAGS) -c -o $@ $<
 
 htscodecs/htscodecs/rANS_static32x16pr_avx512.o: htscodecs/htscodecs/rANS_static32x16pr_avx512.c
-	$(CC) $(CFLAGS) $(HTS_CFLAGS_AVX512) $(ALL_CPPFLAGS) -c -o $@ $<
+	$(CC) $(PICFLAGS) $(CFLAGS) $(HTS_CFLAGS_AVX512) $(ALL_CPPFLAGS) -c -o $@ $<
 
 all: lib-static
 
 .c.o:
-	$(CC) $(CFLAGS) $(ALL_CPPFLAGS) -c -o $@ $<
+	$(CC) $(PICFLAGS) $(CFLAGS) $(ALL_CPPFLAGS) -c -o $@ $<
 
 lib-static: libhts.a
 
