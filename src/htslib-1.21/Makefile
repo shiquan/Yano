@@ -159,10 +159,15 @@ thread_pool_internal_h = thread_pool_internal.h $(htslib_thread_pool_h)
 # ---- build targets ----
 ALL_CPPFLAGS = -I. $(CPPFLAGS)
 
-# ---- per-file CFLAGS for SIMD objects (needed for -mavx2 etc.) ----
-htscodecs/htscodecs/rANS_static32x16pr_sse4.o:   CFLAGS += $(HTS_CFLAGS_SSE4)
-htscodecs/htscodecs/rANS_static32x16pr_avx2.o:   CFLAGS += $(HTS_CFLAGS_AVX2)
-htscodecs/htscodecs/rANS_static32x16pr_avx512.o: CFLAGS += $(HTS_CFLAGS_AVX512)
+# ---- explicit rules for SIMD objects (bypass default .c.o to add ISA flag) ----
+htscodecs/htscodecs/rANS_static32x16pr_sse4.o: htscodecs/htscodecs/rANS_static32x16pr_sse4.c
+	$(CC) $(CFLAGS) $(HTS_CFLAGS_SSE4) $(ALL_CPPFLAGS) -c -o $@ $<
+
+htscodecs/htscodecs/rANS_static32x16pr_avx2.o: htscodecs/htscodecs/rANS_static32x16pr_avx2.c
+	$(CC) $(CFLAGS) $(HTS_CFLAGS_AVX2) $(ALL_CPPFLAGS) -c -o $@ $<
+
+htscodecs/htscodecs/rANS_static32x16pr_avx512.o: htscodecs/htscodecs/rANS_static32x16pr_avx512.c
+	$(CC) $(CFLAGS) $(HTS_CFLAGS_AVX512) $(ALL_CPPFLAGS) -c -o $@ $<
 
 all: lib-static
 
