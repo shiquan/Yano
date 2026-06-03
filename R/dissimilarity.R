@@ -1,7 +1,7 @@
-DScore <- function(x = NULL, y = NULL, W = NULL, perm = 100, filter = 0, seed = 999, debug = FALSE, smooth_Y = TRUE)
+DScore <- function(x = NULL, y = NULL, W = NULL, perm = 100, filter = 0, seed = 999, debug = FALSE)
 {
   set.seed(seed)
-  d <- .Call("D_distribution_test_v2", x, y, W, perm, smooth_Y, filter, debug)
+  d <- .Call("D_distribution_test_v2", x, y, W, perm, filter, debug)
   hist(d[2:(perm+1)])
   abline(v=d[1], col="red")
 
@@ -525,7 +525,7 @@ RunSDT <- function(object = NULL,
 
   tab <- object0[[]]
 
-  ta <- .Call("D_test_v2", x, y, W, perm, threads, idx, bidx, 0, TRUE, debug)
+  ta <- .Call("D_test_v2", x, y, W, perm, threads, idx, bidx, 0, debug)
   if (length(ta) == 1) stop(ta[[1]])
   
   d <- ta[[1]]
