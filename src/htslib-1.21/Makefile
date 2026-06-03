@@ -97,18 +97,11 @@ srcprefix =
 HTSPREFIX =
 
 # ---- htscodecs (bundled) ----
+# SIMD files are guarded by #if defined(HAVE_AVX2) etc. in their source.
+# When the probe fails, config.h omits the HAVE_* define, the files
+# compile to empty .o, and the dispatcher (rANS_static4x16pr.c) skips
+# the call site via the same #if guard.  No filter-out or stubs needed.
 include htscodecs_bundled.mk
-
-# Remove SIMD objects that failed the probe (e.g. GCC 13 incompatibility)
-ifneq ($(HTS_BUILD_SSE4),1)
-  HTSCODECS_OBJS := $(filter-out %rANS_static32x16pr_sse4.o,$(HTSCODECS_OBJS))
-endif
-ifneq ($(HTS_BUILD_AVX2),1)
-  HTSCODECS_OBJS := $(filter-out %rANS_static32x16pr_avx2.o,$(HTSCODECS_OBJS))
-endif
-ifneq ($(HTS_BUILD_AVX512),1)
-  HTSCODECS_OBJS := $(filter-out %rANS_static32x16pr_avx512.o,$(HTSCODECS_OBJS))
-endif
 
 # ---- object files ----
 LIBHTS_OBJS = \
@@ -173,16 +166,6 @@ thread_pool_internal_h = thread_pool_internal.h $(htslib_thread_pool_h)
 
 # ---- build targets ----
 ALL_CPPFLAGS = -I. $(CPPFLAGS)
-
-# ---- explicit rules for SIMD objects (bypass default .c.o to add ISA flag) ----
-htscodecs/htscodecs/rANS_static32x16pr_sse4.o: htscodecs/htscodecs/rANS_static32x16pr_sse4.c
-	$(CC) $(PICFLAGS) $(CFLAGS) $(HTS_CFLAGS_SSE4) $(ALL_CPPFLAGS) -c -o $@ $<
-
-htscodecs/htscodecs/rANS_static32x16pr_avx2.o: htscodecs/htscodecs/rANS_static32x16pr_avx2.c
-	$(CC) $(PICFLAGS) $(CFLAGS) $(HTS_CFLAGS_AVX2) $(ALL_CPPFLAGS) -c -o $@ $<
-
-htscodecs/htscodecs/rANS_static32x16pr_avx512.o: htscodecs/htscodecs/rANS_static32x16pr_avx512.c
-	$(CC) $(PICFLAGS) $(CFLAGS) $(HTS_CFLAGS_AVX512) $(ALL_CPPFLAGS) -c -o $@ $<
 
 all: lib-static
 
