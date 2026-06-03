@@ -149,12 +149,12 @@ create_splice <- function(x, y, xend, height = 0, spline_shape = -0.25)
 {
   xm <- (x+xend)/2
   ym <- y+height
-  tf <- tempfile(fileext=".png")
-  png(tf)
+  # xspline needs an initialized graphics device even with draw=FALSE;
+  # use pdf(file=NULL) to avoid writing to disk
+  pdf(file = NULL)
   plot.new()
   tmp <- xspline(x=c(x,xm,xend), y = c(y,ym,y), spline_shape, TRUE, TRUE, draw = FALSE)
   invisible(dev.off())
-  unlink(tf)
   data.frame(x=tmp$x, y=tmp$y)
 }
 

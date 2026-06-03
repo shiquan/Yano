@@ -20,7 +20,7 @@ SEXP lognorm(SEXP _X, SEXP cs, SEXP _sf)
     cholmod_common c;
     M_R_cholmod_start(&c);
     CHM_SP ans = M_cholmod_allocate_sparse(nrow, ncol, xp[ncol], TRUE, TRUE, 0, CHOLMOD_REAL, &c);
-    if (ans == NULL) return(mkString("Failed to create sparse matrix"));
+    if (ans == NULL) { M_cholmod_finish(&c); return(mkString("Failed to create sparse matrix")); }
     int *ap = (int *)ans->p;
     int *ai = (int *)ans->i;
     double *ax = (double *)ans->x;
@@ -36,5 +36,7 @@ SEXP lognorm(SEXP _X, SEXP cs, SEXP _sf)
     }
     ap[i] = n;
 
-    return M_chm_sparse_to_SEXP(ans, 1, 0, 0, "N", R_NilValue);
+    SEXP ret = M_chm_sparse_to_SEXP(ans, 1, 0, 0, "N", R_NilValue);
+    M_cholmod_finish(&c);
+    return ret;
 }

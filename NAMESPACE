@@ -58,7 +58,7 @@ exportMethods(QuickRecipe)
 exportMethods(QuickRecipe0)
 exportMethods(mergeMatrix)
 import(Matrix)
-import(R.utils)
+
 import(Seurat)
 import(dplyr)
 import(ggplot2)

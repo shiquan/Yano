@@ -127,6 +127,7 @@ SEXP gene_tracks0(const char *chr, int start, int end, struct gtf_spec *G, struc
     }
     if (k != n + n_exon) {
         free(pool);
+        UNPROTECT(7);
         return R_NilValue;
     }
 

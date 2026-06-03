@@ -7,16 +7,16 @@ src/*.dylib
 src/symbols.rds
 
 # htslib generated files (platform-specific)
-src/htslib-1.21/config.h
-src/htslib-1.21/config_vars.h
-src/htslib-1.21/config.mk
-src/htslib-1.21/htscodecs.mk
-src/htslib-1.21/*.o
-src/htslib-1.21/**/*.o
-src/htslib-1.21/*.a
-src/htslib-1.21/*.so
-src/htslib-1.21/*.dylib
-src/htslib-1.21/hts-object-files
+src/htslib-1.10.2/config.h
+src/htslib-1.10.2/config_vars.h
+src/htslib-1.10.2/config.mk
+src/htslib-1.10.2/htscodecs.mk
+src/htslib-1.10.2/*.o
+src/htslib-1.10.2/**/*.o
+src/htslib-1.10.2/*.a
+src/htslib-1.10.2/*.so
+src/htslib-1.10.2/*.dylib
+src/htslib-1.10.2/hts-object-files
 
 # R CMD check artifacts
 ..Rcheck
@@ -25,3 +25,5 @@ check/Yano.Rcheck
 # R session
 .Rhistory
 .RData
+Rplots.pdf
+Yano.Rcheck/

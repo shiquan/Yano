@@ -67,7 +67,7 @@ FbtPlot0 <- function(tab = NULL,
     data[["bp_cum"]] <- data[["start"]]
     xlab = NULL
   } else {
-    data_cum <- tab %>% group_by(chr) %>% summarise(max_bp = max(start)) %>%
+    data_cum <- tab %>% group_by(chr) %>% summarise(max_bp = max(start), .groups = "drop") %>%
       mutate(bp_add = lag(cumsum(max_bp), default = 0)) %>% select(chr, bp_add)
     
     data <- tab %>% inner_join(data_cum, by = "chr") %>% mutate(bp_cum = start + bp_add)
@@ -75,7 +75,9 @@ FbtPlot0 <- function(tab = NULL,
   }
   data$name <- tab$name
   
-  data <- data %>% arrange(col.by)
+  if (!is.null(col.by)) {
+    data <- data %>% arrange(.data[[col.by]])
+  }
 
   qval.min <- min(data$qval) - 1
   qval.max <- max(data$qval) + 1
@@ -102,7 +104,7 @@ FbtPlot0 <- function(tab = NULL,
         if (n < 15) {
           cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
         } else {
-          cols <- cols %||% sample(colours(distinct = TRUE),n)
+          cols <- cols %||% colours(distinct = TRUE)[seq_len(n)]
         }
 
         p <- p + scale_fill_manual(values = cols) 
@@ -117,7 +119,7 @@ FbtPlot0 <- function(tab = NULL,
         if (n < 15) {
           cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
         } else {
-          cols <- cols %||% sample(colours(distinct = TRUE),n)
+          cols <- cols %||% colours(distinct = TRUE)[seq_len(n)]
         }
 
         p <- p + scale_fill_manual(values = cols)
@@ -292,7 +294,7 @@ FbtPlot <- function(object = NULL,
                       name = rownames(tab0))
 
     if (end.name %in% colnames(tab0)) {
-      tab[['start']] <- as.numeric(as.integer((tab0[[start.name]] + tab0[[end.name]])/2))
+      tab[['start']] <- as.numeric((tab0[[start.name]] + tab0[[end.name]]) / 2)
     }
     if (!is.null(col.by)) {
       if (col.by %in% colnames(tab0)) {
@@ -437,7 +439,9 @@ plot.genes <- function(x = NULL, chr = NULL, start = NULL, end = NULL, gtf = NUL
 #' @export
 plot.bed <- function(x = NULL, start = NULL, end = NULL, peaks = NULL, col.by = NULL, group.title.size=rel(2), highlights=NULL, ...)
 {
-  tab <- subset(peaks, start >= start, end <= end)
+  start.filter <- start
+  end.filter <- end
+  tab <- subset(peaks, start >= start.filter & end <= end.filter)
   p <- ggplot()
   if ("type" %in% colnames(tab) & !is.null(col.by)) {
     p <- p + geom_rect(data = tab,inherit.aes = F,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=type), size = 1)
@@ -472,7 +476,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
                      strand = c("both", "forward", "reverse", "ignore"),
                      max.depth = 0,
                      split.bc = FALSE, bin = 1000, cell.tag = "CB", umi.tag = "UB",
-                     cell.group=NULL, log.scaled = log.scaled, #start0 = -1, end0 = -1,
+                     cell.group=NULL, log.scaled = FALSE, #start0 = -1, end0 = -1,
                      highlights=NULL,
                      junc=FALSE, junc.min.depth = 0)
 {
@@ -525,8 +529,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   posmin <- min(bc$pos)
 
   if (strand == "ignore") {
-    idx <- which (bc$strand == "+")
-    bc <- bc[idx,]
+    bc$depth <- abs(bc$depth)
     bc["strand"] <- "."
   }
 
@@ -601,7 +604,7 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
   ymax <- max(bc$depth)
   ymin <- min(bc$depth)
   
-  p1 <- ggplot(bc, aes(x=pos,y=depth), fill="black") + geom_area(stat = "identity")
+  p1 <- ggplot(bc, aes(x=pos,y=depth)) + geom_area(stat = "identity", fill="black")
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
   p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), expand=FALSE)
 
@@ -775,7 +778,7 @@ RatioPlot0 <- function(object = NULL,
   
   # Get the DimReduc to use
   reduction <- reduction %||% DefaultDimReduc(object = object)
-  if (!is_integerish(x = dims, n = 2L, finite = TRUE) && !all(dims > 0L)) {
+  if (!is_integerish(x = dims, n = 2L, finite = TRUE) || !all(dims > 0L)) {
     stop("'dims' must be a two-length integer vector")
   }
   dims <- paste0(Key(object = object[[reduction]]), dims)
@@ -800,7 +803,7 @@ RatioPlot0 <- function(object = NULL,
     stop("No feature found at assay.")
   }
   
-  data1 <- FetchData(object = object, cells = cells, vars = features, slot = "counts")
+  data1 <- FetchData1(object = object, cells = cells, vars = features, layer = "counts")
   data2 <- NULL
   # binding assay
   if (!is.null(bind.name)) {
@@ -817,7 +820,7 @@ RatioPlot0 <- function(object = NULL,
       stop("No feature found at binding assay.")
     }
     
-    data2 <- FetchData(object = object, cells = cells, vars = features0, slot = "counts")
+    data2 <- FetchData1(object = object, cells = cells, vars = features0, layer = "counts")
     data2 <- as.matrix(data2)
     rownames(data2) <- cells
     colnames(data2) <- features0
@@ -830,11 +833,12 @@ RatioPlot0 <- function(object = NULL,
     if (length(features) == 0) {
       stop("No feature found at binding assay.")
     }
-    data2 <- FetchData(object = object, cells = cells, vars = features, slot = "counts")
+    data2 <- FetchData1(object = object, cells = cells, vars = features, layer = "counts")
   }
-  # Combine data  
+  # Combine data
   features <- intersect(colnames(data1), colnames(data2))
-  
+  if (length(features) == 0) stop("No common features found between the two assays.")
+
   data1 <- as.matrix(data1[,features])
   data2 <- as.matrix(data2[,features])
 
@@ -844,6 +848,7 @@ RatioPlot0 <- function(object = NULL,
     data2 <- data2+data1
   }
   data0 <- data1/data2
+  data0[is.infinite(data0)] <- NA
   colnames(data0) <- features
   data <- cbind(data, as.data.frame(data0))
   DefaultAssay(object) <- old.assay
@@ -986,9 +991,7 @@ RatioPlot0 <- function(object = NULL,
       # Add colors scale for normal FeaturePlots
       plot <- plot + guides(color = NULL)
       cols.grad <- cols
-      if (length(x = cols) == 1) {
-        plot <- plot + scale_color_brewer(palette = cols)
-      } else if (length(x = cols) > 1) {
+      if (length(x = cols) > 1) {
         unique.feature.exp <- unique(data.plot[, feature])
         if (length(unique.feature.exp) == 1) {
           warning(paste0(
@@ -1209,7 +1212,7 @@ RatioPlot <- function(object = NULL,
                       order = order,
                       min.cutoff = min.cutoff,
                       max.cutoff = max.cutoff,
-                      mode = 3,
+                      mode = mode,
                       reduction = reduction,
                       shape.by = shape.by,
                       ncol = ncol,

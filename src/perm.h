@@ -10,3 +10,5 @@ double *shuffle_index(double *tmp, int index, int length);
 
 int get_perm_idx(int i, int j);
 
+const int *get_perm_array(int i);
+
