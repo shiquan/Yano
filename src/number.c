@@ -53,7 +53,7 @@ int get_numbase(const char *s)
             break;
     }
 
-    if ( !isdigit((unsigned char)s[1] || s[1] == '8' || s[1] == '9'))
+    if ( !isdigit((unsigned char)s[1]) || s[1] == '8' || s[1] == '9')
         return 10;
     return 8;
 }
@@ -81,7 +81,7 @@ int get_numbase_l(const char *s, int l)
             break;
     }
 
-    if ( !isdigit((unsigned char)s[1] || s[1] == '8' || s[1] == '9'))
+    if ( !isdigit((unsigned char)s[1]) || s[1] == '8' || s[1] == '9')
         return 10;
     return 8;
 }

@@ -7,6 +7,7 @@
 #include <assert.h>
 
 #include "perm.h"
+#include "sparse_ops.h"
 
 #ifndef Matrix_stubs
 #define Matrix_stubs
@@ -342,6 +343,7 @@ SEXP D_test_v1(SEXP _A,
                 }
                 mnb_s = mnb_s/n_cell;
                 Ly1 = 0;
+                ra = 0;
                 rb2 = 0;
                 for (int j = 0; j < n_cell; ++j) {
                     Ly1 += pow(tmpb_s[j]-mnb, 2);
@@ -513,17 +515,21 @@ SEXP D_test_v2(SEXP _A,
 
     if (n_thread < 1) n_thread = 1;
 
-    /* --- Pre-allocate per-thread buffers (one malloc/free per thread, not per feature) --- */
-    double **buf_X     = (double**) R_alloc(n_thread, sizeof(double*));
-    double **buf_X_wrk = (double**) R_alloc(n_thread, sizeof(double*));
-    double **buf_X_s   = (double**) R_alloc(n_thread, sizeof(double*));
-    double **buf_D     = (double**) R_alloc(n_thread, sizeof(double*));
+    /* --- Per-thread buffers: sparse vectors + dense working arrays --- */
+    struct sparse_vec **buf_v     = (struct sparse_vec**) R_alloc(n_thread, sizeof(void*));
+    struct sparse_vec **buf_v_perm = (struct sparse_vec**) R_alloc(n_thread, sizeof(void*));
+    double           **buf_X_s   = (double**) R_alloc(n_thread, sizeof(double*));
+    double           **buf_Y     = (double**) R_alloc(n_thread, sizeof(double*));
+    double           **buf_Yi    = (double**) R_alloc(n_thread, sizeof(double*));
+    double           **buf_D     = (double**) R_alloc(n_thread, sizeof(double*));
 
     for (int t = 0; t < n_thread; t++) {
-        buf_X[t]     = (double*) R_Calloc(n_cell, double);
-        buf_X_wrk[t] = (double*) R_Calloc(n_cell, double);
-        buf_X_s[t]   = (double*) R_Calloc(n_cell, double);
-        buf_D[t]     = (double*) R_Calloc(perm + 1, double);
+        buf_v[t]      = calloc(1, sizeof(struct sparse_vec));
+        buf_v_perm[t] = calloc(1, sizeof(struct sparse_vec));
+        buf_X_s[t]    = (double*) R_Calloc(n_cell, double);
+        buf_Y[t]      = (double*) R_Calloc(n_cell, double);
+        buf_Yi[t]     = (double*) R_Calloc(n_cell, double);
+        buf_D[t]      = (double*) R_Calloc(perm + 1, double);
     }
 
     int i;
@@ -533,10 +539,12 @@ SEXP D_test_v2(SEXP _A,
 #ifdef _OPENMP
         tid = omp_get_thread_num();
 #endif
-        double *X     = buf_X[tid];
-        double *X_wrk = buf_X_wrk[tid];
-        double *X_s   = buf_X_s[tid];
-        double *D     = buf_D[tid];
+        struct sparse_vec *v      = buf_v[tid];
+        struct sparse_vec *v_perm = buf_v_perm[tid];
+        double *X_s = buf_X_s[tid];
+        double *Y   = buf_Y[tid];
+        double *Yi  = buf_Yi[tid];
+        double *D   = buf_D[tid];
 
         int ii = INTEGER(idx)[i] - 1;
         int ij = INTEGER(bidx)[i] - 1;
@@ -546,25 +554,19 @@ SEXP D_test_v2(SEXP _A,
             continue;
         }
 
-        /* ---- Extract X from sparse A ---- */
-        memset(X, 0, n_cell * sizeof(double));
-        int fl = ap[ii+1] - ap[ii];
+        /* ---- Extract X as sparse vector (O(nz), not O(n_cell)) ---- */
+        sparse_vec_from_csc(v, ap, ai, ax, ii);
+        int fl = v->nz;
         double mx = 0;
-        for (int p = ap[ii]; p < ap[ii+1]; ++p) {
-            int cid = ai[p];
-            X[cid] = ax[p];
-            mx += ax[p];
-        }
+        for (int k = 0; k < fl; ++k) mx += v->val[k];
         mx = mx / n_cell;
 
         double X2 = 0;
-        for (int p = ap[ii]; p < ap[ii+1]; ++p) {
-            X2 += pow(ax[p] - mx, 2);
-        }
+        for (int k = 0; k < fl; ++k)
+            X2 += pow(v->val[k] - mx, 2);
         X2 += (n_cell - fl) * mx * mx;
 
         /* ---- Extract Y from sparse B ---- */
-        double Y[n_cell];
         memset(Y, 0, n_cell * sizeof(double));
         double msy = 0;
         int s, j, p;
@@ -594,7 +596,6 @@ SEXP D_test_v2(SEXP _A,
         msy = msy / n_cell;
 
         /* ---- Center Y ---- */
-        double Yi[n_cell];
         double Yi2 = 0;
         for (s = 0; s < n_cell; ++s) {
             Yi[s] = Y[s] - msy;
@@ -602,14 +603,11 @@ SEXP D_test_v2(SEXP _A,
         }
         Yi2 = sqrt(Yi2);
 
-        if (debug && i == 0) {
+        if (debug && i == 0)
             Rprintf("X_mean, %f, smooth_Y_mean, %f, Yi^2, %f \n", mx, msy, Yi2);
-        }
 
         /* ---- Column 0: original X (no shuffle) ---- */
-        smooth_W(X, X_s, n_cell, W);
-        for (s = 0; s < n_cell; ++s)
-            if (X_s[s] < filter) X_s[s] = 0.0;
+        sparse_smooth(v, wp, wi, wx, X_s, n_cell, filter);
 
         {
             double msx = 0;
@@ -634,12 +632,9 @@ SEXP D_test_v2(SEXP _A,
 
         /* ---- Columns 1..perm: shuffled X ---- */
         for (j = 1; j < perm + 1; ++j) {
-            memcpy(X_wrk, X, n_cell * sizeof(double));
-            shuffle_index(X_wrk, j - 1, n_cell);
-
-            smooth_W(X_wrk, X_s, n_cell, W);
-            for (s = 0; s < n_cell; ++s)
-                if (X_s[s] < filter) X_s[s] = 0.0;
+            sparse_vec_copy(v_perm, v);     /* restore original ordering       */
+            sparse_vec_shuffle(v_perm, get_perm_array(j - 1));  /* apply j-th permutation */
+            sparse_smooth(v_perm, wp, wi, wx, X_s, n_cell, filter);
 
             double msx = 0;
             for (s = 0; s < n_cell; ++s) msx += X_s[s];
@@ -672,9 +667,11 @@ SEXP D_test_v2(SEXP _A,
 
     /* ---- Cleanup thread buffers ---- */
     for (int t = 0; t < n_thread; t++) {
-        R_Free(buf_X[t]);
-        R_Free(buf_X_wrk[t]);
+        sparse_vec_destroy(buf_v[t]);      free(buf_v[t]);
+        sparse_vec_destroy(buf_v_perm[t]); free(buf_v_perm[t]);
         R_Free(buf_X_s[t]);
+        R_Free(buf_Y[t]);
+        R_Free(buf_Yi[t]);
         R_Free(buf_D[t]);
     }
 

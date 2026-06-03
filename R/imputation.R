@@ -14,7 +14,7 @@ ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.001)
     X <- as(X, "CsparseMatrix")
   }
   if ("dgCMatrix" %ni% class(W)) {
-    W <- as(x, "CsparseMatrix")
+    W <- as(W, "CsparseMatrix")
   }
   
   wcells <- rownames(W)

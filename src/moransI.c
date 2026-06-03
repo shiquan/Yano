@@ -28,7 +28,7 @@ double *sp_colsums(CHM_SP A, Rboolean mn)
             continue;
         }
         for (int j = ap[i]; j < ap[i+1]; ++j) {
-            if (ISNAN(ax[i])) continue;
+            if (ISNAN(ax[j])) continue;
             cs[i] += ax[j];
         }
 

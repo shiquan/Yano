@@ -5,8 +5,8 @@ DScore <- function(x = NULL, y = NULL, W = NULL, perm = 100, filter = 0, seed = 
   hist(d[2:(perm+1)])
   abline(v=d[1], col="red")
 
-  tval <- (d[1] - mean(d[2:(perm+1)]))/var(d[2:(perm+1)])
-  pval <- pt(tval, df = perm - 1, lower.tail = FALSE)
+  tval <- (mean(d[2:(perm+1)]) - d[1]) / sd(d[2:(perm+1)])
+  pval <- pt(tval, df = perm - 1, lower.tail = TRUE)
   message(paste0("D score = ", d[1], ", p value = ", pval, "."))
   d
 }
@@ -270,7 +270,6 @@ RunBlockCorr <- function(object = NULL,
   gc()
   object0[[colnames(tab)]] <- tab
   object[[assay]] <- object0
-  features <- head(features)
   object <- LogSeuratCommand(object)
 
   DefaultAssay(object) <- old.assay
@@ -546,7 +545,6 @@ RunSDT <- function(object = NULL,
   gc()
   object0[[colnames(tab)]] <- tab
   object[[assay]] <- object0
-  features <- head(features)
   object <- LogSeuratCommand(object)
 
   DefaultAssay(object) <- old.assay

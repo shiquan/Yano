@@ -21,6 +21,10 @@ SEXP gtf2db(SEXP filename, SEXP utr)
     int use_utr = asInteger(utr);
     REprintf("Reading GTF: %s\n", file);
     struct gtf_spec *G = gtf_read(file, use_utr?1:2);
+    if (G == NULL) {
+        error_return("Failed to read GTF file (empty or invalid format).");
+        return R_NilValue;
+    }
 
     SEXP ext = PROTECT(R_MakeExternalPtr(G, R_NilValue, R_NilValue));
     R_RegisterCFinalizerEx(ext, _finalizer, TRUE);

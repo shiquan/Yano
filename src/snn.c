@@ -28,11 +28,11 @@ SEXP knn2snn(SEXP _knn, SEXP prune)
     int *knn = INTEGER(_knn);
 
     int n = 0, m = 1000;
-    int xi[ncell+1];
+    int *xi = (int*) R_Calloc(ncell + 1, int);
     int *xj = malloc(sizeof(int)*m);
     double *xx = malloc(sizeof(double)*m);
-    
-    int labels[ncell];
+
+    int *labels = (int*) R_Calloc(ncell, int);
     int i, j;
     int l;
     for (i = 0; i < ncell; ++i) {
@@ -78,6 +78,8 @@ SEXP knn2snn(SEXP _knn, SEXP prune)
 
     free(xj);
     free(xx);
+    R_Free(xi);
+    R_Free(labels);
     M_cholmod_finish(&c);
 
     UNPROTECT(1);

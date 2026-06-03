@@ -22,7 +22,7 @@ SEXP association_test1(SEXP A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP return_
     int lb = length(B);
     int lc = length(C);
     if (la != lb || la != lc || lb != lc) {
-        mkString("Unequal length of input array.");
+        return mkString("Unequal length of input array.");
     }
     if (la != W->nrow) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix.");
@@ -164,7 +164,7 @@ SEXP association_test2(SEXP _A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP _threa
     int lb = length(B);
     int lc = length(C);
     if (la != lb || la != lc || lb != lc) {
-        mkString("Unequal length of input array.");
+        return mkString("Unequal length of input array.");
     }
     if (la != W->nrow) return mkString("A column and W row do not match.");
     if (W->nrow != W->ncol) return mkString("W is not a square matrix.");

@@ -98,9 +98,11 @@ invert <- function(x) {
 }
 
 .onAttach <- function(...) {
-  attached <- package_attach()
-  if (!is_loading_for_tests()) {
-    rlang::inform(package_attach_message(attached),class = "packageStartupMessage")
+  if (isTRUE(getOption("Yano.autoattach", default = FALSE))) {
+    attached <- package_attach()
+    if (!is_loading_for_tests()) {
+      rlang::inform(package_attach_message(attached), class = "packageStartupMessage")
+    }
   }
 }
 

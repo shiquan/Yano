@@ -30,7 +30,6 @@
 #' @param spatial Set TRUE if barcode is coordinate of bin. Will combine x and y coordinate into bin name "x_y".
 #' @return Returns a sparse matrix of feature counts or a list of spliced, unspliced, and spanning reads sparse matrix.
 #' @importFrom data.table fread
-#' @import R.utils
 #' @export
 ReadPISA <- function(mex_dir=NULL,
                      prefix=NULL,

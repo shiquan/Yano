@@ -278,17 +278,17 @@ SpatialConcaveHull <- function(
   cells0 <- paste0(round(data[,1],4),"_",round(data[,2],4))
   names(cells) <- cells0
   ch <- concaveman::concaveman(data)
-  ch.ps <- paste0(ch[,1], "_", ch[,2])
+  ch.ps <- paste0(round(ch[,1],4), "_", round(ch[,2],4))
   cells <- cells[ch.ps]
   cells <- as.character(cells)
 
   ## ta <- .Call("concave_hull", data$x, data$y)
   ## cells <- cells[ta[[3]]]
-  
+
   if (plot.selected) {
     object[['selector']] <- 'unselect'
     object[['selector']][cells,] <- 'selected'
-    
+
     p <- SpatialPlot(object, group.by = 'selector', ...)
     print(p)
   }
@@ -379,7 +379,7 @@ DimConcaveHull <- function(
   cells1 <- paste0(round(data[,1],4),"_",round(data[,2],4))
   names(cells0) <- cells1
   ch <- concaveman::concaveman(data)
-  ch.ps <- paste0(ch[,1], "_", ch[,2])
+  ch.ps <- paste0(round(ch[,1],4), "_", round(ch[,2],4))
   cells0 <- cells0[ch.ps]
   cells0 <- as.character(cells0)
 

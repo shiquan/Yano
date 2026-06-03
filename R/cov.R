@@ -117,7 +117,6 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
     }
     
     bc <- bind_rows(dl) %>% group_by(pos, label, strand) %>% summarise(sum(depth, na.rm = TRUE))
-    ss <- table(unlist(bc))
     colnames(bc) <- c("pos", "label", "strand", "depth")
   } else {
     bc <- bamcov0(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,

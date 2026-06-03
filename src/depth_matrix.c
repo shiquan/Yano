@@ -52,12 +52,15 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
     hts_idx_t *idx = sam_index_load(fp, fname);
     if (idx == NULL) {
         Rprintf("Failed to load index file. Use `samtools index` the bam file first.\n");
+        hts_close(fp);
         return R_NilValue;
     }
     
     bam_hdr_t *hdr = sam_hdr_read(fp);
     if (hdr == NULL) {
         Rprintf("Malformed bam file.\n");
+        hts_idx_destroy(idx);
+        hts_close(fp);
         return R_NilValue;
     }
 
@@ -65,6 +68,9 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
     int tid = bam_name2id(hdr, name);
     if (tid < 0) {
         Rprintf("Not found chromosome %s in bam file.\n", name);
+        bam_hdr_destroy(hdr);
+        hts_idx_destroy(idx);
+        hts_close(fp);
         return R_NilValue;
     }
 
@@ -84,7 +90,11 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
             int ret = dict_query(bc, name);
             if (ret != -1) {
                 Rprintf("Duplicate cell name records? %s", name);
-                return NULL;
+                bam_hdr_destroy(hdr);
+                hts_idx_destroy(idx);
+                hts_close(fp);
+                dict_destroy(bc);
+                return R_NilValue;
             }
             dict_push(bc, name);
         }
@@ -95,8 +105,11 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
         
         int n3 = Rf_length(_group_names);
         for (i = 0; i < n_cell; ++i) {
+            if (alias[i] < 1 || alias[i] - 1 > n3)
+                error_return("Inconsistance alias names.");
+        }
+        for (i = 0; i < n_cell; ++i) {
             alias[i] = alias[i]-1; // convert 1-based to 0-based
-            if (alias[i] > n3) error_return("Inconsistance alias names.");
         }
     }
 
@@ -165,11 +178,12 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
     }
     if (i != n) {
         dict_destroy(bc);
+        UNPROTECT(5);
         return R_NilValue;
     }
 
     dict_destroy(bc);
-    
+
     SEXP df = PROTECT(Rf_allocVector(VECSXP,5));
     SET_VECTOR_ELT(df, 0, pos);
     SET_VECTOR_ELT(df, 1, pos1);
@@ -239,11 +253,13 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
         
         int n3 = Rf_length(_group_names);
         for (int i = 0; i < n_cell; ++i) {
-            alias[i] = alias[i]-1; // convert 1-based to 0-based
-            if (alias[i] > n3) {
+            if (alias[i] < 1 || alias[i] - 1 > n3) {
                 Rprintf("Inconsistance alias names.");
                 return R_NilValue;
             }
+        }
+        for (int i = 0; i < n_cell; ++i) {
+            alias[i] = alias[i]-1; // convert 1-based to 0-based
         }
     }
 
@@ -288,11 +304,12 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
     }
     if (i != n) {
         dict_destroy(bc);
+        UNPROTECT(4);
         return R_NilValue;
     }
 
     dict_destroy(bc);
-    
+
     SEXP df = PROTECT(Rf_allocVector(VECSXP,4));
     SET_VECTOR_ELT(df, 0, pos);
     SET_VECTOR_ELT(df, 1, stra);
