@@ -1,4 +1,4 @@
-HTSDIR = htslib-1.21
+HTSDIR = htslib-1.10.2
 HTSLIB = $(HTSDIR)/libhts.a
 HTSLIB_CPPFLAGS = -I$(HTSDIR)
 
