@@ -19,7 +19,9 @@ USE_LZMA ?= $(shell echo 'int main(){return 0;}' | $(CC) -include lzma.h -x c - 
 USE_CURL ?= $(shell echo 'int main(){return 0;}' | $(CC) -include curl/curl.h -x c - -lcurl -o /dev/null 2>/dev/null && echo 1 || echo 0)
 
 # ---- required flags ----
-CFLAGS   ?= -g -O2 -fpic
+# -fpic is required for linking into R's shared library (.so)
+CFLAGS   ?= -g -O2
+CFLAGS   += -fpic
 CPPFLAGS := -I. $(CPPFLAGS)
 LDFLAGS  ?= -fpic
 
