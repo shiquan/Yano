@@ -32,7 +32,7 @@
 // Return the base to use for the number in 's', this function adapt from gawk/node.c
 int get_numbase(const char *s)
 {
-    assert(s);
+    if (s == NULL) return 10;
     if (strlen(s) < 2)
         return 10;
     
@@ -60,7 +60,7 @@ int get_numbase(const char *s)
 
 int get_numbase_l(const char *s, int l)
 {
-    assert(s);
+    if (s == NULL) return 10;
     if (strlen(s) < 2)
         return 10;
     const char *str = s;

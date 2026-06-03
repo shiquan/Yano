@@ -1,6 +1,7 @@
 DScore <- function(x = NULL, y = NULL, W = NULL, perm = 100, filter = 0, seed = 999, debug = FALSE, smooth_Y = TRUE)
 {
-  d <- .Call("D_distribution_test_v2", x, y, W, perm, smooth_Y, filter, seed, debug)
+  set.seed(seed)
+  d <- .Call("D_distribution_test_v2", x, y, W, perm, smooth_Y, filter, debug)
   hist(d[2:(perm+1)])
   abline(v=d[1], col="red")
 
@@ -46,8 +47,9 @@ IdentToCells <- function(
 
 SDT <- function(x, y, idx, bidx, W, cs, threads, perm, scale.factor, mode, scale, norm, seed, debug)
 {
+  set.seed(seed)
   cells <- colnames(W)
-  ta <- .Call("D_test_v1", x[,cells], y[,cells], W, 1, perm, threads, idx, bidx, cs[cells], scale.factor, mode, scale, norm, seed, debug)
+  ta <- .Call("D_test_v1", x[,cells], y[,cells], W, 1, perm, threads, idx, bidx, cs[cells], scale.factor, mode, scale, norm, debug)
   ta
 }
 
@@ -245,9 +247,11 @@ RunBlockCorr <- function(object = NULL,
   }
   gc()
 
+  set.seed(seed)
+
   tab <- object0[[]]
-  
-  ta <- .Call("D_test_v1", x, y, W, 1, perm, threads, idx, bidx, cs[cells], scale.factor, mode, FALSE, norm, seed, debug)
+
+  ta <- .Call("D_test_v1", x, y, W, 1, perm, threads, idx, bidx, cs[cells], scale.factor, mode, FALSE, norm, debug)
   if (length(ta) == 1) stop(ta[[1]])
   
   e <- ta[[1]]
@@ -517,10 +521,12 @@ RunSDT <- function(object = NULL,
     message("Using ", threads, " threads.")
   }
   gc()
-  
+
+  set.seed(seed)
+
   tab <- object0[[]]
-  
-  ta <- .Call("D_test_v2", x, y, W, perm, threads, idx, bidx, 0, TRUE, seed, debug)
+
+  ta <- .Call("D_test_v2", x, y, W, perm, threads, idx, bidx, 0, TRUE, debug)
   if (length(ta) == 1) stop(ta[[1]])
   
   d <- ta[[1]]
@@ -562,6 +568,18 @@ cor_dist2 <- function(x = NULL, y = NULL, W = NULL, perm = 1000, thread = 1)
   ta
 }
 
+#' @title SDTdemo
+#' @description Demo function for spatial dissimilarity testing.
+#' @param object Seurat object.
+#' @param bind.name Name of binding feature column in meta data.
+#' @param bind.assay Binding assay name.
+#' @param assay Test assay name.
+#' @param mode Test mode: 1, 2, or 3.
+#' @param perm Number of permutations. Default is 100.
+#' @param feature Feature to test.
+#' @param library.size Library size vector.
+#' @param method Method: "D1" or "D2".
+#' @return Test results.
 #' @export
 SDTdemo <- function(object = NULL, bind.name = NULL, bind.assay = NULL, assay = NULL, mode = c(1,2,3), perm = 100, feature = NULL, library.size = NULL, method = c("D1","D2")) {
   

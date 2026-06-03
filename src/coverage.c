@@ -232,7 +232,7 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
         if (split_by_tag) {
             if (id == -1) {
                 // data = bam_aux_get(b, bc_tag);
-                assert(data);
+                if (!data) continue;
                 // if (data == NULL) continue;
                 id = dict_query(bc, (char*)(data+1));
                 if (id == -1) id = dict_push(bc, (char*)(data+1));
@@ -289,7 +289,7 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
                                     new->before = cur->before;
                                     if (cur->before) cur->before->next = new;
                                     else {
-                                        assert(cur == head);
+                                        if (cur != head) continue;
                                         head->before = new;
                                         head = new;
                                     }
@@ -324,7 +324,7 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
                                     new->before = cur->before;
                                     if (cur->before) cur->before->next = new;
                                     else {
-                                        assert(cur == head);
+                                        if (cur != head) continue;
                                         head->before = new;
                                         head = new;
                                     }
@@ -337,7 +337,7 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
                             }
                             
                             if (cur == NULL) {
-                                assert(tail);
+                                if (!tail) continue;
                                 struct depth *new = depth_init();
                                 new->pos = pos;
                                 new->before = tail;
@@ -396,7 +396,7 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
                                 new->before = cur->before;
                                 if (cur->before) cur->before->next = new;
                                 else {
-                                    assert(cur == head);
+                                    if (cur != head) continue;
                                     head->before = new;
                                     head = new;
                                 }
@@ -434,7 +434,7 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
                                 new->before = cur->before;
                                 if (cur->before) cur->before->next = new;
                                 else {
-                                    assert(cur == head);
+                                    if (cur != head) continue;
                                     head->before = new;
                                     head = new;
                                 }
@@ -447,7 +447,7 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
                         }
                             
                         if (cur == NULL) {
-                            assert(tail);
+                            if (!tail) continue;
                             struct depth *new = depth_init();
                             new->pos = pos;
                             new->end = end;
@@ -501,7 +501,7 @@ struct depth *fragment2depth(tbx_t *tbx, const char *seqname, int start, int end
         
         int n;
         int *s = ksplit(&r, '\t', &n);
-        assert(n >= 4);
+        if (n < 4) continue;
         int st = str2int(r.s + s[1]);
         int ed = str2int(r.s + s[2]);
             
@@ -540,7 +540,7 @@ struct depth *fragment2depth(tbx_t *tbx, const char *seqname, int start, int end
                         new->before = cur->before;
                         if (cur->before) cur->before->next = new;
                         else {
-                            assert(cur == head);
+                            if (cur != head) continue;
                             head->before = new;
                             head = new;
                         }
@@ -575,7 +575,7 @@ struct depth *fragment2depth(tbx_t *tbx, const char *seqname, int start, int end
                         new->before = cur->before;
                         if (cur->before) cur->before->next = new;
                         else {
-                            assert(cur == head);
+                            if (cur != head) continue;
                             head->before = new;
                             head = new;
                         }
@@ -587,7 +587,7 @@ struct depth *fragment2depth(tbx_t *tbx, const char *seqname, int start, int end
                     cur = cur->next; // next record
                 }
                 if (cur == NULL) {
-                    assert(tail);
+                    if (!tail) continue;
                     struct depth *new = depth_init();
                     new->pos = i;
                     new->before = tail;

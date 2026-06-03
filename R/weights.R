@@ -1,3 +1,8 @@
+#' @title spatialDistTest
+#' @description Compute minimum distances to N nearest neighbors from spatial coordinates.
+#' @param coord A matrix of spatial coordinates.
+#' @param n Number of nearest neighbors. Default is 8.
+#' @return A matrix of distances.
 #' @export
 spatialDistTest <- function(coord = NULL, n = 8) {
   coord <- as.matrix(coord)
@@ -159,7 +164,15 @@ GetWeightsFromSNN <- function(object = NULL, snn = "RNA_snn", prune.SNN = 1/50, 
   W <- GetWeights(snn=snn.graph, prune.SNN = prune.SNN, cells = cells)
   return(W)
 }
-#'@export
+#' @title GetWeightsFromSpatial
+#' @description Calculate cell-cell weight matrix from spatial coordinates.
+#' @param object Seurat object.
+#' @param diag.value Diagonal value in the weight matrix. Default is 0.
+#' @param k.param K-nearest neighbors. Default is 20.
+#' @param image Name of the spatial image. If NULL, uses the first image.
+#' @param prune.SNN Jaccard index cutoff for SNN pruning. Default is 1/30.
+#' @return A sparse weight matrix.
+#' @export
 GetWeightsFromSpatial <- function(object = NULL, diag.value = 0, k.param = 20, image = NULL, prune.SNN = 1/30) {
   image <- image %||% Images(object)
   if (length(image) == 0) {

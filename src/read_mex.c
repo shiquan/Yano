@@ -5,21 +5,22 @@
 #include "number.h"
 #include "htslib/kstring.h"
 #include "htslib/bgzf.h"
-// #include "Matrix/Matrix.h"
 #include <Matrix.h>
 // # nocov end
 static cholmod_common c;
 
 SEXP readmex(SEXP _file)
 {
-    const char *file;
+    const char *file = CHAR(STRING_ELT(_file, 0));
     BGZF *fp = bgzf_open(file, "r");
+    if (fp == NULL) return mkString("Failed to open file");
+
     kstring_t str = {0,0,0};
     int n = 0;
     CHM_SP ans = NULL;
-    int *ap;
-    int *ai;
-    double *ax;
+    int *ap = NULL;
+    int *ai = NULL;
+    double *ax = NULL;
 
     int lst = -1;
     int k = 0;
@@ -32,8 +33,9 @@ SEXP readmex(SEXP _file)
         int p;
         int *s = ksplit(&str, 0, &p);
         if (p != 3) {
-            Rprintf("malformed format.");
-            break;
+            bgzf_close(fp);
+            free(str.s);
+            return mkString("Malformed MEX format: expected 3 fields per line");
         }
 
         int n_feature = str2int(str.s+s[0]);
@@ -41,9 +43,13 @@ SEXP readmex(SEXP _file)
         int n_record = str2int(str.s+s[2]);
 
         if (n == 0) {
-            ans = M_cholmod_allocate_sparse(n_feature, n_barcode, n_record, TRUE, TRUE, 0, CHOLMOD_REAL, &c);
-            if (ans == NULL) return(mkString("Failed to create sparse matrix"));
-            
+            ans = M_cholmod_allocate_sparse(n_feature, n_barcode, n_record,
+                                            TRUE, TRUE, 0, CHOLMOD_REAL, &c);
+            if (ans == NULL) {
+                bgzf_close(fp);
+                free(str.s);
+                return mkString("Failed to create sparse matrix");
+            }
             ap = (int *)ans->p;
             ai = (int *)ans->i;
             ax = (double *)ans->x;
@@ -57,13 +63,15 @@ SEXP readmex(SEXP _file)
             }
             ai[k] = n_barcode;
             ax[k] = n_record;
-            
             k++;
         }
         n++;
     }
 
-    UNPROTECT(1);
-    
+    bgzf_close(fp);
+    free(str.s);
+
+    if (ans == NULL) return mkString("Empty file");
+
     return M_chm_sparse_to_SEXP(ans, 1, -1, 0, "N", R_NilValue);
 }

@@ -125,7 +125,10 @@ SEXP gene_tracks0(const char *chr, int start, int end, struct gtf_spec *G, struc
             k++;
         }
     }
-    assert(k == n + n_exon);
+    if (k != n + n_exon) {
+        free(pool);
+        return R_NilValue;
+    }
 
     free(pool);
     region_itr_destroy(itr);

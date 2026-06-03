@@ -163,7 +163,10 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
         r = r->next;
         free(t);
     }
-    assert(i == n);
+    if (i != n) {
+        dict_destroy(bc);
+        return R_NilValue;
+    }
 
     dict_destroy(bc);
     
@@ -283,7 +286,10 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
         r = r->next;
         free(t);
     }
-    assert(i == n);
+    if (i != n) {
+        dict_destroy(bc);
+        return R_NilValue;
+    }
 
     dict_destroy(bc);
     

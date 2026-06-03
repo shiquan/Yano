@@ -298,7 +298,7 @@ FbtPlot <- function(object = NULL,
       if (col.by %in% colnames(tab0)) {
         tab[[col.by]] <- tab0[[col.by]]
       } else {
-        warnings(paste0("No ", col.by, " found at meta.features."))
+        warning(paste0("No ", col.by, " found at meta.features."))
       }
     }
     
@@ -306,7 +306,7 @@ FbtPlot <- function(object = NULL,
       if (shape.by %in% colnames(tab0)) {
         tab[[shape.by]] <- tab0[[shape.by]]
       } else {
-        warnings(paste0("No ", shape.by, " found at meta.features."))
+        warning(paste0("No ", shape.by, " found at meta.features."))
       }
     }
     
@@ -350,7 +350,7 @@ theme_cov <- function(...) {
   )
 }
 #' @export
-plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes = NULL, label=TRUE, highlights=NULL, print.genes = NULL, max.genes = 20)
+plot.genes <- function(x = NULL, chr = NULL, start = NULL, end = NULL, gtf = NULL, genes = NULL, label=TRUE, highlights=NULL, print.genes = NULL, max.genes = 20, ...)
 {
   if (is.null(gtf)) stop("No database specified.")
   if (!isGTF(gtf)) stop("Not like a GTF database, use gtf2db to read GTF first.")
@@ -435,7 +435,7 @@ plot.genes <- function(chr = NULL, start = NULL, end = NULL, gtf = NULL, genes =
   p
 }
 #' @export
-plot.bed <- function(start = NULL, end = NULL, peaks = NULL, col.by = NULL, group.title.size=rel(2), highlights=NULL)
+plot.bed <- function(x = NULL, start = NULL, end = NULL, peaks = NULL, col.by = NULL, group.title.size=rel(2), highlights=NULL, ...)
 {
   tab <- subset(peaks, start >= start, end <= end)
   p <- ggplot()
@@ -485,7 +485,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
         if (!is.null(nm2)) {
           bad.nm <- setdiff(nm, nm2)
           if (length(bad.nm) > 0) {
-            warnings("Inconsistance list name between cell group and bam files.")
+            warning("Inconsistance list name between cell group and bam files.")
           }
           nm <- intersect(nm, nm2)
           bamfile <- bamfile[nm]
@@ -776,7 +776,7 @@ RatioPlot0 <- function(object = NULL,
   # Get the DimReduc to use
   reduction <- reduction %||% DefaultDimReduc(object = object)
   if (!is_integerish(x = dims, n = 2L, finite = TRUE) && !all(dims > 0L)) {
-    abort(message = "'dims' must be a two-length integer vector")
+    stop("'dims' must be a two-length integer vector")
   }
   dims <- paste0(Key(object = object[[reduction]]), dims)
   cells <- cells %||% Cells(x = object[[reduction]])
@@ -789,7 +789,7 @@ RatioPlot0 <- function(object = NULL,
 
   # Check presence of dimensions
   if (!all(dims %in% colnames(x = data))) {
-    abort(message = "The dimensions requested were not found")
+    stop("The dimensions requested were not found")
   }
 
   old.assay <- DefaultAssay(object)
@@ -991,7 +991,7 @@ RatioPlot0 <- function(object = NULL,
       } else if (length(x = cols) > 1) {
         unique.feature.exp <- unique(data.plot[, feature])
         if (length(unique.feature.exp) == 1) {
-          warn(message = paste0(
+          warning(paste0(
             "All cells have the same value (",
             unique.feature.exp,
             ") of ",

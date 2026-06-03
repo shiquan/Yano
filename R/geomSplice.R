@@ -1,5 +1,9 @@
+#' @title geom_splice
+#' @description A ggplot2 geom for drawing splice junction arcs.
+#' @inheritParams ggplot2::layer
+#' @param spline_shape Spline shape parameter, default -0.25.
 #' @export
-geom_splice <- function(mapping = NULL, 
+geom_splice <- function(mapping = NULL,
                         data = NULL, 
                         stat = "splice", 
                         position = "identity", 
@@ -75,6 +79,12 @@ geom_splice <- function(mapping = NULL,
 ##                       )
 
 
+#' @title stat_splice
+#' @description A ggplot2 stat for computing splice junction paths.
+#' @inheritParams ggplot2::layer
+#' @param spline_shape Spline shape parameter, default -0.25.
+#' @param open Whether the spline is open, default TRUE.
+#' @param rep_ends Whether to repeat ends, default TRUE.
 #' @export
 stat_splice <- function(mapping = NULL, data = NULL, geom = "splice",
                         position = "identity", na.rm = TRUE, show.legend = NA, inherit.aes = TRUE,
@@ -96,8 +106,10 @@ stat_splice <- function(mapping = NULL, data = NULL, geom = "splice",
   )
 }
 
-#' @importFrom graphics xspline
+#' @title StatSplice
+#' @description A ggplot2 Stat for computing splice junction paths.
 #' @export
+#' @importFrom graphics xspline
 StatSplice <- ggproto("StatSplice", Stat,
                        setup_data = function(data, params) {
                          if (anyDuplicated(data$group)) {
@@ -123,6 +135,14 @@ StatSplice <- ggproto("StatSplice", Stat,
                       required_aes = c("x", "y", "xend", "height")
                       )
 
+#' @title create_splice
+#' @description Create a spline path for a splice junction arc.
+#' @param x Start x-coordinate.
+#' @param y Start y-coordinate.
+#' @param xend End x-coordinate.
+#' @param height Height of the arc.
+#' @param spline_shape Spline shape parameter, default -0.25.
+#' @return A data.frame with x and y coordinates for the spline path.
 #' @importFrom graphics xspline
 #' @export
 create_splice <- function(x, y, xend, height = 0, spline_shape = -0.25)

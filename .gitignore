@@ -1,0 +1,27 @@
+# Generated during build/configure
+src/Makevars
+src/Makevars.tmp
+src/*.o
+src/*.so
+src/*.dylib
+src/symbols.rds
+
+# htslib generated files (platform-specific)
+src/htslib-1.21/config.h
+src/htslib-1.21/config_vars.h
+src/htslib-1.21/config.mk
+src/htslib-1.21/htscodecs.mk
+src/htslib-1.21/*.o
+src/htslib-1.21/**/*.o
+src/htslib-1.21/*.a
+src/htslib-1.21/*.so
+src/htslib-1.21/*.dylib
+src/htslib-1.21/hts-object-files
+
+# R CMD check artifacts
+..Rcheck
+check/Yano.Rcheck
+
+# R session
+.Rhistory
+.RData

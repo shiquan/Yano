@@ -18,7 +18,7 @@ annoTX <- function(object = NULL, assay = NULL, gtf = NULL, gene.name = "gene_na
   sl <- .Call("tx2gene", tx, gtf)
   ug <- unique(sl[[5]])
   if (length(ug) == 1 && ug[1] == '.') {
-    warnings("No genes found. Make sure you use the transcript assay and right GTF database.")
+    warning("No genes found. Make sure you use the transcript assay and right GTF database.")
   }
 
   sl0 <- sl[[1]]

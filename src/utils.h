@@ -25,12 +25,18 @@
 #define ANSI_COLOR_GRAY    ""
 #define ANSI_COLOR_RESET   ""
 
+/*
+ * NOTE: <Rinternals.h> (included above at line 6) defines `error` as Rf_error.
+ * The #ifndef guard below exists only as a safe fallback for non-R contexts.
+ * In R packages, Rf_error() performs a longjmp — ensure cholmod/gsl workspaces
+ * are finished BEFORE calling error(), or use goto cleanup patterns.
+ */
 #ifndef error
 #define error(line, ...) do						\
     {									\
 	Rprintf(ANSI_COLOR_RED "[error] [func: %s, line: %d] " ANSI_COLOR_RESET ANSI_COLOR_MAGENTA line ANSI_COLOR_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__); \
 	errno = 0;							\
-	exit(EXIT_FAILURE);						\
+	Rf_error(line, ##__VA_ARGS__);					\
     } while(0)
 
 #endif
