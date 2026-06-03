@@ -3,10 +3,13 @@ HTSLIB = $(HTSDIR)/libhts.a
 HTSLIB_CPPFLAGS = -I$(HTSDIR)
 
 PKG_CFLAGS = @PKG_CFLAGS@ @openmp_cflags@ $(HTSLIB_CPPFLAGS) -I.
-PKG_LIBS = @PKG_LIBS@ @openmp_cflags@ $(HTSDIR)/libhts.a -lcurl -lz -llzma
+PKG_LIBS = @PKG_LIBS@ @openmp_cflags@ $(HTSDIR)/libhts.a -lz -lm
 
 all: HTS
 
 HTS:
-	cd $(HTSDIR) && rm -f config.h && make clean && make lib-static && cd -
+	cd $(HTSDIR) && rm -f config.h htscodecs.mk && $(MAKE) lib-static USE_BZ2=0 USE_LZMA=0 USE_CURL=0 CC="$(CC)" CFLAGS="$(CFLAGS)" && cd -
 
+clean:
+	rm -f $(HTSDIR)/*.o $(HTSDIR)/*/*.o $(HTSDIR)/libhts.a
+	rm -f $(HTSDIR)/config.h $(HTSDIR)/config_vars.h $(HTSDIR)/htscodecs.mk $(HTSDIR)/version.h

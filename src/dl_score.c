@@ -19,7 +19,7 @@ struct val {
     double d;
     double t_d;
 };
-SEXP dl_score(SEXP _A, SEXP _B, SEXP _W, SEXP _perm, SEXP _threads, SEXP _seed)
+SEXP dl_score(SEXP _A, SEXP _B, SEXP _W, SEXP _perm, SEXP _threads)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
@@ -45,14 +45,13 @@ SEXP dl_score(SEXP _A, SEXP _B, SEXP _W, SEXP _perm, SEXP _threads, SEXP _seed)
     R_CheckStack();
     R_CheckUserInterrupt();
 
-    const int seed = asInteger(_seed);
-    srand(seed);
-
     int **ris = NULL;
     ris = R_Calloc(perm, int*);
+    GetRNGstate();
     for (int pi = 0; pi < perm; ++pi) {
         ris[pi] = random_idx(n_cell);
     }
+    PutRNGstate();
 
     int nn = 0;
     

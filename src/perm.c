@@ -1,4 +1,5 @@
 #include "perm.h"
+#include <R_ext/Error.h>
 
 int *random_idx(const int n)
 {
@@ -6,7 +7,7 @@ int *random_idx(const int n)
     int i;
     for (i = 0; i < n; ++i) idx[i] = i;
     for (i = 0; i < n-1; ++i) {
-        int j = i + rand() / (RAND_MAX / (n - i) + 1);
+        int j = i + (int)(unif_rand() * (n - i));
         int t = idx[j];
         idx[j] = idx[i];
         idx[i] = t;
@@ -27,9 +28,11 @@ static int permutation = 0;
 void random_index_init(int perm, int n_unit) {
     permutation = perm;
     ris = R_Calloc(perm,int*);
+    GetRNGstate();
     for (int pi = 0; pi < perm; ++pi) {
         ris[pi] = random_idx(n_unit);
-    }    
+    }
+    PutRNGstate();
 }
 
 void random_index_free()
@@ -48,6 +51,6 @@ double *shuffle_index(double *tmp, int index, int length)
 }
 
 int get_perm_idx(int i, int j) {
-    if (i >= permutation) error("Out of range.");
+    if (i >= permutation) Rf_error("Out of range: i=%d, permutation=%d", i, permutation);
     return ris[i][j];
 }

@@ -23,7 +23,7 @@ varanno <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL
   df <- data.frame(chr = chr, start = start)
   if (!is.null(vcf) & !is.null(tags)) {
     sl <- anno_vcf(chr = chr, start = start, end = end, ref = ref, alt = alt, strand = strand, vcf = vcf, tags = tags, check.alt.only = check.alt.only)
-    if (is.null(sl)) error("Failed to annotate VCF.")
+    if (is.null(sl)) stop("Failed to annotate VCF.")
     n <- length(tags)
     for (i in 1:n) {
       df[[tags[[i]]]] <- sl[[i]]

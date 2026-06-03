@@ -10,6 +10,8 @@ FeatureSelector(
   return.object = FALSE,
   plot.selected = TRUE,
   combine = FALSE,
+  reduction = NULL,
+  cells = NULL,
   ...
 )
 }

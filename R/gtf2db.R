@@ -11,12 +11,20 @@ gtf2db <- function(filename = NULL, use_utr = FALSE) {
   return(db)
 }
 
-#'@export
+#' @title isGTF
+#' @description Check if an object is a GTF database.
+#' @param gtf An object to check.
+#' @return Logical, TRUE if the object is a GTF database.
+#' @export
 isGTF <- function(gtf = NULL) {
   return("GTF" %in% class(gtf))
 }
 
-#'@export
+#' @title notGTF
+#' @description Check if an object is NOT a GTF database.
+#' @param gtf An object to check.
+#' @return Logical, TRUE if the object is not a GTF database.
+#' @export
 notGTF <- function(gtf = NULL) {
   return("GTF" %ni% class(gtf))
 }

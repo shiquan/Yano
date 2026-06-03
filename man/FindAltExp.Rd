@@ -59,9 +59,9 @@ FindAltExp(
 
 \item{seed}{Seed for generate random number. Default is 999.}
 
-\item{debug}{Print debug logs. Will auto set thread to 1. Default is FALSE.}
+\item{pseudo.group}{Aggregate counts into groups for each clusters. Used only for DEXSeq.}
 
-\item{pesudo.group}{Aggregate counts into groups for each clusters. Used only for DEXSeq.}
+\item{debug}{Print debug logs. Will auto set thread to 1. Default is FALSE.}
 }
 \description{
 Using linear regression model (implemented by DEXSeq) or PermTest method to calculate delta ratio and simulate p value for each event.

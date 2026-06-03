@@ -67,7 +67,7 @@ int process_fmt_array(kstring_t *s, int n, int type, void *data)
             case BCF_BT_INT16: BRANCH(int16_t, le_to_i16, v==bcf_int16_missing, v==bcf_int16_vector_end, kputw(v, s)); break;
             case BCF_BT_INT32: BRANCH(int32_t, le_to_i32, v==bcf_int32_missing, v==bcf_int32_vector_end, kputw(v, s)); break;
             case BCF_BT_FLOAT: BRANCH(uint32_t, le_to_u32, v==bcf_float_missing, v==bcf_float_vector_end, kputd(le_to_float(p), s)); break;
-            default: hts_log_error("Unexpected type %d", type); exit(1); break;
+            default: hts_log_error("Unexpected type %d", type); return -1;
         }
         #undef BRANCH
     }
@@ -128,7 +128,7 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
     } else {
         tbx = tbx_index_load(vcf_fname);
         if (!tbx) {
-            fprintf(stderr,"Failed to load index file of %s.\n", vcf_fname);
+            REprintf("Failed to load index file of %s.\n", vcf_fname);
             return R_NilValue;
         }
     }
@@ -689,7 +689,7 @@ char *construct_alternative_sequence(char *ref_str, struct gtf *tx, int pos, con
 {
     int ss;
     int cds = find_cds_location(tx, pos, &ss);
-    assert(cds>0);
+    if (cds <= 0) return NULL;
     kstring_t tmp = {0,0,0};
     int lref = strlen(ref);
     int lalt = strlen(alt);
@@ -756,7 +756,7 @@ enum mol_con fast_predict(int pos, struct gtf *tx, int *e)
         if (ex->type != feature_exon) continue;
         if (pos >= ex->start && pos <= ex->end) return mc_noncoding_exon;
         if (pos < ex->start) {
-            assert(last_i > 0);
+            if (last_i <= 0) return mc_noncoding_intron;
             int loc1 = pos - last_ed;
             int loc2 = ex->start - pos;
             if (loc1 < loc2) {

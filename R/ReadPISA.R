@@ -193,6 +193,11 @@ ReadPISA <- function(mex_dir=NULL,
   mat
 }
 
+#' @title ReadStereoseq
+#' @description Read Stereo-seq count matrix from MEX format directory.
+#' @param count Path to the count matrix directory.
+#' @param bin Bin size for spatial binning. Default is 50.
+#' @return A sparse matrix of feature counts.
 #' @export
 ReadStereoseq <- function(count = NULL, bin = 50) {
   mtx.file <- paste0(count,"/matrix.mtx.gz")
