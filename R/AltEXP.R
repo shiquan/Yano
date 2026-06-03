@@ -133,8 +133,9 @@ PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode =
   
   idx.1 <- match(cells.1, cells)
   idx.2 <- match(cells.2, cells)
-  
-  df <- .Call("alt_exp", x, y, idx.1, idx.2, mode[1L], perm, threads, seed)
+
+  set.seed(seed)
+  df <- .Call("alt_exp", x, y, idx.1, idx.2, mode[1L], perm, threads)
 
   if (length(df) == 1) {
     stop(df)
@@ -164,7 +165,7 @@ PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode =
 #' @param bind.assay Assay for binding features. If not set, test features in same goup (with same bind name) will be aggreated as binding feature
 #' @param features Candidate list to test. If not set, will use all.
 #' @param bind.features Candidate list for binding features. If not set, will use all.
-#' @param min.pct Only test features that are detected in a minimum fraction of min.pct cells in all cells.  Meant to speed up the function by not testing genes that are very infrequenctly expressed in all cells. Remember we are testing alternative epxression pattern here, so it is possible the test feature is not expressed in one group, therefore we are not going to check by groups. Note that min.pct is set for test feature here. But in \code{\link{RunPSI}}, the min.pct is set for binding feature. Default is 0.05.
+#' @param min.pct Only test features that are detected in a minimum fraction of min.pct cells in all cells.  Meant to speed up the function by not testing genes that are very infrequenctly expressed in all cells. Remember we are testing alternative epxression pattern here, so it is possible the test feature is not expressed in one group, therefore we are not going to check by groups. Note that min.pct is set for test feature here. But in RunPSI, the min.pct is set for binding feature. Default is 0.05.
 #' @param min.pct.bind.feature Only test binding features that are detected in a minimum fraction of min.pct.bind.feature in either of the two populations. Meant to speed up the function by not testing genes that are very infrequenctly expressed in both groups. Default is 0.05.
 #' @param return.thresh Only return markers that have a p-value < return.thresh.
 #' @param node A node to find markers for and all its children; requires \code{\link{BuildClusterTree}} to have been run previously. Only can be used if test all groups.
@@ -190,7 +191,7 @@ RunDEXSeq <- function(object = NULL, bind.name = "gene_name",
   }
 
   if (is.null(bind.assay)) {
-    warnings("Bind assay is not specified, will aggreate exons from the same gene.")
+    warning("Bind assay is not specified, will aggreate exons from the same gene.")
   }
   
   assay <- assay %||% DefaultAssay(object)
@@ -240,7 +241,7 @@ RunDEXSeq <- function(object = NULL, bind.name = "gene_name",
 #' @param features Candidate list to test. If not set, will use AutoCorrFeatures(object, assay = assay).
 #' @param bind.features Candidate list for bind features to test. If not set, will test all covered.
 #' @param min.cells Used to filter candiate features or binding features. Require them at least expressed in min.cells. Default is 10.
-#' @param pesudo.group Aggregate counts into groups for each clusters. Used only for DEXSeq.
+#' @param pseudo.group Aggregate counts into groups for each clusters. Used only for DEXSeq.
 #' @param return.thresh Only return markers that have a p-value < return.thresh. Default is NULL.
 #' @param mode Test mode. For mode 1, X (test feature) vs Y (binding feature). For mode 2, X vs (Y-X). For mode 3, X vs (Y+X). 
 #' @param perm Permutation steps for calculate statistical of delta-ratio. Default is 100.
@@ -440,7 +441,7 @@ FindAllAltExp <- function(object = NULL,
     if (is.null(x = tree)) {
       stop("Please run 'BuildClusterTree' before finding markers on nodes")
     }
-    descendants <- Seurat:::DFT(tree = tree, node = node, include.children = TRUE)
+    descendants <- DFT(tree = tree, node = node, include.children = TRUE)
     all.children <- sort(x = tree$edge[, 2][!tree$edge[, 2] %in% tree$edge[, 1]])
     descendants <- MapVals(
       vec = descendants,

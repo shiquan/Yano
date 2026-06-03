@@ -35,6 +35,8 @@ AssociationTest(
 
 \item{assay}{Work assay.}
 
+\item{layer}{Input data layer, usually be 'data'.}
+
 \item{min.cells}{Features detected in few than minimal number of cells will be skipped. Default is 10.}
 
 \item{test.assay}{The test assay. This option is required.}
@@ -55,6 +57,8 @@ AssociationTest(
 
 \item{threads}{Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.}
 
+\item{verbose}{Print log message. Default is TRUE.}
+
 \item{debug}{Print debug message. Will auto set thread to 1. Default is FALSE.}
 
 \item{reduction}{Dimension reduction name for constructing SNN graph and weight matrix. Default is 'pca'. This and following parameters only actived when cells is set, because need to recalculate the SNN graph for the defined cells.}
@@ -65,15 +69,7 @@ AssociationTest(
 
 \item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
 
-\item{versbose}{Print log message. Default is TRUE.}
-
-\item{nn.method}{Method for nearest neighbor finding. Options include: rann, annoy(default).}
-
-\item{annoy.metric}{Distance metric for annoy. Options include: euclidean (default), cosine, manhattan, and hamming}
-
-\item{n.trees}{More trees gives higher precision when using annoy approximate nearest neighbor search. Default is 50.}
-
-\item{nn.eps}{Error bound when performing nearest neighbor seach using RANN; default of 0.0 implies exact nearest neighbor search}
+\item{return.dist}{Return distance matrix. Default is FALSE.}
 }
 \description{
 Run association test for features with alternative expressed pairs. Features that have similar expression pattern with the 'test feature' and show different expression pattern with the 'binding feature' will be prioritized.

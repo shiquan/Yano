@@ -7,9 +7,11 @@
 AutoCorrFeatures(object = NULL, assay = NULL, name = "autocorr.variable")
 }
 \arguments{
+\item{object}{Seurat object}
+
 \item{assay}{Working assay.}
 
-\item{obejct}{Seurat object}
+\item{name}{Name of the autocorrelation variable column. Default is "autocorr.variable".}
 }
 \description{
 return spatial autocorrlated features

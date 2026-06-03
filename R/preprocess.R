@@ -1,3 +1,4 @@
+#' @rdname QuickRecipe0
 #' @export
 setMethod(f = "QuickRecipe0",
           signature = signature(counts = "SMatrix"),
@@ -17,6 +18,7 @@ setMethod(f = "QuickRecipe0",
             return(QuickRecipe0(counts, assay = assay, verbose = verbose))
           })
 
+#' @rdname QuickRecipe0
 #' @export
 setMethod(f = "QuickRecipe0",
           signature = signature(counts = "Seurat"),
@@ -95,6 +97,7 @@ ProcessDimReduc <- function(object = NULL, ndim=20, resolution = 0.5, nvar= 3000
 #' @import Seurat
 #' @import Matrix
 #'
+#' @rdname QuickRecipe
 #' @export
 setMethod(f = "QuickRecipe",
           signature = signature(counts = "Seurat"),
@@ -110,6 +113,7 @@ setMethod(f = "QuickRecipe",
             ProcessDimReduc(object, ndim=ndim, resolution=resolution, nvar=nvar, verbose = verbose)
           })
 
+#' @rdname QuickRecipe
 setMethod(f = "QuickRecipe",
           signature = signature(counts = "SMatrix"),
           definition = function(counts = NULL, min.cells = 20, min.features = 200,
@@ -127,6 +131,10 @@ setMethod(f = "QuickRecipe",
 
 "%ni%" <- Negate("%in%")
 
+#' @title getCores
+#' @description Get number of CPU cores for parallel processing.
+#' @param threads Requested thread count. If 0, auto-detect.
+#' @return Integer number of threads.
 #' @importFrom parallel detectCores
 #' @export
 getCores <- function(threads = 0)
@@ -196,6 +204,13 @@ ParseExonName <- function(object = NULL, assay = NULL)
 
 #'
 #' @importFrom data.table fread
+#' @title LoadEPTanno
+#' @description Load exon-pair-trio (EPT) annotation from a file.
+#' @param file Path to the EPT annotation file.
+#' @param object Seurat object to annotate.
+#' @param assay Assay name. If NULL, uses default assay.
+#' @param stranded Whether the annotation is stranded. Default is TRUE.
+#' @return Annotated Seurat object.
 #' @export
 LoadEPTanno <- function(file = NULL, object = NULL, assay = NULL, stranded = TRUE)
 {
@@ -321,6 +336,11 @@ ParseBED <- function(object = NULL, assay = NULL)
   object
 }
 
+#' @title RenameVARs
+#' @description Rename genetic variant features based on naming strategy.
+#' @param counts A count matrix.
+#' @param strategy Naming strategy (1 or 2). Default is 1.
+#' @return A renamed count matrix.
 #' @export
 RenameVARs <- function(counts = NULL, strategy = 1) {
   rn <- rownames(counts)

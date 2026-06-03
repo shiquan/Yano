@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+# Clean generated files for source package distribution
+rm -f src/Makevars src/Makevars.tmp src/*.o src/*.so src/*.dylib src/symbols.rds
+# Clean htslib build artifacts
+rm -f src/htslib-1.21/config.h src/htslib-1.21/config_vars.h src/htslib-1.21/config.mk
+rm -f src/htslib-1.21/htscodecs.mk src/htslib-1.21/*.o src/htslib-1.21/*.a
+rm -f src/htslib-1.21/*.so src/htslib-1.21/*.dylib src/htslib-1.21/hts-object-files
+if [ -f src/htslib-1.21/Makefile ]; then
+  (cd src/htslib-1.21 && make clean 2>/dev/null) || true
+fi

@@ -73,7 +73,7 @@ int dict_delete_value(struct dict *D, int idx)
 
 char *dict_name(const struct dict *D, int idx)
 {
-    assert(idx >= 0 && idx < D->n);
+    if (idx < 0 || idx >= D->n) return NULL;
     return D->name[idx];
 }
 
@@ -147,7 +147,7 @@ static int dict_push0(struct dict *D, char const *key, int idx)
     if (D->n == D->m) {
         D->m = D->m == 0 ? 1024 : D->m<<1;
         D->count = realloc(D->count, sizeof(uint32_t)*D->m);
-        assert(D->count);
+        if (!D->count) return 0;
         int i;
         for (i = D->n; i < D->m; ++i) D->count[i] = 0;
         D->name = realloc(D->name, sizeof(char*)*D->m);
@@ -284,7 +284,7 @@ char **dict_names(struct dict *D)
 static int check_similar(char *a, char *b, int mis)
 {
     int l0 = strlen(a);
-    assert(strlen(b) == l0);
+    if (strlen(b) != l0) return 1;
     int i;
     int m = 0;
     for (i = 0; i < l0; ++i) {

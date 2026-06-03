@@ -1,3 +1,11 @@
+# Suppress R CMD check notes about NSE variables
+utils::globalVariables(c(
+  "annoy.metric", "bind.feature", "bp_add", "bp_cum",
+  "dx", "dy", "gene", "label", "max_bp", "med", "name",
+  "nn.method", "padj", "pos", "qval", "strand", "type",
+  "x", "xmax", "xmin", "y", "ymax", "ymin"
+))
+
 # codes edited from tidyverse/R/attach.R zzz.R
 core <- c("ggplot2", "Seurat", "dplyr")
 

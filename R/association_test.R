@@ -12,17 +12,15 @@
 #' @param cells Calculate scores for predefined cells. Will reconstruct the SNN graph and weight matrix for these cells with 'reduction' space (usually be pca or harmony). Only weight matrix that calculated by SNN is supported if cells/idents/node is defined.
 #' @param perm Permutations for evaluating mean and sd of D/L scores. Default is 100.
 #' @param seed Seed for generate random number. Default is 999.
+#' @param layer Input data layer, usually be 'data'.
 #' @param threads Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.
-#' @param versbose Print log message. Default is TRUE.
+#' @param verbose Print log message. Default is TRUE.
+#' @param return.dist Return distance matrix. Default is FALSE.
 #' @param debug Print debug message. Will auto set thread to 1. Default is FALSE.
-#' @param reduction Dimension reduction name for constructing SNN graph and weight matrix. Default is 'pca'. This and following parameters only actived when cells is set, because need to recalculate the SNN graph for the defined cells. 
+#' @param reduction Dimension reduction name for constructing SNN graph and weight matrix. Default is 'pca'. This and following parameters only actived when cells is set, because need to recalculate the SNN graph for the defined cells.
 #' @param dims Dimensions of reduction used to construct SNN graph.
 #' @param k.param Defines k for the k-nearest neighbor algorithm. This one and following parameters will passed to Seurat::FindNeighbors.
 #' @param prune.SNN Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.
-#' @param nn.method Method for nearest neighbor finding. Options include: rann, annoy(default).
-#' @param annoy.metric Distance metric for annoy. Options include: euclidean (default), cosine, manhattan, and hamming
-#' @param n.trees More trees gives higher precision when using annoy approximate nearest neighbor search. Default is 50.
-#' @param nn.eps Error bound when performing nearest neighbor seach using RANN; default of 0.0 implies exact nearest neighbor search
 #' @importFrom Matrix sparseMatrix
 #' @importFrom data.table rbindlist
 #' @export

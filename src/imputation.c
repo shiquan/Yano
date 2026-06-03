@@ -10,12 +10,12 @@ SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
 {
     cholmod_common c;
     M_R_cholmod_start(&c);
-    
+
     double filter = asReal(_filter);
     CHM_SP X = AS_CHM_SP__(_X);
     CHM_SP W = AS_CHM_SP__(_W);
-    if (W->stype) return mkString("W cannot be symmetric");
-    // W = M_cholmod_transpose(W, (int)W->xtype, &c);
+    if (W->stype) { M_cholmod_finish(&c); return mkString("W cannot be symmetric"); }
+
     const int *Xp = (int*)X->p;
     const int *Xi = (int*)X->i;
     const double *Xx = (double*)X->x;
@@ -26,11 +26,10 @@ SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
 
     int nl = length(idx);
     int n_cell = W->nrow;
-    //int n_cell = W->ncol;
     int n_feature = X->nrow;
-    
-    if (X->ncol != n_cell) error("Unequal length of cells.");
-    if (nl > W->ncol) error("The output cells are more than ncol(W).");
+
+    if (X->ncol != n_cell) { M_cholmod_finish(&c); error("Unequal length of cells."); }
+    if (nl > W->ncol)      { M_cholmod_finish(&c); error("The output cells are more than ncol(W)."); }
 
     size_t n = 0, m = 1000;
     int *yi = malloc(m*sizeof(int));
@@ -46,7 +45,6 @@ SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
     for (i = 0; i < nl; ++i) { // foreach cell
         yp[i] = n;
         int ii = INTEGER(idx)[i]-1;
-        //Rprintf("cell, %d, n, %d\n", ii, n);
         int j;
         int n1 = 0;
         for (j = Wp[ii]; j < Wp[ii+1]; ++j) {
@@ -54,25 +52,28 @@ SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
             int ix = Wi[j];
             for (p = Xp[ix]; p < Xp[ix+1]; ++p) {
                 k = Xi[p];
-                if (w0[k] < ii+1) {                    
+                if (w0[k] < ii+1) {
                     w0[k] = ii+1;
                     i0[n1] = k;
                     x0[k] = Wx[j]*Xx[p];
                     n1++;
                 } else {
                     x0[k] += Wx[j]*Xx[p];
-                }                                      
+                }
             }
         }
         for (j = 0; j < n1; ++j) {
             int k = i0[j];
             if (x0[k] < filter) continue;
-            if (n ==m) {
+            if (n == m) {
                 m = m*2;
                 yi = realloc(yi, sizeof(int)*m);
                 yx = realloc(yx, sizeof(double)*m);
-                if (yi == NULL || yx == NULL)
+                if (yi == NULL || yx == NULL) {
+                    free(yi); free(yx);
+                    M_cholmod_finish(&c);
                     error("Failed to allocate data.");
+                }
             }
 
             yi[n] = k;
@@ -81,10 +82,13 @@ SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
         }
     }
     yp[i] = n;
-    // M_cholmod_free_sparse(&W, &c);
 
     CHM_SP ans = M_cholmod_allocate_sparse(n_feature, nl, n, FALSE, TRUE, 0, CHOLMOD_REAL, &c);
-    if (ans == NULL) return(mkString("Failed to create sparse matrix"));
+    if (ans == NULL) {
+        free(yi); free(yx);
+        M_cholmod_finish(&c);
+        return mkString("Failed to create sparse matrix");
+    }
     int *ap = (int *)ans->p;
     int *ai = (int *)ans->i;
     double *ax = (double *)ans->x;

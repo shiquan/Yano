@@ -156,7 +156,7 @@ void debug_print_bed(struct bed_spec *B)
 {
     int i;
     for (i = 0; i < B->n; ++i) {
-        fprintf(stderr, "%s\t%d\t%d\n", bed_seqname(B, B->bed[i].seqname), B->bed[i].start, B->bed[i].end);
+        REprintf("%s\t%d\t%d\n", bed_seqname(B, B->bed[i].seqname), B->bed[i].start, B->bed[i].end);
     }
 }
 

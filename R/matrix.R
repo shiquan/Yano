@@ -1,6 +1,12 @@
+#' @title mergeMatrix
+#' @description Merge multiple matrix files into one. At least two matrix files should be specified.
+#' @param x Matrix 1 or a list of Matrix.
+#' @param y Matrix 2.
+#' @param ... More matrix files.
+#' @export
 setGeneric(
   name = "mergeMatrix",
-  def=function(x,  ...)  standardGeneric("mergeMatrix")
+  def=function(x, y, ...)  standardGeneric("mergeMatrix")
 )
 
 MMerge0 <- function(x = NULL, y = NULL, ...) {
@@ -34,6 +40,7 @@ setMethod(f = "mergeMatrix",
           }
           )
 
+#' @rdname mergeMatrix
 setMethod(f = "mergeMatrix",
           signature = signature(x="list"),
           definition = function(x = NULL, ...) {

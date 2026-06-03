@@ -46,7 +46,7 @@ static const char *feature_type_names[] = {
 
 const char *get_feature_name(enum feature_type type)
 {
-    assert(type>-1);
+    if (type < 0) return "unknown";
     return feature_type_names[type];
 }
 
@@ -451,7 +451,7 @@ static void gtf_sort(struct gtf *gtf)
         
     if (gtf->n_gtf) {
         qsort((const struct gtf**)gtf->gtf, gtf->n_gtf, sizeof(struct gtf*), cmpfunc1);
-        assert(gtf->start < gtf->end);
+        if (gtf->start >= gtf->end) return;
     }
     /*
     if (gtf->query) {
@@ -518,7 +518,7 @@ static int gtf_build_index(struct gtf_spec *G)
     int mito_id = dict_query(G->name, mito);
     for (i = 0; i < dict_size(G->name); ++i) {
         struct gtf_ctg *ctg = dict_query_value(G->name,i);
-        assert(ctg);
+        if (!ctg) continue;
         qsort((const struct gtf**)ctg->gtf, ctg->n_gtf, sizeof(struct gtf*), cmpfunc1);
         int j;
         for (j = 0; j < ctg->n_gtf; ++j) {

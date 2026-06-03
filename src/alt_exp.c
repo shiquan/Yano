@@ -11,7 +11,7 @@ static cholmod_common c;
 extern int *random_idx(const int n);
 extern void shuffle(double tmp[], int const idx[], const int n);
 
-SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEXP _threads, SEXP _seed)
+SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEXP _threads)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
@@ -19,11 +19,6 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
     const int perm = asInteger(_perm);
     int n_thread = asInteger(_threads);
 
-    const int seed = asInteger(_seed);
-    // Rboolean debug = asLogical(_debug);
-
-    srand(seed);
-    
     int mode = asInteger(_mode);
     if (A->stype) return mkString("A cannot be symmetric");
     if (B->stype) return mkString("B cannot be symmetric");

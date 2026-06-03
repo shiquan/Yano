@@ -46,7 +46,7 @@ RunDEXSeq(
 
 \item{bind.features}{Candidate list for binding features. If not set, will use all.}
 
-\item{min.pct}{Only test features that are detected in a minimum fraction of min.pct cells in all cells.  Meant to speed up the function by not testing genes that are very infrequenctly expressed in all cells. Remember we are testing alternative epxression pattern here, so it is possible the test feature is not expressed in one group, therefore we are not going to check by groups. Note that min.pct is set for test feature here. But in \code{\link{RunPSI}}, the min.pct is set for binding feature. Default is 0.05.}
+\item{min.pct}{Only test features that are detected in a minimum fraction of min.pct cells in all cells.  Meant to speed up the function by not testing genes that are very infrequenctly expressed in all cells. Remember we are testing alternative epxression pattern here, so it is possible the test feature is not expressed in one group, therefore we are not going to check by groups. Note that min.pct is set for test feature here. But in RunPSI, the min.pct is set for binding feature. Default is 0.05.}
 
 \item{min.pct.bind.feature}{Only test binding features that are detected in a minimum fraction of min.pct.bind.feature in either of the two populations. Meant to speed up the function by not testing genes that are very infrequenctly expressed in both groups. Default is 0.05.}
 

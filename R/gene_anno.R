@@ -25,7 +25,7 @@ annoGene <- function(object = NULL, assay = NULL, gtf = NULL, gene.name = NULL)
   sl <- .Call("gene_locs", genes, gtf)
   
   if (class(sl) == "character") {
-    warnings("No genes found. Make sure you use the gene assay and right GTF database.")
+    warning("No genes found. Make sure you use the gene assay and right GTF database.")
     return(object)
   }
   sl0 <- sl[[1]]

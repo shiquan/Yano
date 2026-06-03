@@ -1,6 +1,23 @@
+#' @title QuickRecipe
+#' @description Quick clustering pipeline for single cell data using Seurat.
+#' @param counts Raw counts matrix or Seurat object.
+#' @param meta.data Optional meta data.
+#' @param min.cells Minimum cells for feature filtering.
+#' @param min.features Minimum features for cell filtering.
+#' @param nvar Number of variable features for PCA.
+#' @param ... Additional arguments.
+#' @export
 setGeneric("QuickRecipe", function(counts = NULL, meta.data = NULL, min.cells = 20, min.features = 200,
                                    nvar = 2000, ...) standardGeneric("QuickRecipe"))
 
+#' @title QuickRecipe0
+#' @description Simplified quick clustering (no dimension reduction).
+#' @param counts Raw counts matrix or Seurat object.
+#' @param meta.data Optional meta data.
+#' @param min.cells Minimum cells for feature filtering.
+#' @param min.features Minimum features for cell filtering.
+#' @param ... Additional arguments.
+#' @export
 setGeneric("QuickRecipe0", function(counts = NULL, meta.data = NULL, min.cells = 20, min.features = 200,
                                     ...) standardGeneric("QuickRecipe0"))
 

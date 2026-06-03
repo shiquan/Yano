@@ -19,7 +19,7 @@ SEXP gtf2db(SEXP filename, SEXP utr)
     const char *file = translateChar(STRING_ELT(filename, 0));
 
     int use_utr = asInteger(utr);
-    fprintf(stderr, "%s\n", file);
+    REprintf("Reading GTF: %s\n", file);
     struct gtf_spec *G = gtf_read(file, use_utr?1:2);
 
     SEXP ext = PROTECT(R_MakeExternalPtr(G, R_NilValue, R_NilValue));

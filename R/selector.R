@@ -60,11 +60,13 @@ DimSelector <- function(object,
 #' @inheritParams DimSelector
 #' @export
 FeatureSelector <- function(object,
-                            feature, 
+                            feature,
                             return.object = FALSE,
                             #return.lines = FALSE,
                             plot.selected = TRUE,
                             combine = FALSE,
+                            reduction = NULL,
+                            cells = NULL,
                             ...
                             )
 {
@@ -236,6 +238,10 @@ ImageDimSelector <- function(object,
 }
 
 #' @importFrom Seurat SpatialPlot
+#' @title SpatialConcaveHull
+#' @description Select cells from spatial plot using concave hull lasso.
+#' @inheritParams DimSelector
+#' @param knn Number of nearest neighbors for concave hull. Default is 3.
 #' @export
 SpatialConcaveHull <- function(
   object,
@@ -271,7 +277,7 @@ SpatialConcaveHull <- function(
   data <- as.matrix(data)
   cells0 <- paste0(round(data[,1],4),"_",round(data[,2],4))
   names(cells) <- cells0
-  ch <- concavemn::concaveman(data)
+  ch <- concaveman::concaveman(data)
   ch.ps <- paste0(ch[,1], "_", ch[,2])
   cells <- cells[ch.ps]
   cells <- as.character(cells)
@@ -295,6 +301,9 @@ SpatialConcaveHull <- function(
 }
 
 #' @importFrom Seurat DimPlot
+#' @title DimConcaveHull
+#' @description Select cells from dimension reduction plot using concave hull lasso.
+#' @inheritParams DimSelector
 #' @export
 DimConcaveHull <- function(
                            object,
@@ -393,6 +402,9 @@ DimConcaveHull <- function(
 #' @importFrom ggplot2 ggplot_build ggplot_gtable
 #' @importFrom stringr str_detect
 #' @importFrom grid deviceLoc seekViewport
+#' @title ggplot_selector
+#' @description Interactive cell selection tool for ggplot2-based plots.
+#' @return A list with x and y coordinates and logical index of selected cells.
 #' @export
 ggplot_selector <- function()
 {

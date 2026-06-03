@@ -50,6 +50,8 @@ FindAllAltExp(
 
 \item{seed}{Seed for generate random number. Default is 999.}
 
+\item{pseudo.group}{Aggregate counts into groups for each clusters. Used only for DEXSeq.}
+
 \item{debug}{Print debug logs. Will auto set thread to 1. Default is FALSE.}
 }
 \value{
