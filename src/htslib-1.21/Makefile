@@ -47,15 +47,29 @@ else
   NONCONFIGURE_OBJS =
 endif
 
-# ---- SIMD: only for x86_64; ARM gets NEON from htscodecs_bundled.mk ----
+# ---- SIMD: auto-detect via compile probe ----
+# Probe whether the compiler supports each ISA extension.
+# If compilation fails (e.g. GCC 13 ABI mismatch with bundled htscodecs),
+# the extension is silently disabled.
 ARCH := $(shell uname -m)
+
+HTS_CFLAGS_SSE4  = -msse4.1
+HTS_CFLAGS_AVX2  = -mavx2
+HTS_CFLAGS_AVX512 = -mavx512f -mavx512bw
+
 ifneq ($(filter x86_64 amd64,$(ARCH)),)
-  HTS_CFLAGS_SSE4  = -msse4.1
-  HTS_CFLAGS_AVX2  = -mavx2
-  HTS_CFLAGS_AVX512 = -mavx512f -mavx512bw
-  HTS_BUILD_SSE4  = 1
-  HTS_BUILD_AVX2  = 1
-  HTS_BUILD_AVX512 = 1
+  HTS_BUILD_SSE4 := $(shell echo 'int main(){return 0;}' | $(CC) $(HTS_CFLAGS_SSE4) -x c - -o /dev/null 2>/dev/null && echo 1 || echo 0)
+  HTS_BUILD_AVX2 := $(shell echo '#include <immintrin.h>' | $(CC) $(HTS_CFLAGS_AVX2) -x c - -o /dev/null 2>/dev/null && echo 1 || echo 0)
+  HTS_BUILD_AVX512 := $(shell echo '#include <immintrin.h>' | $(CC) $(HTS_CFLAGS_AVX512) -x c - -o /dev/null 2>/dev/null && echo 1 || echo 0)
+  ifeq ($(HTS_BUILD_SSE4),0)
+    HTS_CFLAGS_SSE4 =
+  endif
+  ifeq ($(HTS_BUILD_AVX2),0)
+    HTS_CFLAGS_AVX2 =
+  endif
+  ifeq ($(HTS_BUILD_AVX512),0)
+    HTS_CFLAGS_AVX512 =
+  endif
 else
   HTS_CFLAGS_SSE4  =
   HTS_CFLAGS_AVX2  =
