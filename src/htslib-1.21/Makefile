@@ -47,10 +47,10 @@ else
   NONCONFIGURE_OBJS =
 endif
 
-# ---- SIMD: auto-detect via compile probe ----
-# Probe whether the compiler supports each ISA extension.
-# If compilation fails (e.g. GCC 13 ABI mismatch with bundled htscodecs),
-# the extension is silently disabled.
+# ---- SIMD: auto-detect via actual source compilation ----
+# Probe by compiling the real htscodecs SIMD source with the ISA flag.
+# If the bundled htscodecs is incompatible with the system compiler
+# (e.g. GCC 13 ABI changes), the extension is silently disabled.
 ARCH := $(shell uname -m)
 
 HTS_CFLAGS_SSE4  = -msse4.1
@@ -58,9 +58,9 @@ HTS_CFLAGS_AVX2  = -mavx2
 HTS_CFLAGS_AVX512 = -mavx512f -mavx512bw
 
 ifneq ($(filter x86_64 amd64,$(ARCH)),)
-  HTS_BUILD_SSE4 := $(shell echo 'int main(){return 0;}' | $(CC) $(HTS_CFLAGS_SSE4) -x c - -o /dev/null 2>/dev/null && echo 1 || echo 0)
-  HTS_BUILD_AVX2 := $(shell echo '#include <immintrin.h>' | $(CC) $(HTS_CFLAGS_AVX2) -x c - -o /dev/null 2>/dev/null && echo 1 || echo 0)
-  HTS_BUILD_AVX512 := $(shell echo '#include <immintrin.h>' | $(CC) $(HTS_CFLAGS_AVX512) -x c - -o /dev/null 2>/dev/null && echo 1 || echo 0)
+  HTS_BUILD_SSE4 := $(shell $(CC) $(HTS_CFLAGS_SSE4) -I. -c $(HTSPREFIX)htscodecs/htscodecs/rANS_static32x16pr_sse4.c -o /dev/null 2>/dev/null && echo 1 || echo 0)
+  HTS_BUILD_AVX2 := $(shell $(CC) $(HTS_CFLAGS_AVX2) -I. -c $(HTSPREFIX)htscodecs/htscodecs/rANS_static32x16pr_avx2.c -o /dev/null 2>/dev/null && echo 1 || echo 0)
+  HTS_BUILD_AVX512 := $(shell $(CC) $(HTS_CFLAGS_AVX512) -I. -c $(HTSPREFIX)htscodecs/htscodecs/rANS_static32x16pr_avx512.c -o /dev/null 2>/dev/null && echo 1 || echo 0)
   ifeq ($(HTS_BUILD_SSE4),0)
     HTS_CFLAGS_SSE4 =
   endif
@@ -158,6 +158,11 @@ thread_pool_internal_h = thread_pool_internal.h $(htslib_thread_pool_h)
 
 # ---- build targets ----
 ALL_CPPFLAGS = -I. $(CPPFLAGS)
+
+# ---- per-file CFLAGS for SIMD objects (needed for -mavx2 etc.) ----
+htscodecs/htscodecs/rANS_static32x16pr_sse4.o:   CFLAGS += $(HTS_CFLAGS_SSE4)
+htscodecs/htscodecs/rANS_static32x16pr_avx2.o:   CFLAGS += $(HTS_CFLAGS_AVX2)
+htscodecs/htscodecs/rANS_static32x16pr_avx512.o: CFLAGS += $(HTS_CFLAGS_AVX512)
 
 all: lib-static
 
