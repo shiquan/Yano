@@ -58,9 +58,9 @@ HTS_CFLAGS_AVX2  = -mavx2
 HTS_CFLAGS_AVX512 = -mavx512f -mavx512bw
 
 ifneq ($(filter x86_64 amd64,$(ARCH)),)
-  HTS_BUILD_SSE4 := $(shell $(CC) $(HTS_CFLAGS_SSE4) -I. -c $(HTSPREFIX)htscodecs/htscodecs/rANS_static32x16pr_sse4.c -o /dev/null 2>/dev/null && echo 1 || echo 0)
-  HTS_BUILD_AVX2 := $(shell $(CC) $(HTS_CFLAGS_AVX2) -I. -c $(HTSPREFIX)htscodecs/htscodecs/rANS_static32x16pr_avx2.c -o /dev/null 2>/dev/null && echo 1 || echo 0)
-  HTS_BUILD_AVX512 := $(shell $(CC) $(HTS_CFLAGS_AVX512) -I. -c $(HTSPREFIX)htscodecs/htscodecs/rANS_static32x16pr_avx512.c -o /dev/null 2>/dev/null && echo 1 || echo 0)
+  HTS_BUILD_SSE4 := $(shell $(CC) $(CFLAGS) $(CPPFLAGS) $(HTS_CFLAGS_SSE4) -I. -c $(HTSPREFIX)htscodecs/htscodecs/rANS_static32x16pr_sse4.c -o /dev/null 2>/dev/null && echo 1 || echo 0)
+  HTS_BUILD_AVX2 := $(shell $(CC) $(CFLAGS) $(CPPFLAGS) $(HTS_CFLAGS_AVX2) -I. -c $(HTSPREFIX)htscodecs/htscodecs/rANS_static32x16pr_avx2.c -o /dev/null 2>/dev/null && echo 1 || echo 0)
+  HTS_BUILD_AVX512 := $(shell $(CC) $(CFLAGS) $(CPPFLAGS) $(HTS_CFLAGS_AVX512) -I. -c $(HTSPREFIX)htscodecs/htscodecs/rANS_static32x16pr_avx512.c -o /dev/null 2>/dev/null && echo 1 || echo 0)
   ifeq ($(HTS_BUILD_SSE4),0)
     HTS_CFLAGS_SSE4 =
   endif
