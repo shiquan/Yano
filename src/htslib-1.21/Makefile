@@ -95,6 +95,17 @@ HTSPREFIX =
 # ---- htscodecs (bundled) ----
 include htscodecs_bundled.mk
 
+# Remove SIMD objects that failed the probe (e.g. GCC 13 incompatibility)
+ifneq ($(HTS_BUILD_SSE4),1)
+  HTSCODECS_OBJS := $(filter-out %rANS_static32x16pr_sse4.o,$(HTSCODECS_OBJS))
+endif
+ifneq ($(HTS_BUILD_AVX2),1)
+  HTSCODECS_OBJS := $(filter-out %rANS_static32x16pr_avx2.o,$(HTSCODECS_OBJS))
+endif
+ifneq ($(HTS_BUILD_AVX512),1)
+  HTSCODECS_OBJS := $(filter-out %rANS_static32x16pr_avx512.o,$(HTSCODECS_OBJS))
+endif
+
 # ---- object files ----
 LIBHTS_OBJS = \
 	kfunc.o \
