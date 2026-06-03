@@ -3,7 +3,7 @@ HTSLIB = $(HTSDIR)/libhts.a
 HTSLIB_CPPFLAGS = -I$(HTSDIR)
 
 PKG_CFLAGS = @PKG_CFLAGS@ @openmp_cflags@ $(HTSLIB_CPPFLAGS) -I.
-PKG_LIBS = @PKG_LIBS@ @openmp_cflags@ $(HTSDIR)/libhts.a -lz -lm
+PKG_LIBS = @PKG_LIBS@ @openmp_cflags@ $(HTSDIR)/libhts.a -lz -lm -lcurl
 
 all: HTS
 
