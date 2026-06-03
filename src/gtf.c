@@ -266,7 +266,7 @@ static int gtf_push(struct gtf_spec *G, struct gtf_ctg *ctg, struct gtf *gtf, in
 
             if (tx_gtf->strand == -1) tx_gtf->strand = gene_gtf->strand;
             if (tx_gtf->gene_name == -1) tx_gtf->gene_name = gene_gtf->gene_name;
-            if (tx_gtf->gene_id == -1) tx_gtf->gene_name = gene_gtf->gene_id;
+            if (tx_gtf->gene_id == -1) tx_gtf->gene_id = gene_gtf->gene_id;
             return 0; // trans record end here
         }
 

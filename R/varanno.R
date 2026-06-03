@@ -62,7 +62,7 @@ annoVAR <- function(object = NULL, assay = NULL, gtf = NULL, vcf = NULL, tags = 
 
   df <- object[[assay]][[]]
 
-  if (length(intersect(c("chr","start","ref","alt"), colnames(df))) != 3) {
+  if (length(intersect(c("chr","start","ref","alt"), colnames(df))) < 4) {
     message("Parse names ..")
     object <- ParseVarName(object)
     df <- object[[assay]][[]]

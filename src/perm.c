@@ -16,10 +16,12 @@ int *random_idx(const int n)
 }
 void shuffle(double tmp[], int const idx[], const int n)
 {
-    double aux[n];
+    double *aux = (double*) calloc(n, sizeof(double));
+    if (aux == NULL) error("shuffle: memory allocation failed");
     int i;
     for (i = 0; i < n; i++) aux[idx[i]] = tmp[i];
     for (i = 0; i < n; i++) tmp[i] = aux[i];
+    free(aux);
 }
 
 static int **ris = NULL;
@@ -53,4 +55,9 @@ double *shuffle_index(double *tmp, int index, int length)
 int get_perm_idx(int i, int j) {
     if (i >= permutation) Rf_error("Out of range: i=%d, permutation=%d", i, permutation);
     return ris[i][j];
+}
+
+const int *get_perm_array(int i) {
+    if (i >= permutation) Rf_error("Out of range: i=%d, permutation=%d", i, permutation);
+    return ris[i];
 }

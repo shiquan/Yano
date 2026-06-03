@@ -36,7 +36,7 @@ annoTX <- function(object = NULL, assay = NULL, gtf = NULL, gene.name = "gene_na
   object[[assay]][["strand"]] <- sl0
   sl0 <- sl[[5]]
   names(sl0) <- fn
-  object[[assay]][[gene.name]] <- sl[[5]]
+  object[[assay]][[gene.name]] <- sl0
   
   object <- LogSeuratCommand(object)
   object

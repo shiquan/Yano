@@ -137,8 +137,6 @@ AssociationTest <- function(object = NULL,
                         k.param = k.param,
                         compute.SNN = TRUE,
                         prune.SNN = prune.SNN,
-                        nn.method = nn.method,
-                        annoy.metric = annoy.metric,
                         nn.eps = 0,
                         l2.norm = FALSE, cache.index = FALSE, verbose = FALSE)
     snn <- ng[['snn']]

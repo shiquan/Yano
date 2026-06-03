@@ -74,7 +74,6 @@ SEXP vcf_query_value(SEXP _vcf, SEXP _chr, SEXP _pos, SEXP _ref)
     if (idx == NULL) {
         hts_close(fp);
         bcf_hdr_destroy(hdr);
-        hts_idx_destroy(idx);
         error("No index file, plz index the VCF/BCF file first.");
     }
 
@@ -191,10 +190,6 @@ static int n_ret = 0;
 static int m_ret = 0;
 static struct ret **rets = NULL;
 
-void buffer_init() {
-    m_ret = 1000;
-    rets = malloc(m_ret*sizeof(struct ret*));
-}
 static void write_out(struct ret *ret)
 {
     if (n_ret == m_ret) {
@@ -244,12 +239,13 @@ static struct ret *run_it(bcf_hdr_t *hdr, bcf1_t *v, int n_unit, struct dict *sa
     }
 
     int ac[2]; // ref and nonref
-    double a0[n_unit]; // ref count per sample
-    double a1[n_unit];
+    double *a0 = calloc(n_unit, sizeof(double)); // ref count per sample
+    double *a1 = calloc(n_unit, sizeof(double));
+    if (a0 == NULL || a1 == NULL) {
+        free(gt_arr); free(a0); free(a1);
+        return NULL;
+    }
     ac[0] = 0; ac[1] = 0;
-    // filtering
-    memset(a0, 0, n_unit*sizeof(double));
-    memset(a1, 0, n_unit*sizeof(double));
     int i, j;        
     for (i = 0; i < nsample; i++) {
         int idx = dict_query(samples, hdr->samples[i]);
@@ -271,17 +267,24 @@ static struct ret *run_it(bcf_hdr_t *hdr, bcf1_t *v, int n_unit, struct dict *sa
     }
     if ((double)ac[1]/(ac[0]+ac[1]) < maf || (double)ac[0]/(ac[0]+ac[1]) < maf) {
         free(gt_arr);
+        free(a0); free(a1);
         return NULL;
     }
 
     struct ret *ret = ret_create();
     ret->rid = v->rid;
     ret->pos = v->pos+1;
-    
-    double tmpa[n_unit];
-    double tmpb[n_unit];
-    double tmpa_s[n_unit];
-    double tmpb_s[n_unit];
+
+    double *tmpa   = calloc(n_unit, sizeof(double));
+    double *tmpb   = calloc(n_unit, sizeof(double));
+    double *tmpa_s = calloc(n_unit, sizeof(double));
+    double *tmpb_s = calloc(n_unit, sizeof(double));
+    if (tmpa == NULL || tmpb == NULL || tmpa_s == NULL || tmpb_s == NULL) {
+        free(gt_arr); free(a0); free(a1);
+        free(tmpa); free(tmpb); free(tmpa_s); free(tmpb_s);
+        free(ret);
+        return NULL;
+    }
     
     // only test for nonref alleles
     // SPA
@@ -330,7 +333,13 @@ static struct ret *run_it(bcf_hdr_t *hdr, bcf1_t *v, int n_unit, struct dict *sa
     //double Ly = Ly1/Ly2;
     double r = ra/(rb1*rb2);
     double e = sqrt(Lx) * (1-r);
-    double es[perm];
+    double *es = calloc(perm, sizeof(double));
+    if (es == NULL) {
+        free(gt_arr); free(a0); free(a1);
+        free(tmpa); free(tmpb); free(tmpa_s); free(tmpb_s);
+        free(ret);
+        return NULL;
+    }
     int k;
     double mean = 0;
     for (k = 0; k < perm; ++k) {
@@ -382,12 +391,19 @@ static struct ret *run_it(bcf_hdr_t *hdr, bcf1_t *v, int n_unit, struct dict *sa
     }
     
     free(gt_arr);
+    free(a0); free(a1);
+    free(tmpa); free(tmpb); free(tmpa_s); free(tmpb_s);
+    free(es);
 
     return ret;
 }
 
 SEXP spa_vcf(SEXP _vcf, SEXP _W, SEXP _maf, SEXP _permut, SEXP _threads)
 {
+    // Reset global result buffer for re-entrant calls
+    n_ret = 0;
+    if (rets) { free(rets); rets = NULL; }
+
     const int perm = asInteger(_permut);
     int n_thread = asInteger(_threads);
 

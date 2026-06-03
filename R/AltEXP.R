@@ -31,17 +31,16 @@ ValidateCellGroups <- function(
     stop("Cell group 1 is empty - no cells with identity class ", cells.1)
   } else if (length(x = cells.2) == 0) {
     stop("Cell group 2 is empty - no cells with identity class ", cells.2)
-    return(NULL)
   } else if (length(x = cells.1) +length(x=cells.2)< min.cells) {
     stop("Cell group 1 has fewer than ", min.cells, " cells")
   } else if (any(!cells.1 %in% colnames(x = object))) {
-    bad.cells <- colnames(x = object)[which(x = !as.character(x = cells.1) %in% colnames(x = object))]
+    bad.cells <- cells.1[which(x = !as.character(x = cells.1) %in% colnames(x = object))]
     stop(
       "The following cell names provided to cells.1 are not present: ",
       paste(bad.cells, collapse = ", ")
     )
   } else if (any(!cells.2 %in% colnames(x = object))) {
-    bad.cells <- colnames(x = object)[which(x = !as.character(x = cells.2) %in% colnames(x = object))]
+    bad.cells <- cells.2[which(x = !as.character(x = cells.2) %in% colnames(x = object))]
     stop(
       "The following cell names provided to cells.2 are not present: ",
       paste(bad.cells, collapse = ", ")
@@ -324,7 +323,7 @@ FindAltExp <- function(object = NULL,
   d2 <- x[, cells.2]
   pct1 <- rowSums(d1>0)/length(cells.1)
   pct2 <- rowSums(d2>0)/length(cells.2)
-  pct <- rowSums(x)/length(ncol(x))
+  pct <- rowSums(x)/ncol(x)
   
   rm(d1)
   rm(d2)

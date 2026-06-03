@@ -335,19 +335,19 @@ SEXP dl_score(SEXP _A, SEXP _B, SEXP _W, SEXP _perm, SEXP _threads)
                     mna_s = mna_s/(double)n_cell;
                     mnb_s = mnb_s/(double)n_cell;
                     
-                    Lx1 = Ly1 = ra = rb1 = rb2 = 0;                
+                    Lx1 = Ly1 = ra = rb1 = rb2 = 0;
                     for (int jj = 0; jj < n_cell; ++jj) {
-                        Lx1 += pow(tmpa_s[jj] - mna_s, 2);
-                        Ly1 += pow(tmpb_s[jj] - mnb_s, 2);
-                        
+                        Lx1 += pow(tmpa_s[jj] - mna, 2);
+                        Ly1 += pow(tmpb_s[jj] - mnb, 2);
+
                         tmpa_s[jj] = tmpa_s[jj] - mna_s;
                         tmpb_s[jj] = tmpb_s[jj] - mnb_s;
-                        
+
                         ra += tmpa_s[jj] * tmpb_s[jj];
                         rb1 += pow(tmpa_s[jj],2);
                         rb2 += pow(tmpb_s[jj],2);
                     }
-                    
+
                     rb1 = sqrt(rb1);
                     rb2 = sqrt(rb2);
                     r = ra/(rb1*rb2);
