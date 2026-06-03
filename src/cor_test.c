@@ -436,13 +436,11 @@ SEXP D_test_v2(SEXP _A,
                SEXP idx,
                SEXP bidx,
                SEXP _filter,
-               SEXP _smoothY,
                SEXP _debug)
 {
     CHM_SP A = AS_CHM_SP__(_A);
     CHM_SP B = AS_CHM_SP__(_B);
     CHM_SP W = AS_CHM_SP__(_W);
-    Rboolean s_y = asLogical(_smoothY);
     CHM_SP A2;
     CHM_SP B2;
 
@@ -516,12 +514,12 @@ SEXP D_test_v2(SEXP _A,
     if (n_thread < 1) n_thread = 1;
 
     /* --- Per-thread buffers: sparse vectors + dense working arrays --- */
-    struct sparse_vec **buf_v     = (struct sparse_vec**) R_alloc(n_thread, sizeof(void*));
+    struct sparse_vec **buf_v      = (struct sparse_vec**) R_alloc(n_thread, sizeof(void*));
     struct sparse_vec **buf_v_perm = (struct sparse_vec**) R_alloc(n_thread, sizeof(void*));
-    double           **buf_X_s   = (double**) R_alloc(n_thread, sizeof(double*));
-    double           **buf_Y     = (double**) R_alloc(n_thread, sizeof(double*));
-    double           **buf_Yi    = (double**) R_alloc(n_thread, sizeof(double*));
-    double           **buf_D     = (double**) R_alloc(n_thread, sizeof(double*));
+    double           **buf_X_s     = (double**) R_alloc(n_thread, sizeof(double*));
+    double           **buf_Y       = (double**) R_alloc(n_thread, sizeof(double*));
+    double           **buf_Yi      = (double**) R_alloc(n_thread, sizeof(double*));
+    double           **buf_D       = (double**) R_alloc(n_thread, sizeof(double*));
 
     for (int t = 0; t < n_thread; t++) {
         buf_v[t]      = calloc(1, sizeof(struct sparse_vec));
@@ -567,31 +565,13 @@ SEXP D_test_v2(SEXP _A,
         X2 += (n_cell - fl) * mx * mx;
 
         /* ---- Extract Y from sparse B ---- */
-        memset(Y, 0, n_cell * sizeof(double));
         double msy = 0;
-        int s, j, p;
-        if (s_y) {
-            for (s = 0; s < n_cell; ++s) {
-                p = bp[ij];
-                for (j = wp[s]; j < wp[s+1]; ++j) {
-                    int id = wi[j];
-                    for (; p < bp[ij+1]; p++) {
-                        if (bi[p] == id) {
-                            Y[s] += bx[p] * wx[j];
-                        } else if (bi[p] > id) {
-                            break;
-                        }
-                    }
-                    if (p == bp[ij+1]) break;
-                }
-                msy += Y[s];
-            }
-        } else {
-            for (p = bp[ij]; p < bp[ij+1]; ++p) {
-                s = bi[p];
-                Y[s] = bx[p];
-                msy += Y[s];
-            }
+        int s, j;
+        memset(Y, 0, n_cell * sizeof(double));
+        for (int p = bp[ij]; p < bp[ij+1]; ++p) {
+            int s = bi[p];
+            Y[s] = bx[p];
+            msy += Y[s];
         }
         msy = msy / n_cell;
 
@@ -604,7 +584,7 @@ SEXP D_test_v2(SEXP _A,
         Yi2 = sqrt(Yi2);
 
         if (debug && i == 0)
-            Rprintf("X_mean, %f, smooth_Y_mean, %f, Yi^2, %f \n", mx, msy, Yi2);
+            Rprintf("X_mean, %f, Y_mean, %f, Yi^2, %f \n", mx, msy, Yi2);
 
         /* ---- Column 0: original X (no shuffle) ---- */
         sparse_smooth(v, wp, wi, wx, X_s, n_cell, filter);
@@ -693,13 +673,11 @@ SEXP D_distribution_test_v2(SEXP _A,
                             SEXP _B,
                             SEXP _W,
                             SEXP _permut,
-                            SEXP _smoothY,
                             SEXP _filter,
                             SEXP _debug)
 {
     int la = length(_A);
     int lb = length(_B);
-    Rboolean s_y = asLogical(_smoothY);
 
     CHM_SP W = AS_CHM_SP__(_W);
     double filter = asReal(_filter);
@@ -781,37 +759,22 @@ SEXP D_distribution_test_v2(SEXP _A,
     int *ti = (int*)SXt->i;
     int *tp = (int*)SXt->p;
 
-    double Ys[n_cell];
-    memset(Ys, 0, sizeof(double)*n_cell);
-    double msy = 0; // mean value of smoothed Y (Y~)
-    if (s_y) {
-        for (s = 0; s < n_cell; ++s) {
-            for (j = wp[s]; j < wp[s+1]; ++j) {
-                int id = wi[j];
-                if (Y[id] == 0) continue;
-                Ys[s] += Y[id]*wx[j];
-            }
-            msy += Ys[s];
-        }
-    } else {
-        for (s = 0; s < n_cell; ++s) {
-            Ys[s] = Y[s];
-            msy += Ys[s];
-        }
-    }
-        
+    double msy = 0;
+    for (s = 0; s < n_cell; ++s)
+        msy += Y[s];
+
    // calculate Sx and r
     msy = msy/n_cell;
-    double Yi[n_cell]; // Y~i - mean(Y~)
+    double Yi[n_cell]; // Yi - mean(Y)
     double Yi2 = 0; // sum(Y~u - mean(Y~))^2
     for (s = 0; s < n_cell; ++s) {
-        Yi[s] = Ys[s] - msy;
+        Yi[s] = Y[s] - msy;
         Yi2 += pow(Yi[s],2); 
     }
     Yi2 = sqrt(Yi2);
 
     if (debug) {
-        Rprintf("X_mean, %f, smooth_Y_mean, %f, Yi^2, %f \n", mx, msy, Yi2);
+        Rprintf("X_mean, %f, Y_mean, %f, Yi^2, %f \n", mx, msy, Yi2);
     }
 
     double D[perm+1];
