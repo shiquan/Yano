@@ -6,6 +6,9 @@
 #include<Rdefines.h>
 #include <Matrix.h>
 
+/* declared in cor_test.o via Matrix_stubs.c, resolved at link time */
+extern int M_cholmod_free_sparse(CHM_SP *A, cholmod_common *Common);
+
 SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
 {
     cholmod_common c;
@@ -99,8 +102,12 @@ SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
     free(yx);
 
     M_cholmod_sort(ans, &c);
+    /* doFree=0 avoids Matrix-internal leak; free ans before finishing c */
+    SEXP ret = PROTECT(M_chm_sparse_to_SEXP(ans, 0, 0, 0, "N", R_NilValue));
+    M_cholmod_free_sparse(&ans, &c);
     M_cholmod_finish(&c);
-    return M_chm_sparse_to_SEXP(ans, 1, 0, 0, "N", R_NilValue);
+    UNPROTECT(1);
+    return ret;
 }
 
 CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter, cholmod_common *c)

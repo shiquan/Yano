@@ -10,15 +10,12 @@
 SEXP knn2snn(SEXP _knn, SEXP prune)
 {
     switch(TYPEOF(_knn)) {
-    case LGLSXP:
     case INTSXP:
-    case REALSXP:
         break;
     default:
-        error("'knn' must be numeric");
+        error("'knn' must be an integer matrix");
     }
 
-    if(TYPEOF(_knn) != INTSXP) _knn = coerceVector(_knn, INTSXP);
     PROTECT(_knn);
 
     int ncell = nrows(_knn);

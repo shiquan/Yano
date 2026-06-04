@@ -5,6 +5,9 @@
 #include "dict.h"
 #include "Matrix/Matrix.h"
 
+/* declared in cor_test.o via Matrix_stubs.c, resolved at link time */
+extern int M_cholmod_free_sparse(CHM_SP *A, cholmod_common *Common);
+
 
 SEXP lognorm(SEXP _X, SEXP cs, SEXP _sf)
 {
@@ -36,7 +39,11 @@ SEXP lognorm(SEXP _X, SEXP cs, SEXP _sf)
     }
     ap[i] = n;
 
-    SEXP ret = M_chm_sparse_to_SEXP(ans, 1, 0, 0, "N", R_NilValue);
+    /* doFree=0 avoids the Matrix-internal code path that leaks +1 on
+       the R protection stack; we free the CHM_SP manually instead. */
+    SEXP ret = PROTECT(M_chm_sparse_to_SEXP(ans, 0, 0, 0, "N", R_NilValue));
+    M_cholmod_free_sparse(&ans, &c);
     M_cholmod_finish(&c);
+    UNPROTECT(1);
     return ret;
 }
