@@ -125,10 +125,12 @@ SEXP association_test1(SEXP A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP return_
 
     if (ret) {
         SEXP ta = PROTECT(allocVector(VECSXP, 3));
-        SET_VECTOR_ELT(ta, 0, ScalarReal(I1));
-        SET_VECTOR_ELT(ta, 1, ScalarReal(I2));
+        SEXP s1 = PROTECT(ScalarReal(I1));
+        SET_VECTOR_ELT(ta, 0, s1);
+        SEXP s2 = PROTECT(ScalarReal(I2));
+        SET_VECTOR_ELT(ta, 1, s2);
         SET_VECTOR_ELT(ta, 2, ds);
-        UNPROTECT(2);
+        UNPROTECT(4);
         return ta;
     } else {
         double mn = 0, sd = 0;
@@ -140,12 +142,15 @@ SEXP association_test1(SEXP A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP return_
             sd += REAL(ds)[i] *REAL(ds)[i];
         }
         sd = sqrt(sd/n_perm);
-        
+
         SEXP ta = PROTECT(allocVector(VECSXP, 3));
-        SET_VECTOR_ELT(ta, 0, ScalarReal(I1));
-        SET_VECTOR_ELT(ta, 1, ScalarReal(I2));
-        SET_VECTOR_ELT(ta, 2, ScalarReal((I1-I2-mn)/sd));
-        UNPROTECT(2);
+        SEXP s1 = PROTECT(ScalarReal(I1));
+        SET_VECTOR_ELT(ta, 0, s1);
+        SEXP s2 = PROTECT(ScalarReal(I2));
+        SET_VECTOR_ELT(ta, 1, s2);
+        SEXP s3 = PROTECT(ScalarReal((I1-I2-mn)/sd));
+        SET_VECTOR_ELT(ta, 2, s3);
+        UNPROTECT(5);
         return ta;
     }
 }

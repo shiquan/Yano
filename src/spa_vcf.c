@@ -149,7 +149,8 @@ SEXP vcf_query_value(SEXP _vcf, SEXP _chr, SEXP _pos, SEXP _ref)
         SET_VECTOR_ELT(df, i, ta[i]);
     }
 
-    setAttrib(df, R_ClassSymbol, mkString("data.frame"));
+    SEXP cls = PROTECT(mkString("data.frame"));
+    setAttrib(df, R_ClassSymbol, cls);
     SEXP names = PROTECT(allocVector(STRSXP, max_ploidy));
     for (i = 0; i < max_ploidy; ++i) {
         SET_STRING_ELT(names,  i, mkChar(v->d.allele[i]));
@@ -171,7 +172,7 @@ SEXP vcf_query_value(SEXP _vcf, SEXP _chr, SEXP _pos, SEXP _ref)
     hts_itr_destroy(itr);
     hts_idx_destroy(idx);
     hts_close(fp);
-    UNPROTECT(max_ploidy+3);
+    UNPROTECT(max_ploidy+4);
     return df;
 }
 
@@ -503,21 +504,22 @@ SEXP spa_vcf(SEXP _vcf, SEXP _W, SEXP _maf, SEXP _permut, SEXP _threads)
     SET_VECTOR_ELT(ta, 3, Valt);
     SET_VECTOR_ELT(ta, 4, Vt);
 
-    setAttrib(ta, R_ClassSymbol, mkString("data.frame"));
+    SEXP cls = PROTECT(mkString("data.frame"));
+    setAttrib(ta, R_ClassSymbol, cls);
     SEXP names = PROTECT(allocVector(STRSXP, 5));
     SET_STRING_ELT(names,  0, mkChar("chr"));
     SET_STRING_ELT(names,  1, mkChar("pos"));
     SET_STRING_ELT(names,  2, mkChar("ref"));
     SET_STRING_ELT(names,  3, mkChar("alt"));
-    SET_STRING_ELT(names,  4, mkChar("tval"));    
+    SET_STRING_ELT(names,  4, mkChar("tval"));
     setAttrib(ta, R_NamesSymbol, names);
 
     SEXP rownames = PROTECT(allocVector(INTSXP, 2));
     SET_INTEGER_ELT(rownames, 0, NA_INTEGER);
     SET_INTEGER_ELT(rownames, 1, -n_ret);
     setAttrib(ta, R_RowNamesSymbol, rownames);
-  
-    UNPROTECT(8);
+
+    UNPROTECT(9);
 
     return ta;
 }
