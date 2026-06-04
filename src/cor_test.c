@@ -576,6 +576,14 @@ SEXP D_test_v2(SEXP _A,
             Y[s] = bx[p];
         }
 
+        /*
+         * IMPORTANT: Y must be smoothed through W before computing D.
+         * D = SS * (1 - r) compares smooth-X against smooth-Y.
+         * Smoothing Y preserves spatial signal from the bind feature;
+         * using raw Y would discard spatial co-variation and inflate
+         * the D-score, producing overly conservative p-values.
+         * DO NOT remove this smoothing step.
+         */
         /* ---- Smooth Y through W: Yi = W * Y ---- */
         memset(Yi, 0, n_cell * sizeof(double));
         for (s = 0; s < n_cell; ++s) {
@@ -776,6 +784,14 @@ SEXP D_distribution_test_v2(SEXP _A,
     int *ti = (int*)SXt->i;
     int *tp = (int*)SXt->p;
 
+    /*
+     * IMPORTANT: Y must be smoothed through W before computing D.
+     * D = SS * (1 - r) compares smooth-X against smooth-Y.
+     * Smoothing Y preserves spatial signal from the bind feature;
+     * using raw Y discards spatial co-variation and inflates the
+     * D-score, producing overly conservative p-values.
+     * DO NOT remove this smoothing step.
+     */
     /* ---- Smooth Y through W ---- */
     double Yi[n_cell];
     memset(Yi, 0, sizeof(double)*n_cell);
