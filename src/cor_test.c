@@ -27,11 +27,15 @@ SEXP openmp_support()
 double * shuffle_double_arr(double *a, const int n)
 {
     double *s = calloc(n, sizeof(double));
+    if (!s) return NULL;
+    memcpy(s, a, n * sizeof(double));
     int i;
-    for (i = 0; i < n-1; ++i) {
+    /* Fisher-Yates in-place shuffle */
+    for (i = 0; i < n - 1; ++i) {
         int j = i + (int)(unif_rand() * (n - i));
-        s[i] = a[j];
-        s[j] = a[i];
+        double t = s[j];
+        s[j] = s[i];
+        s[i] = t;
     }
     return(s);
 }
@@ -567,29 +571,11 @@ SEXP D_test_v2(SEXP _A,
         /* ---- Extract Y from sparse B ---- */
         memset(Y, 0, n_cell * sizeof(double));
         double msy = 0;
-        int s, j, p;
-        if (s_y) {
-            for (s = 0; s < n_cell; ++s) {
-                p = bp[ij];
-                for (j = wp[s]; j < wp[s+1]; ++j) {
-                    int id = wi[j];
-                    for (; p < bp[ij+1]; p++) {
-                        if (bi[p] == id) {
-                            Y[s] += bx[p] * wx[j];
-                        } else if (bi[p] > id) {
-                            break;
-                        }
-                    }
-                    if (p == bp[ij+1]) break;
-                }
-                msy += Y[s];
-            }
-        } else {
-            for (p = bp[ij]; p < bp[ij+1]; ++p) {
-                s = bi[p];
-                Y[s] = bx[p];
-                msy += Y[s];
-            }
+        int s, p, j;
+        for (p = bp[ij]; p < bp[ij+1]; ++p) {
+            s = bi[p];
+            Y[s] = bx[p];
+            msy += Y[s];
         }
         msy = msy / n_cell;
 
