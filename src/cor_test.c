@@ -570,19 +570,32 @@ SEXP D_test_v2(SEXP _A,
 
         /* ---- Extract Y from sparse B ---- */
         memset(Y, 0, n_cell * sizeof(double));
-        double msy = 0;
         int s, p, j;
         for (p = bp[ij]; p < bp[ij+1]; ++p) {
             s = bi[p];
             Y[s] = bx[p];
-            msy += Y[s];
         }
+
+        /* ---- Smooth Y through W: Yi = W * Y ---- */
+        memset(Yi, 0, n_cell * sizeof(double));
+        for (s = 0; s < n_cell; ++s) {
+            if (Y[s] == 0.0) continue;
+            for (j = wp[s]; j < wp[s+1]; ++j)
+                Yi[wi[j]] += wx[j] * Y[s];
+        }
+        if (filter > 0.0) {
+            for (s = 0; s < n_cell; ++s)
+                if (Yi[s] < filter) Yi[s] = 0.0;
+        }
+
+        /* ---- Center smoothed Y ---- */
+        double msy = 0;
+        for (s = 0; s < n_cell; ++s) msy += Yi[s];
         msy = msy / n_cell;
 
-        /* ---- Center Y ---- */
         double Yi2 = 0;
         for (s = 0; s < n_cell; ++s) {
-            Yi[s] = Y[s] - msy;
+            Yi[s] = Yi[s] - msy;
             Yi2 += pow(Yi[s], 2);
         }
         Yi2 = sqrt(Yi2);
@@ -763,17 +776,29 @@ SEXP D_distribution_test_v2(SEXP _A,
     int *ti = (int*)SXt->i;
     int *tp = (int*)SXt->p;
 
+    /* ---- Smooth Y through W ---- */
+    double Yi[n_cell];
+    memset(Yi, 0, sizeof(double)*n_cell);
+    for (s = 0; s < n_cell; ++s) {
+        if (Y[s] == 0.0) continue;
+        for (j = wp[s]; j < wp[s+1]; ++j)
+            Yi[wi[j]] += wx[j] * Y[s];
+    }
+    if (filter > 0.0) {
+        for (s = 0; s < n_cell; ++s)
+            if (Yi[s] < filter) Yi[s] = 0.0;
+    }
+
     double msy = 0;
     for (s = 0; s < n_cell; ++s)
-        msy += Y[s];
+        msy += Yi[s];
 
    // calculate Sx and r
     msy = msy/n_cell;
-    double Yi[n_cell]; // Yi - mean(Y)
     double Yi2 = 0; // sum(Y~u - mean(Y~))^2
     for (s = 0; s < n_cell; ++s) {
-        Yi[s] = Y[s] - msy;
-        Yi2 += pow(Yi[s],2); 
+        Yi[s] = Yi[s] - msy;
+        Yi2 += pow(Yi[s],2);
     }
     Yi2 = sqrt(Yi2);
 
