@@ -763,6 +763,7 @@ RatioPlot0 <- function(object = NULL,
                        figure_plot = FALSE
                        )
 {
+  mode <- as.integer(match.arg(as.character(mode), choices = c("1", "2", "3")))
   # Set a theme to remove right-hand Y axis lines
   # Also sets right-hand Y axis text label formatting
   no.right <- theme(
@@ -1183,6 +1184,7 @@ RatioPlot <- function(object = NULL,
                       figure_plot = FALSE
                       )
 {
+  mode <- as.integer(match.arg(as.character(mode), choices = c("1", "2", "3")))
   assay <- assay %||% DefaultAssay(object)
   if (assay %ni% Assays(object)) {
     stop(paste0("Assay ", assay, " is not exist."))
