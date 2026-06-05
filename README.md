@@ -22,7 +22,7 @@ BiocManager::install("shiquan/Yano")
 
 ## Citation
  
-Shi, Q., & Kristiansen, K. (2025). Spatial dissimilarity analysis in single cell transcriptomics. bioRxiv, 2025.01.04.631330. https://doi.org/10.1101/2025.01.04.631330 
+Shi, Q., & Kristiansen, K. (2025). Spatial dissimilarity analysis in single cell transcriptomics. Cell Reports Methods. https://doi.org/10.1016/j.crmeth.2025.101226 
 
 
 
