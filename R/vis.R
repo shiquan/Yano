@@ -296,23 +296,23 @@ FbtPlot <- function(object = NULL,
     if (end.name %in% colnames(tab0)) {
       tab[['start']] <- as.numeric((tab0[[start.name]] + tab0[[end.name]]) / 2)
     }
+    tab[['assay']] <- assay0
+
     if (!is.null(col.by)) {
       if (col.by %in% colnames(tab0)) {
         tab[[col.by]] <- tab0[[col.by]]
-      } else {
+      } else if (!col.by %in% colnames(tab)) {
         warning(paste0("No ", col.by, " found at meta.features."))
       }
     }
-    
+
     if (!is.null(shape.by)) {
       if (shape.by %in% colnames(tab0)) {
         tab[[shape.by]] <- tab0[[shape.by]]
-      } else {
+      } else if (!shape.by %in% colnames(tab)) {
         warning(paste0("No ", shape.by, " found at meta.features."))
       }
     }
-    
-    tab[['assay']] <- assay0
     
     tab <- base::subset(tab, !is.na(qval))
 
