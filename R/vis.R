@@ -342,7 +342,7 @@ theme_cov <- function(...) {
   theme(
     axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
     axis.title.x = element_blank(),
-    axis.text.y = element_text(family = "Helvetica",color = "black",size = rel(1)),
+    axis.text.y = element_text(family = "Helvetica",color = "black",size = rel(0.8)),
     axis.text.x = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
     axis.line = element_blank(),
     axis.ticks = element_blank(),
@@ -377,9 +377,7 @@ plot.genes <- function(x = NULL, chr = NULL, start = NULL, end = NULL, gtf = NUL
     
     if (!is.null(highlights)) {
       df <- as.data.frame(highlights)
-      df$ymin <- 0
-      df$ymax <- 1
-      p <- p + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
+      p <- p + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax), ymin=-Inf, ymax=Inf, fill="grey", alpha=0.2)
     }
     p <- p + fbt_theme()
     return(p)
@@ -421,9 +419,7 @@ plot.genes <- function(x = NULL, chr = NULL, start = NULL, end = NULL, gtf = NUL
 
   if (!is.null(highlights)) {
     df <- as.data.frame(highlights)
-    df$ymin <- 0
-    df$ymax <- mi
-    p <- p + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
+    p <- p + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax), ymin=-Inf, ymax=Inf, fill="grey", alpha=0.2)
   }
   if (max.genes > 0 || !is.null(print.genes)) {
     p <- p + geom_text_repel(data=gname,aes(x=med,y=idx, label=gene), nudge_y = gname$nudge_y, size=5, max.overlaps=Inf, segment.color = "grey50")
@@ -454,9 +450,7 @@ plot.bed <- function(x = NULL, start = NULL, end = NULL, peaks = NULL, col.by = 
   }
   if (!is.null(highlights)) {
     df <- as.data.frame(highlights)
-    df$ymin <- 0
-    df$ymax <- 1
-    p <- p + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
+    p <- p + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax), ymin=-Inf, ymax=Inf, fill="grey", alpha=0.2)
   }
 
   p <- p + facet_wrap(facets = ~strand, strip.position = 'right', ncol = 1)
@@ -562,12 +556,10 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   
   if (!is.null(highlights)) {
     df <- as.data.frame(highlights)
-    df$ymin <- ymin
-    df$ymax <- ymax
-    p1 <- p1 + geom_rect(data=df,inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax,ymin=ymin,ymax=ymax), color="grey", alpha=0.2)
+    p1 <- p1 + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax), ymin=-Inf, ymax=Inf, fill="grey", alpha=0.2)
   }
   
-  p1 <- p1 + scale_y_continuous(breaks=pretty_breaks(),guide=guide_axis(check.overlap = T))
+  p1 <- p1 + scale_y_continuous(breaks = pretty_breaks(n = 4), labels = label_comma(), guide = guide_axis(check.overlap = TRUE))
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
   p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), ylim = c(ymin0, ymax0), expand=FALSE)
   p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue", "." = "grey60"))
@@ -715,18 +707,18 @@ TrackPlot <- function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
   
   if (!is.null(p0)) {
     if (!is.null(p3)) {
-      return(p0/ p1 / p3/ p2 + plot_layout(heights=layout.heights[c(1,2,2,3)]))
+      combined <- p0 / p1 / p3 / p2 + plot_layout(heights=layout.heights[c(1,2,2,3)])
     } else {
-      return(p0/ p1 / p2 + plot_layout(heights=layout.heights))
+      combined <- p0 / p1 / p2 + plot_layout(heights=layout.heights)
     }
+  } else if (!is.null(p3)) {
+    combined <- p1 / p3 / p2 + plot_layout(heights=layout.heights[c(2,2,3)])
+  } else if (length(layout.heights) == 2) {
+    combined <- p1 / p2 + plot_layout(heights=layout.heights)
+  } else {
+    combined <- p1 / p2 + plot_layout(heights=layout.heights[c(2,3)])
   }
-  if (!is.null(p3)) {
-    return(p1 / p3/ p2 + plot_layout(heights=layout.heights[c(2,2,3)]))
-  }
-  if (length(layout.heights) == 2) {
-    return(p1 / p2 + plot_layout(heights=layout.heights))
-  } 
-  return(p1 / p2 + plot_layout(heights=layout.heights[c(2,3)]))
+  combined & theme(panel.spacing = unit(0, "lines"), plot.margin = margin(0, 0, 0, 0))
 }
 
 #' @importFrom grDevices rgb
