@@ -133,14 +133,52 @@ FbtPlot0 <- function(tab = NULL,
       p <- p + geom_point(aes(x=bp_cum, y=qval, shape = .data[[shape.by]]),  size = pt.size)      
     }
   }
+  x_axis_angle <- 0
   if (isFALSE(zoom.in)) {
+    ## Assess chromosome label overlap risk using width distribution
+    chr_widths <- tab %>%
+      group_by(chr) %>%
+      summarise(width = max(start), .groups = "drop")
+    total_width <- sum(chr_widths$width)
+    if (total_width == 0) total_width <- 1  # degenerate guard
+    chr_widths$width_frac <- chr_widths$width / total_width
+    chr_widths$name_len <- nchar(as.character(chr_widths$chr))
+    ## squeeze: chars per unit of relative width (higher = more overlap risk)
+    chr_widths$squeeze <- chr_widths$name_len / chr_widths$width_frac
+    max_squeeze <- max(chr_widths$squeeze)
+    mean_squeeze <- sum(chr_widths$name_len)
+    squeeze_ratio <- max_squeeze / mean_squeeze
+    if (is.infinite(squeeze_ratio) || is.nan(squeeze_ratio)) squeeze_ratio <- 999
+
+    n_chrs <- nrow(axis_set)
+    max_chr_len <- max(chr_widths$name_len)
+
+    if (squeeze_ratio < 3 && n_chrs <= 12 && max_chr_len <= 4) {
+      x_axis_text_size <- rel(1.5)
+      x_axis_guide <- waiver()
+    } else if (squeeze_ratio < 10 && n_chrs <= 22) {
+      x_axis_text_size <- rel(1.2)
+      x_axis_guide <- waiver()
+    } else if (squeeze_ratio < 40) {
+      x_axis_text_size <- rel(1.0)
+      x_axis_guide <- guide_axis(n.dodge = 2)
+    } else {
+      x_axis_text_size <- rel(0.85)
+      x_axis_guide <- waiver()
+      x_axis_angle <- 45
+    }
     p <- p + scale_x_continuous(labels = axis_set$chr, breaks = axis_set$center,
                                 limits = c(min(data$bp_cum), max(data$bp_cum)),
-                                expand=c(0.01,0.01)) # , guide = guide_axis(n.dodge=2))
+                                expand = c(0.01, 0.01),
+                                guide = x_axis_guide)
   } else {
+    x_axis_text_size <- rel(1.5)
     p <- p + coord_cartesian(xlim=c(start, end), ylim=c(qval.min, qval.max), expand=FALSE) + scale_x_continuous(labels = scales::label_comma())
   }
   p <- p + fbt_theme() + theme(axis.title.y = element_text(size = rel(1.5), angle = 90))
+  p <- p + theme(axis.text.x = element_text(size = x_axis_text_size,
+                                             angle = x_axis_angle,
+                                             hjust = if (x_axis_angle > 0) 1 else 0.5))
   p <- p + xlab(xlab) + ylab(ylab)
 
   if (!is.null(point.label)) {
