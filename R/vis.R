@@ -518,6 +518,9 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     ymin0 <- ifelse(max.depth > 0, -1*max.depth, ymin)
   }
   ymax0 <- ifelse(max.depth > 0, max.depth, ymax)
+  y_pad <- (ymax0 - ymin0) * 0.06
+  ymin0 <- ymin0 - y_pad
+  ymax0 <- ymax0 + y_pad
   
   posmax <- max(bc$pos)
   posmin <- min(bc$pos)
@@ -559,7 +562,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
     p1 <- p1 + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax), ymin=-Inf, ymax=Inf, fill="grey", alpha=0.2)
   }
   
-  p1 <- p1 + scale_y_continuous(breaks = pretty_breaks(n = 4), labels = label_comma(), guide = guide_axis(check.overlap = TRUE))
+  p1 <- p1 + scale_y_continuous(breaks = pretty_breaks(n = 4), labels = label_comma(), guide = guide_axis(check.overlap = TRUE), expand = expansion(mult = c(0.06, 0.06)))
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
   p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), ylim = c(ymin0, ymax0), expand=FALSE)
   p1 <- p1 + scale_fill_manual(values = c("+" = "red", "-" = "blue", "." = "grey60"))
@@ -598,6 +601,7 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
   
   p1 <- ggplot(bc, aes(x=pos,y=depth)) + geom_area(stat = "identity", fill="black")
   p1 <- p1 + facet_wrap(facets = ~label, strip.position = 'right', ncol = 1)
+  p1 <- p1 + scale_y_continuous(expand = expansion(mult = c(0.06, 0.06)))
   p1 <- p1 + xlab("") + ylab("") + theme_bw() +coord_cartesian(xlim=c(start, end), expand=FALSE)
 
   return(p1)
