@@ -30,3 +30,6 @@ Yano.Rcheck/
 
 # macOS
 .DS_Store
+
+# Build tarballs
+*.tar.gz
