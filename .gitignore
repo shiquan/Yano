@@ -27,3 +27,6 @@ check/Yano.Rcheck
 .RData
 Rplots.pdf
 Yano.Rcheck/
+
+# macOS
+.DS_Store
