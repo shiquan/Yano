@@ -34,7 +34,6 @@
 #ifndef error
 #define error(line, ...) do						\
     {									\
-	Rprintf(ANSI_COLOR_RED "[error] [func: %s, line: %d] " ANSI_COLOR_RESET ANSI_COLOR_MAGENTA line ANSI_COLOR_RESET "\n", __FUNCTION__, __LINE__, ##__VA_ARGS__); \
 	errno = 0;							\
 	Rf_error(line, ##__VA_ARGS__);					\
     } while(0)

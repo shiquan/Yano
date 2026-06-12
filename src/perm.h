@@ -2,6 +2,9 @@
 #include<Rdefines.h>
 #include "Matrix.h"
 
+int *random_idx(const int n);
+void shuffle(double tmp[], int const idx[], const int n);
+
 void random_index_init(int perm, int n_unit);
 
 void random_index_free();

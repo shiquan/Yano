@@ -12,8 +12,9 @@ CheckBindName <- function(object,
     stop("No bind.name found at meta table.")
   }
 
-  sel <- meta[[bind.name]]  
-  names(sel) <- rownames(object)
+  sel <- meta[[bind.name]]
+  # use meta rownames for correct assay-feature alignment
+  names(sel) <- rownames(meta)
 
   DefaultAssay(object) <- old.assay
   return(sel)
@@ -79,7 +80,10 @@ DEXSeqTest <- function(x, y, cells.1 = NULL, cells.2 = NULL, pseudo.group = 3, r
   meta.tab <- data.frame(row.names=colnames(x),
                          condition=factor(c(rep("cluster1", pseudo.group),
                                             rep("cluster2", pseudo.group))))
-  
+
+  # NOTE: mode 2/3 transforms are already applied in FindAltExp before
+  # calling DEXSeqTest (which is always invoked with mode=1).  The
+  # branches below are retained for standalone DEXSeqTest usage.
   if (mode == 2) {
     y <- y - x
     y[y<0] <- 0
@@ -288,12 +292,12 @@ FindAltExp <- function(object = NULL,
 
   if (!is.null(ident.1)) {
     cells.1 <- colnames(object)[which(Idents(object) == ident.1)]
-    if (is.null(cells.1)) stop("No ident.1 found")
+    if (length(cells.1) == 0) stop("No ident.1 found")
   }
 
   if (!is.null(ident.2)) {
     cells.2 <- colnames(object)[which(Idents(object) == ident.2)]
-    if (is.null(cells.2)) stop("No ident.2 found")
+    if (length(cells.2) == 0) stop("No ident.2 found")
   }
 
   if (is.null(cells.1)) {
@@ -455,7 +459,9 @@ FindAllAltExp <- function(object = NULL,
     )
     tree <- ape::drop.tip(phy = tree, tip = drop.children)
     new.nodes <- unique(x = tree$edge[, 1, drop = TRUE])
-    idents.all <- (tree$Nnode + 2):max(tree$edge)
+    # identity classes to compare: all classes NOT in the selected node's clade
+    idents.all <- sort(x = unique(x = Idents(object = object)))
+    idents.all <- setdiff(x = idents.all, y = descendants)
   }
 
   genes.de <- list()
@@ -469,7 +475,7 @@ FindAllAltExp <- function(object = NULL,
           ident.1 = if (is.null(x = node)) {
             idents.all[i]
           } else {
-            tree
+            descendants
           },
           ident.2 = if (is.null(x = node)) {
             NULL
@@ -518,12 +524,8 @@ FindAllAltExp <- function(object = NULL,
     }
     gde <- genes.de[[i]]
     if (nrow(x = gde) > 0) {
-      if (nrow(x = gde) > 0) {
-        gde$cluster <- idents.all[i]
-      }
-      if (nrow(x = gde) > 0) {
-        gde.all <- rbind(gde.all, gde)        
-      }
+      gde$cluster <- idents.all[i]
+      gde.all <- rbind(gde.all, gde)
     }
   }
   

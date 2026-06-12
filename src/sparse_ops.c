@@ -9,9 +9,15 @@ static int ensure_cap(struct sparse_vec *v, int need)
     if (v->n_alloc >= need) return 0;
     int newcap = v->n_alloc ? v->n_alloc * 2 : 64;
     if (newcap < need) newcap = need;
+    int    *old_idx = v->idx;
+    double *old_val = v->val;
     int    *new_idx = realloc(v->idx,  newcap * sizeof(int));
     double *new_val = realloc(v->val, newcap * sizeof(double));
     if (!new_idx || !new_val) {
+        /* restore original pointers in case one realloc succeeded
+           and freed the old block, leaving v->idx or v->val dangling */
+        v->idx = old_idx;
+        v->val = old_val;
         free(new_idx); free(new_val);
         return 1;
     }

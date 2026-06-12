@@ -112,6 +112,8 @@ GetWeights <- function(snn = NULL,
     if (!inherits(snn, "sparseMatrix")) {
       stop("snn must be a sparse matrix (dgCMatrix).")
     }
+    # make a copy to avoid mutating the caller's matrix
+    snn <- as(snn, "CsparseMatrix")
     diag(snn) <- diag.value
     if (!is.null(cells)) {
       cells <- intersect(cells, rownames(snn))

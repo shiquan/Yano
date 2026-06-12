@@ -62,6 +62,7 @@ void index_bin_push(struct region_index *idx, uint32_t start, uint32_t end, void
         idx->size++;
     }
     if (l->m == l->n) {
+        if (l->m > INT_MAX/2) { errno = ENOMEM; return; }
         l->m <<=1;
         l->a = realloc(l->a, l->m*sizeof(void*));
     }

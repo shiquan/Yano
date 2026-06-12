@@ -90,11 +90,12 @@ SEXP merge_matrix(SEXP x)
         for (int j = 0; j < a->ncol; ++j) {
             const char *nm2 = CHAR(STRING_ELT(CN,j));
             int c1 = dict_query(cns, nm2);
+            if (c1 < 0) continue;
             for (int p0 = ap[j]; p0 < ap[j+1]; p0++) {
-                int i0 = ai[p0];                
+                int i0 = ai[p0];
                 const char *nm1 = CHAR(STRING_ELT(RN,i0));
                 i0 = dict_query(rns, nm1);
-                //continue;
+                if (i0 < 0) continue;
                 pOi[nz] = i0;
                 pOj[nz] = c1;
                 pOx[nz] = ax[p0];

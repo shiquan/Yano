@@ -290,7 +290,7 @@ SEXP association_test2(SEXP _A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP _threa
             ds[i] = i1 - i2;
             mn += ds[i];
         }
-        mn = mn/n_cell;
+        mn = mn/n_perm;
 
         for (i = 0; i < n_perm; ++i) {
             ds[i] = ds[i] - mn;

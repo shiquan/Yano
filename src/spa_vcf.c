@@ -417,7 +417,12 @@ SEXP spa_vcf(SEXP _vcf, SEXP _W, SEXP _maf, SEXP _permut, SEXP _threads)
         return R_NilValue;
     }
 
-    bcf_hdr_t *hdr = bcf_hdr_read(fp);    
+    bcf_hdr_t *hdr = bcf_hdr_read(fp);
+    if (hdr == NULL) {
+        Rprintf("Failed to read BCF/VCF header from %s.\n", vcf_fname);
+        hts_close(fp);
+        return R_NilValue;
+    }
 
     struct dict *samples = dict_init();
     int n_unit = W->nrow;

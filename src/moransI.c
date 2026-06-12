@@ -99,7 +99,7 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
         S02;
     
     int i;
-    for (i = 0; i < W->nzmax; ++i) {
+    for (i = 0; i < ((int*)W->p)[W->ncol]; ++i) {
         S0 += bx[i];
     }
     S02 = pow(S0, 2);
@@ -319,7 +319,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
             R_Free(tmp);
 
 #pragma omp critical
-            if (step == 1) {            
+            if (step == 0) {
                 REAL(Ival)[i] = I;
                 // REAL(Pval)[i] = p;
             }
@@ -401,7 +401,7 @@ SEXP moransi_perm_test(SEXP _A, SEXP _W, SEXP _scaled, SEXP _threads, SEXP _bina
     double S0 = 0;
     
     int i;
-    for (i = 0; i < W->nzmax; ++i) {
+    for (i = 0; i < ((int*)W->p)[W->ncol]; ++i) {
         if (bx[i] <= 0) continue;
         if (binarized) {
             S0++;

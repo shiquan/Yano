@@ -95,6 +95,10 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
             g22 += tmpb[ii];
         }
 
+        /* save original g12/g22 before mode transform for use in permutation loop */
+        double g12_orig = g12;
+        double g22_orig = g22;
+
         if (mode == 2) {
             g12 = g12 - g11;
             g22 = g22 - g21;
@@ -109,15 +113,13 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
 
         double mean = 0;
         double var = 0;
-        
+
         double *es = R_Calloc(perm, double);
         for (int k = 0; k < perm; ++k) {
             shuffle(tmpa, ris[k], n_cell);
             // shuffle(tmpb, ris[k], n_cell);
             g11 = 0;
-            // g12 = 0;
             // g21 = 0;
-            // g22 = 0;
             for (int j = 0; j < len_g1; ++j) {
                 int ii = INTEGER(idx1)[j]  -1;
                 g11 += tmpa[ii];
@@ -128,15 +130,18 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
             /*     g21 += tmpa[ii]; */
             /*     g22 += tmpb[ii]; */
             /* } */
-            
+
+            /* recompute g12 from original (untransformed) value + shuffled g11 */
             if (mode == 2) {
-                g12 = g12 - g11;
-                // g22 = g22 - g21;
+                g12 = g12_orig - g11;
+                // g22 = g22_orig - g21;
             } else if (mode == 3) {
-                g12 = g12 + g11;
-                // g22 = g22 + g21;
+                g12 = g12_orig + g11;
+                // g22 = g22_orig + g21;
+            } else {
+                g12 = g12_orig;  // mode 1: no transform, keep original
             }
-            
+
             // es[k] = (g11/g12) - (g21/g22);
             es[k] = g11/g12;
             mean = mean + es[k];

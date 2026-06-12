@@ -35,7 +35,7 @@ IdentToCells <- function(
   }
   if (length(x = as.vector(x = ident)) > 1 &&
         any(as.character(x = ident) %in% cellnames.use)) {
-    bad.cells <- cellnames.use[which(x = !as.character(x = ident) %in% cellnames.use)]
+    bad.cells <- as.character(ident)[which(!as.character(ident) %in% cellnames.use)]
     if (length(x = bad.cells) > 0) {
       stop(paste0("The following cell names provided to ident are not present in the object: ", paste(bad.cells, collapse = ", ")))
     }
@@ -71,7 +71,7 @@ SDT <- function(x, y, idx, bidx, W, cs, threads, perm, scale.factor, mode, scale
 #' @param perm Permutations for evaluating mean and sd of D/L scores. Default is 100.
 #' @param seed Seed for generate random number. Default is 999.
 #' @param threads Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.
-#' @param versbose Print log message. Default is TRUE.
+#' @param verbose Print log message. Default is TRUE.
 #' @param debug Print debug message. Will auto set thread to 1. Default is FALSE.
 #' @param force Force to use this function.
 #' @importFrom Matrix sparseMatrix
@@ -205,7 +205,7 @@ RunBlockCorr <- function(object = NULL,
     if (isTRUE(verbose)) {
       message("Retrieve binding data from assay ", bind.assay, ".")
     }
-    old.assay <- DefaultAssay(object)
+    old.bind.assay <- DefaultAssay(object)
     DefaultAssay(object) <- bind.assay
 
     ## todo
@@ -216,8 +216,8 @@ RunBlockCorr <- function(object = NULL,
     blocks1 <- rownames(object)[idx]
 
     tab <- subset(tab, tab[[bind.name]] %in% blocks1)
-    
-    DefaultAssay(object) <- old.assay
+
+    DefaultAssay(object) <- old.bind.assay
 
     features <- intersect(features, rownames(tab))
     tab <- tab[features, ]
@@ -327,7 +327,7 @@ lognorm <- function(mat = NULL, cs = NULL, scale.factor = 1e5)
 #' @param perm Permutations for evaluating mean and sd of D/L scores. Default is 100.
 #' @param seed Seed for generate random number. Default is 999.
 #' @param threads Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.
-#' @param versbose Print log message. Default is TRUE.
+#' @param verbose Print log message. Default is TRUE.
 #' @param debug Print debug message. Will auto set thread to 1. Default is FALSE.
 #' @examples
 #' data("glbt_small")
@@ -469,7 +469,7 @@ RunSDT <- function(object = NULL,
     if (isTRUE(verbose)) {
       message("Retrieve binding data from assay ", bind.assay, ".")
     }
-    old.assay <- DefaultAssay(object)
+    old.bind.assay <- DefaultAssay(object)
     DefaultAssay(object) <- bind.assay
 
     y <- GetAssayData1(object, assay = bind.assay, layer = "counts")
@@ -479,8 +479,8 @@ RunSDT <- function(object = NULL,
     blocks1 <- rownames(y)[idx]
 
     tab <- subset(tab, tab[[bind.name]] %in% blocks1)
-    
-    DefaultAssay(object) <- old.assay
+
+    DefaultAssay(object) <- old.bind.assay
 
     features <- intersect(features, rownames(tab))
     tab <- tab[features,]
