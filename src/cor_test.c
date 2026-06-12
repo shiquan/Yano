@@ -24,21 +24,6 @@ SEXP openmp_support()
 #endif
     return ScalarLogical(0);
 }
-double * shuffle_double_arr(double *a, const int n)
-{
-    double *s = calloc(n, sizeof(double));
-    if (!s) return NULL;
-    memcpy(s, a, n * sizeof(double));
-    int i;
-    /* Fisher-Yates in-place shuffle */
-    for (i = 0; i < n - 1; ++i) {
-        int j = i + (int)(unif_rand() * (n - i));
-        double t = s[j];
-        s[j] = s[i];
-        s[i] = t;
-    }
-    return(s);
-}
 void smooth_W(double * const a, double *s, const int N, CHM_SP W)
 {
     int *wp = (int*)W->p;
