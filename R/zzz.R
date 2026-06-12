@@ -91,12 +91,6 @@ package_packages <- function(include_self = TRUE) {
   names
 }
 
-invert <- function(x) {
-  if (length(x) == 0) return()
-  stacked <- utils::stack(x)
-  tapply(as.character(stacked$ind), stacked$values, list)
-}
-
 .onAttach <- function(...) {
   if (isTRUE(getOption("Yano.autoattach", default = FALSE))) {
     attached <- package_attach()

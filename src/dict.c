@@ -145,6 +145,7 @@ static int dict_push0(struct dict *D, char const *key, int idx)
         return ret;
     }
     if (D->n == D->m) {
+        if (D->m > INT_MAX/2) { errno = ENOMEM; return -1; }
         D->m = D->m == 0 ? 1024 : D->m<<1;
         D->count = realloc(D->count, sizeof(uint32_t)*D->m);
         if (!D->count) return 0;

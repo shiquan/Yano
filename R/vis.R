@@ -5,8 +5,8 @@ fbt_theme <- function() {
     axis.title.x = element_text(color = "black", family = "Helvetica",size = rel(1.5)),
     axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
     axis.line = element_blank(),
-    axis.ticks = element_line(size = rel(1), color = "black"),
-    panel.border = element_rect(color = "black", fill = NA, size= rel(2), linetype = "solid"),
+    axis.ticks = element_line(linewidth = rel(1), color = "black"),
+    panel.border = element_rect(color = "black", fill = NA, linewidth = rel(2), linetype = "solid"),
     panel.grid.major = element_blank(),
     panel.grid.minor = element_blank(),
     panel.background = element_rect(fill = "whitesmoke"),
@@ -452,8 +452,8 @@ plot.genes <- function(x = NULL, chr = NULL, start = NULL, end = NULL, gtf = NUL
       }
     }
   }
-  p <- ggplot() + geom_segment(data = subset(tracks, type == 1),aes(x = start, xend = end, y = idx, yend = idx, color=strand), size=1)
-  p <- p + geom_segment(data = subset(tracks, type == 2), aes(x = start, xend = end, y = idx, yend = idx),color="black", size = 3)
+  p <- ggplot() + geom_segment(data = subset(tracks, type == 1),aes(x = start, xend = end, y = idx, yend = idx, color=strand), linewidth=1)
+  p <- p + geom_segment(data = subset(tracks, type == 2), aes(x = start, xend = end, y = idx, yend = idx),color="black", linewidth = 3)
 
   if (!is.null(highlights)) {
     df <- as.data.frame(highlights)
@@ -478,12 +478,12 @@ plot.bed <- function(x = NULL, start = NULL, end = NULL, peaks = NULL, col.by = 
   tab <- subset(peaks, start >= start.filter & end <= end.filter)
   p <- ggplot()
   if ("type" %in% colnames(tab) & !is.null(col.by)) {
-    p <- p + geom_rect(data = tab,inherit.aes = F,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=type), size = 1)
-    #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=type), size = 3)
+    p <- p + geom_rect(data = tab,inherit.aes = F,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=type), linewidth = 1)
+    #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=type), linewidth = 3)
     p <- p + scale_fill_manual(values = col.by)
   } else {
-    p <- p + geom_rect(data = tab, inherit.aes = F,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=strand), size = 1)
-    #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), size = 3)
+    p <- p + geom_rect(data = tab, inherit.aes = F,aes(xmin = start, xmax = end, ymin = 0, ymax = 1, fill=strand), linewidth = 1)
+    #p <- p + geom_segment(data = subset(tab, strand=="-"),aes(x = start, xend = end, y = 0, yend = 0, color=strand), linewidth = 3)
     p <- p + scale_fill_manual(values = c("+" = "red", "-" = "blue", "." = "grey60"))
   }
   if (!is.null(highlights)) {

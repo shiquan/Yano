@@ -174,10 +174,6 @@ RunAutoCorr <- function(object = NULL,
   rm(moransi.vals)
   gc()
 
-  ## trim logs
-  cells <- head(cells)
-  features <- head(features)
-  
   object <- LogSeuratCommand(object)
   
   tt <- Sys.time()-tt
@@ -221,9 +217,9 @@ SetAutoCorrFeatures <- function(object = NULL,
   if (isTRUE(verbose)) {
     message(paste0(length(idx), " autocorrelated features."))
   }
-  object0[["autocorr.variable"]] <- FALSE
+  object0[[name]] <- FALSE
 
-  all <- object0[["autocorr.variable"]][[1]]
+  all <- object0[[name]][[1]]
   all[idx] <- TRUE
   names(all) <- rownames(object0)
   object0[[name]] <- all

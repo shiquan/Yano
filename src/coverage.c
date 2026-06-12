@@ -466,7 +466,7 @@ struct depth* bam2depth(const hts_idx_t *idx, const int tid, const int start, co
     }
 
     if (result < -1)
-        warnings("Failed to retrieve region due to truncated file or corrupt bam index.");
+        warning("Failed to retrieve region due to truncated file or corrupt bam index.");
     
     hts_itr_destroy(itr);
 
@@ -501,18 +501,18 @@ struct depth *fragment2depth(tbx_t *tbx, const char *seqname, int start, int end
         
         int n;
         int *s = ksplit(&r, '\t', &n);
-        if (n < 4) continue;
+        if (n < 4) { free(s); continue; }
         int st = str2int(r.s + s[1]);
         int ed = str2int(r.s + s[2]);
-            
-        if (ed <= start) continue;
-        if (st >= end) continue;
-            
+
+        if (ed <= start) { free(s); continue; }
+        if (st >= end)   { free(s); continue; }
+
         char *cell = r.s + s[3];
         int id = -1;
         if (bc) {
             id = dict_query(bc, cell);
-            if (id == -1) continue;
+            if (id == -1) { free(s); continue; }
             if (alias_idx) id = alias_idx[id];
         }
         

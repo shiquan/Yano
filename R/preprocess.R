@@ -106,9 +106,9 @@ setMethod(f = "QuickRecipe",
                                 ndim = 20, verbose = TRUE
                                 ) {
             
-            object <- QuickRecipe0(counts=counts, 
+            object <- QuickRecipe0(counts=counts,
                                    min.cells =min.cells, min.features = min.features,
-                                   assay = NULL, verbose = verbose)
+                                   assay = assay, verbose = verbose)
 
             ProcessDimReduc(object, ndim=ndim, resolution=resolution, nvar=nvar, verbose = verbose)
           })
@@ -370,7 +370,7 @@ RenameVARs <- function(counts = NULL, strategy = 1) {
     nm0 <- unique(nm)
 
     idx <- match(nm, nm0)
-    #counts <- as(counts, "dgCMatrix")
+    counts <- as(counts, "dgCMatrix")
     x <- Matrix::sparseMatrix(i = idx[counts@i+1], p = counts@p, x= counts@x)
     rownames(x) <- nm0
     colnames(x) <- colnames(counts)
@@ -413,7 +413,7 @@ RenameVARs <- function(counts = NULL, strategy = 1) {
     
     nm0 <- unique(nm)
     idx <- match(nm, nm0)
-    counts <- counts[names(nm),]
+    counts <- as(counts[names(nm),], "dgCMatrix")
     x <- Matrix::sparseMatrix(i = idx[counts@i+1], p = counts@p, x= counts@x)
     rownames(x) <- nm0
     colnames(x) <- colnames(counts)

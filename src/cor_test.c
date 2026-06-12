@@ -664,7 +664,12 @@ SEXP D_test_v2(SEXP _A,
         for (j = 1; j < perm + 1; ++j) vr += pow(D[j] - md, 2);
         vr = sqrt(vr / perm);
 
-        double t = (md - D[0]) / vr;
+        double t;
+        if (vr == 0.0) {
+            t = (md == D[0]) ? 0.0 : NA_REAL;
+        } else {
+            t = (md - D[0]) / vr;
+        }
 
         REAL(Dval)[i] = D[0];
         REAL(Tval)[i] = t;
@@ -948,10 +953,20 @@ SEXP D_distribution_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
     const double Lx2_obs = Lx2;
     const double rb2_obs = rb2;
 
+    /* pre-generate permutation indices to avoid unif_rand() inside OpenMP */
+    GetRNGstate();
+    int **ris = R_Calloc(perm, int*);
+    for (int pi = 0; pi < perm; ++pi) {
+        ris[pi] = random_idx(N);
+    }
+    PutRNGstate();
+
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < perm; ++i) {
-        double *s = shuffle_double_arr(a, N);
-        double *tmpa_s = calloc(N, sizeof(double));
+        double *s = R_Calloc(N, double);
+        memcpy(s, a, N * sizeof(double));
+        shuffle(s, ris[i], N);
+        double *tmpa_s = R_Calloc(N, double);
         smooth_W(s, tmpa_s, N, W);
         double mna_s = 0;
         int j;
@@ -971,8 +986,8 @@ SEXP D_distribution_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
 
         rb1 = sqrt(rb1);
 
-        free(tmpa_s);
-        free(s);
+        R_Free(tmpa_s);
+        R_Free(s);
 
         double Lx = Lx1 / Lx2_obs;
         double r  = ra / (rb1 * rb2_obs);
@@ -982,6 +997,9 @@ SEXP D_distribution_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
             REAL(X)[i]  = e;
         }
     }
+
+    for (int pi = 0; pi < perm; ++pi) R_Free(ris[pi]);
+    R_Free(ris);
 
     R_Free(tmpb_s);
     R_Free(a);
@@ -1072,10 +1090,20 @@ SEXP D_distribution_test2(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads
     const double Lx2_obs = Lx2;
     const double rb2_obs = rb2;
 
+    /* pre-generate permutation indices to avoid unif_rand() inside OpenMP */
+    GetRNGstate();
+    int **ris = R_Calloc(perm, int*);
+    for (int pi = 0; pi < perm; ++pi) {
+        ris[pi] = random_idx(N);
+    }
+    PutRNGstate();
+
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < perm; ++i) {
-        double *s = shuffle_double_arr(a, N);
-        double *tmpa_s = calloc(N, sizeof(double));
+        double *s = R_Calloc(N, double);
+        memcpy(s, a, N * sizeof(double));
+        shuffle(s, ris[i], N);
+        double *tmpa_s = R_Calloc(N, double);
         smooth_W2(s, tmpa_s, N, W);
         double mna_s = 0;
         int j;
@@ -1095,8 +1123,8 @@ SEXP D_distribution_test2(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads
 
         rb1 = sqrt(rb1);
 
-        free(tmpa_s);
-        free(s);
+        R_Free(tmpa_s);
+        R_Free(s);
 
         double Lx = Lx1 / Lx2_obs;
         double r  = ra / (rb1 * rb2_obs);
@@ -1106,6 +1134,9 @@ SEXP D_distribution_test2(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads
             REAL(X)[i]  = e;
         }
     }
+
+    for (int pi = 0; pi < perm; ++pi) R_Free(ris[pi]);
+    R_Free(ris);
 
     R_Free(tmpb_s);
     R_Free(a);

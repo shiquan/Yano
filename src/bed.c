@@ -349,13 +349,15 @@ static int parse_str(struct bed_spec *B, kstring_t *str)
     int seqname = dict_push(B->seqname, str->s + s[0]);
     int start   = str2int(str->s+s[1]);
     int end     = str2int(str->s+s[2]);
-    if (start == 0 && end == 0) return 1;
+    if (start == 0 && end == 0) { free(s); return 1; }
 
     if (end < start) error("Bad range: %s:%d-%d", str->s+s[0], start, end);
 
     if (B->n == B->m) {
+        if (B->m > INT_MAX/2) { errno = ENOMEM; return 1; }
         B->m = B->m == 0 ? 32 : B->m<<1;
         B->bed = realloc(B->bed, sizeof(struct bed)*B->m);
+        if (B->bed == NULL) { errno = ENOMEM; return 1; }
     }
     struct bed *bed = &B->bed[B->n];
     bed->seqname = seqname;
@@ -392,8 +394,10 @@ int bed_spec_push0(struct bed_spec *B, const char *seqname, int start, int end, 
     if (strand != 1 && strand != 0 && strand != -1) error("Unknown strand.");
     
     if (B->n == B->m) {
+        if (B->m > INT_MAX/2) { errno = ENOMEM; return 1; }
         B->m = B->m == 0 ? 32 : B->m<<1;
         B->bed = realloc(B->bed, sizeof(struct bed)*B->m);
+        if (B->bed == NULL) { errno = ENOMEM; return 1; }
     }
     
     int seqname_id = dict_push(B->seqname, seqname);
@@ -413,8 +417,10 @@ int bed_spec_push0(struct bed_spec *B, const char *seqname, int start, int end, 
 int bed_spec_push1(struct bed_spec *B, int seqname, int start, int end, int strand, int name, void *ext)
 {
     if (B->n == B->m) {
+        if (B->m > INT_MAX/2) { errno = ENOMEM; return 1; }
         B->m = B->m == 0 ? 32 : B->m<<1;
         B->bed = realloc(B->bed, sizeof(struct bed)*B->m);
+        if (B->bed == NULL) { errno = ENOMEM; return 1; }
     }
     
     struct bed *b = &B->bed[B->n];
@@ -430,8 +436,10 @@ int bed_spec_push1(struct bed_spec *B, int seqname, int start, int end, int stra
 int bed_spec_push(struct bed_spec *B, struct bed *bed)
 {
     if (B->n == B->m) {
+        if (B->m > INT_MAX/2) { errno = ENOMEM; return 1; }
         B->m = B->m == 0 ? 32 : B->m<<1;
         B->bed = realloc(B->bed, sizeof(struct bed)*B->m);
+        if (B->bed == NULL) { errno = ENOMEM; return 1; }
     }
     struct bed *bed0 = &B->bed[B->n];
     memcpy(bed0, bed, sizeof(struct bed));
@@ -558,7 +566,7 @@ struct region_itr *bed_query(const struct bed_spec *B, char *name, int start, in
     }
     
     int st = B->ctg[id].idx; // 0 based
-    if (end < B->bed[st].start) return NULL; // out of range
+    if (st < 0 || end < B->bed[st].start) return NULL; // no beds for contig or out of range
 
     struct region_index *idx = B->idx[id].idx;
     struct region_itr *itr = region_query(idx, start, end);

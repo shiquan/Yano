@@ -37,6 +37,11 @@ SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
     size_t n = 0, m = 1000;
     int *yi = malloc(m*sizeof(int));
     double *yx = malloc(m*sizeof(double));
+    if (yi == NULL || yx == NULL) {
+        free(yi); free(yx);
+        M_cholmod_finish(&c);
+        error("Failed to allocate memory for imputation.");
+    }
     int yp[nl+1];
     int w0[n_feature];
     double x0[n_feature];

@@ -388,7 +388,7 @@ DimConcaveHull <- function(
     object[['selector']] <- 'unselect'
     object[['selector']][cells0,] <- 'selected'
     
-    p <- DimPlot(object, group.by = 'selector', reduction = reduction, cells=cells)
+    p <- DimPlot(object, group.by = 'selector', reduction = reduction, cells = cells0)
     print(p)
   }
 

@@ -27,8 +27,8 @@ bamcov0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "
   if (!is.null(cell.group)) {
     cell.names <- names(cell.group)
     if (is.null(cell.names)) stop("Names of cell.group should not be empty.")
+    groups <- levels(cell.group) %||% unique(as.character(cell.group))
     cell.group <- as.character(cell.group)
-    groups <- levels(cell.group) %||% unique(cell.group)
     group.ids <- match(cell.group, groups)
     n <- length(cell.group)
     split.bc <- TRUE    
@@ -58,13 +58,9 @@ bamcov0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "
       j = match(dlst[[5]][idx.0], y),
       x = dlst[[4]][idx.0],
       dims=c(nr,nc))
-
-    rownames(m0) <- x
-    colnames(m0) <- y
-    m0 <- as.matrix(m0)
-    tab1 <- reshape2::melt(m0)
-    tab1$strand <- '+'
-    tab <- rbind(tab,tab1)
+    s0 <- summary(m0)
+    tab1 <- data.frame(pos = x[s0$i], label = y[s0$j], depth = s0$x, strand = '+')
+    tab <- rbind(tab, tab1)
   }
 
   if (length(idx.1) > 0) {
@@ -73,13 +69,9 @@ bamcov0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "
       j = match(dlst[[5]][idx.1], y),
       x = dlst[[4]][idx.1],
       dims=c(nr,nc))
-
-    rownames(m1) <- x
-    colnames(m1) <- y
-    m1 <- as.matrix(m1)
-    tab2 <- reshape2::melt(m1)
-    tab2$strand <- '-'
-    tab <- rbind(tab,tab2)
+    s1 <- summary(m1)
+    tab2 <- data.frame(pos = x[s1$i], label = y[s1$j], depth = s1$x, strand = '-')
+    tab <- rbind(tab, tab2)
   }
 
   colnames(tab) <- c("pos","label","depth","strand")
@@ -151,8 +143,8 @@ bamjunc0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = 
   if (!is.null(cell.group)) {
     cell.names <- names(cell.group)
     if (is.null(cell.names)) stop("Names of cell.group should not be empty.")
+    groups <- levels(cell.group) %||% unique(as.character(cell.group))
     cell.group <- as.character(cell.group)
-    groups <- levels(cell.group) %||% unique(cell.group)
     group.ids <- match(cell.group, groups)
     n <- length(cell.group)
     split.bc <- TRUE    
@@ -231,8 +223,8 @@ fragcov0 <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc
   if (!is.null(cell.group)) {
     cell.names <- names(cell.group)
     if (is.null(cell.names)) stop("Names of cell.group should not be empty.")
+    groups <- levels(cell.group) %||% unique(as.character(cell.group))
     cell.group <- as.character(cell.group)
-    groups <- levels(cell.group) %||% unique(cell.group)
     group.ids <- match(cell.group, groups)
     n <- length(cell.group)
     split.bc <- TRUE    
@@ -254,12 +246,8 @@ fragcov0 <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc
     j = match(dlst[[4]], y),
     x = dlst[[3]],
     dims=c(nr,nc))
-
-  rownames(m0) <- x
-  colnames(m0) <- y
-  m0 <- as.matrix(m0)
-  tab <- reshape2::melt(m0)
-  tab$strand <- '.'
+  s <- summary(m0)
+  tab <- data.frame(pos = x[s$i], label = y[s$j], depth = s$x, strand = '.')
 
   colnames(tab) <- c("pos","label","depth","strand")
   tab$depth <- as.integer(tab$depth/win)
@@ -294,7 +282,6 @@ fragcov <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc 
     }
 
     bc <- bind_rows(dl) %>%  group_by(pos, label, strand) %>% summarise(sum(depth, na.rm = TRUE))
-    ss <- table(unlist(bc))
     colnames(bc) <- c("pos", "label", "strand", "depth")
   } else {
     bc <- fragcov0(fragfile=fragfile, chr=as.character(chr), start=start, end=end,

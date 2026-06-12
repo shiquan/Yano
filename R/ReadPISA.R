@@ -173,13 +173,21 @@ ReadPISA <- function(mex_dir=NULL,
     colnames(mat$spliced) <- barcode.names$V1
   }
   rownames(mat$spliced) <- make.unique(feature.names$V1)
-  colnames(mat$unspliced) <- barcode.names$V1
+  colnames(mat$unspliced) <- if (isTRUE(spatial)) {
+    paste(barcode.names$V1, barcode.names$V2, sep="_")
+  } else {
+    barcode.names$V1
+  }
   rownames(mat$unspliced) <- make.unique(feature.names$V1)
 
   mat$spliced <- .renameMatrix(mat$spliced, prefix, suffix, cells)
   mat$unspliced <- .renameMatrix(mat$unspliced, prefix, suffix, cells)
   if (file.exists(spanning.path)) {
-    colnames(mat$spanning) <- barcode.names$V1
+    colnames(mat$spanning) <- if (isTRUE(spatial)) {
+      paste(barcode.names$V1, barcode.names$V2, sep="_")
+    } else {
+      barcode.names$V1
+    }
     rownames(mat$spanning) <- make.unique(feature.names$V1)
     mat$spanning <- .renameMatrix(mat$spanning, prefix, suffix, cells)
   }

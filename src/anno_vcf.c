@@ -123,22 +123,42 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
         idx = bcf_index_load(vcf_fname);
         if (!idx) {
             Rprintf("Failed to load index file of %s. Use `bcftools index` the BCF first.\n", vcf_fname);
+            free(tags); free(vals);
+            bcf_destroy(v);
+            if (tmpk.m) free(tmpk.s);
+            bcf_hdr_destroy(h);
+            hts_close(fp);
             return R_NilValue;
         }
     } else {
         tbx = tbx_index_load(vcf_fname);
         if (!tbx) {
             REprintf("Failed to load index file of %s.\n", vcf_fname);
+            free(tags); free(vals);
+            bcf_destroy(v);
+            if (tmpk.m) free(tmpk.s);
+            bcf_hdr_destroy(h);
+            hts_close(fp);
             return R_NilValue;
         }
     }
-    
+
     for (int i = 0; i < n_tag; ++i) {
         tags[i] = strdup(translateChar(STRING_ELT(_tags, i)));
-        
+
         int id = bcf_hdr_id2int(h, BCF_DT_ID, tags[i]);
         if (! bcf_hdr_idinfo_exists(h, BCF_HL_INFO, id) ) {
             Rprintf("No tag %s found in the VCF header.\n", tags[i]);
+            for (int j = 0; j <= i; ++j) free(tags[j]);
+            free(tags);
+            for (int j = 0; j < i; ++j) free(vals[j].v);
+            free(vals);
+            bcf_destroy(v);
+            if (tmpk.m) free(tmpk.s);
+            bcf_hdr_destroy(h);
+            hts_close(fp);
+            if (idx) hts_idx_destroy(idx);
+            if (tbx) tbx_destroy(tbx);
             return R_NilValue;
         }
         vals[i].id = id;
@@ -573,6 +593,10 @@ struct mempool {
     struct dict *tx;
 };
 
+/* NOTE: mempool and wnames are static globals used by construct_reference()
+   and predict_func().  These functions are NOT re-entrant — do not call them
+   concurrently from OpenMP threads within the same process.  R-level forked
+   parallelism (mclapply) is safe because each fork gets its own copy. */
 static struct mempool mempool;
 
 void memory_init()

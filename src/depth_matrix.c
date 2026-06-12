@@ -1,6 +1,7 @@
 #include <R.h>
 #include <Rdefines.h>
 #include <Rinternals.h>
+#include <string.h>
 
 #include "utils.h"
 #include "htslib/sam.h"
@@ -101,12 +102,16 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
         alias_tag = 1;
         fix_barcodes = 1;
         split_by_bc = TRUE;
-        alias = INTEGER(_group);
-        
+        /* copy R vector before modifying to avoid corrupting caller data */
+        alias = (int*) R_Calloc(n_cell, int);
+        memcpy(alias, INTEGER(_group), n_cell * sizeof(int));
+
         int n3 = Rf_length(_group_names);
         for (i = 0; i < n_cell; ++i) {
-            if (alias[i] < 1 || alias[i] - 1 > n3)
+            if (alias[i] < 1 || alias[i] - 1 > n3) {
+                R_Free(alias);
                 error_return("Inconsistance alias names.");
+            }
         }
         for (i = 0; i < n_cell; ++i) {
             alias[i] = alias[i]-1; // convert 1-based to 0-based
@@ -116,6 +121,7 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
     struct depth *d = bam2depth(idx, tid, start, end, strand, fp, mapq_thres, ignore_strand,
                                 bc, tag, umi_tag, split_by_bc, alias_tag,
                                 alias, fix_barcodes, junc);
+    if (alias) { R_Free(alias); alias = NULL; }
     // return matrix
     hts_close(fp);
     hts_idx_destroy(idx);
@@ -249,12 +255,15 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
         // alias_tag = 1;
         //fix_barcodes = 1;
         //split_by_bc = TRUE;
-        alias = INTEGER(_group);
-        
+        /* copy R vector before modifying to avoid corrupting caller data */
+        alias = (int*) R_Calloc(n_cell, int);
+        memcpy(alias, INTEGER(_group), n_cell * sizeof(int));
+
         int n3 = Rf_length(_group_names);
         for (int i = 0; i < n_cell; ++i) {
             if (alias[i] < 1 || alias[i] - 1 > n3) {
                 Rprintf("Inconsistance alias names.");
+                R_Free(alias);
                 return R_NilValue;
             }
         }
@@ -264,6 +273,7 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
     }
 
     struct depth *d = fragment2depth(tbx, seqname, start, end, fp, bc, alias);
+    if (alias) { R_Free(alias); alias = NULL; }
 
     bgzf_close(fp);
     tbx_destroy(tbx); // ??
