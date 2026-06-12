@@ -57,7 +57,7 @@ void *dict_query_value2(struct dict *D, const char *key)
 
 int dict_assign_value(struct dict *D, int idx, void *val)
 {
-    if (idx < 0 || idx > D->n) return 1;
+    if (idx < 0 || idx >= D->n) return 1;
     D->value[idx] = val;
     return 0;
 }

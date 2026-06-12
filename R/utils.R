@@ -16,7 +16,7 @@ Meta <- function(object, assay = NULL)
 
 # Helper: find default dimensionality reduction
 DefaultDimReduc <- function(object) {
-  reductions <- names(object@reductions)
+  reductions <- Seurat::Reductions(object)
   for (r in c("umap", "tsne", "pca")) {
     if (r %in% reductions) return(r)
   }
@@ -30,6 +30,8 @@ RandomName <- function(length = 10L) {
 }
 
 # Helper: Seurat-compatible ggplot theme helpers
+# Return rhs when lhs is not NULL, otherwise NULL.
+# Semantics: %iff% acts as a guard — only evaluate rhs if lhs is present.
 `%iff%` <- function(lhs, rhs) {
   if (!is.null(lhs)) return(rhs)
   return(lhs)

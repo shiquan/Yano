@@ -147,16 +147,16 @@ ReadPISA <- function(mex_dir=NULL,
     return(.ReadPISA0(barcode.path, feature.path, matrix.path, use_10X, spatial, prefix, suffix, cells))
   }
   mat <- list()
-  cat("Load spliced matrix ...\n")
+  message("Load spliced matrix ...")
   mat$spliced <- .ReadMM(file = spliced.path)
-  cat("Load unspliced matrix ...\n")
+  message("Load unspliced matrix ...")
   mat$unspliced <- .ReadMM(file = unspliced.path)
 
   if (file.exists(spanning.path)) {
-    cat("Load spanning matrix ...\n")
+    message("Load spanning matrix ...")
     mat$spanning <- .ReadMM(file = spanning.path)
   } else {
-    cat("Spanning matrix is null.\n")
+    message("Spanning matrix is null.")
   }
 
   feature.names <- read.delim(feature.path,

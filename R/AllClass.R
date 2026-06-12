@@ -1,3 +1,3 @@
 #'@import Matrix
 setClassUnion(name = 'SMatrix', members = c("dgCMatrix", "dgTMatrix", "matrix"))
-setClassUnion("MatrixOrNull", members = c("dgTMatrix", "dgCMatrix", "matrix", "missing"))
+setClassUnion("MatrixOrNull", members = c("dgTMatrix", "dgCMatrix", "matrix", "NULL", "missing"))
