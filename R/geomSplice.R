@@ -111,29 +111,33 @@ stat_splice <- function(mapping = NULL, data = NULL, geom = "splice",
 #' @export
 #' @importFrom graphics xspline
 StatSplice <- ggproto("StatSplice", Stat,
-                       setup_data = function(data, params) {
-                         if (anyDuplicated(data$group)) {
-                           data$group <- paste(data$group, seq_len(nrow(data)), sep = "-")
-                         }
-                         data
-                       },
-                      
-                      compute_panel = function(data, scales, spline_shape=-0.25) {
-                        cols_to_keep <- setdiff(names(data), c("x", "y", "xend", "height"))
-                        splices <- lapply(seq_len(nrow(data)), function(i) {
-                          splice_path <- create_splice(
-                            data$x[i], 
-                            data$y[i], 
-                            data$xend[i], 
-                            data$height[i], 
-                            spline_shape
-                          )
-                          cbind(splice_path, unclass(data[i, cols_to_keep]))
-                        })
-                        do.call(rbind, splices)
-                      },
-                      required_aes = c("x", "y", "xend", "height")
-                      )
+  default_aes = aes(height = 0),
+  setup_data = function(data, params) {
+    if (anyDuplicated(data$group)) {
+      data$group <- paste(data$group, seq_len(nrow(data)), sep = "-")
+    }
+    data
+  },
+
+  compute_panel = function(data, scales, spline_shape = -0.25) {
+    cols_to_keep <- setdiff(names(data), c("x", "y", "xend", "height"))
+    # Open ONE temporary device for the entire batch of splines,
+    # avoiding per-splice device open/close overhead
+    pdf(file = NULL)
+    on.exit(invisible(dev.off()), add = TRUE)
+    plot.new()
+    splices <- lapply(seq_len(nrow(data)), function(i) {
+      splice_path <- create_splice_internal(
+        data$x[i], data$y[i],
+        data$xend[i], data$height[i],
+        spline_shape
+      )
+      cbind(splice_path, unclass(data[i, cols_to_keep]))
+    })
+    do.call(rbind, splices)
+  },
+  required_aes = c("x", "y", "xend", "height")
+)
 
 #' @title create_splice
 #' @description Create a spline path for a splice junction arc.
@@ -145,18 +149,23 @@ StatSplice <- ggproto("StatSplice", Stat,
 #' @return A data.frame with x and y coordinates for the spline path.
 #' @importFrom graphics xspline
 #' @export
+# Internal: compute spline path assuming a graphics device is already open.
+# Used by StatSplice$compute_panel which opens one device per panel.
+create_splice_internal <- function(x, y, xend, height = 0, spline_shape = -0.25) {
+  xm <- (x + xend) / 2
+  ym <- y + height
+  tmp <- xspline(x = c(x, xm, xend), y = c(y, ym, y),
+                 spline_shape, TRUE, TRUE, draw = FALSE)
+  data.frame(x = tmp$x, y = tmp$y)
+}
+
+# User-facing wrapper: opens a temporary device for standalone use.
 create_splice <- function(x, y, xend, height = 0, spline_shape = -0.25)
 {
-  xm <- (x+xend)/2
-  ym <- y+height
-  # xspline needs an initialized graphics device even with draw=FALSE;
-  # use pdf(file=NULL) to avoid writing to disk.  on.exit guarantees
-  # the temporary device is cleaned up even if xspline throws an error.
   pdf(file = NULL)
   on.exit(invisible(dev.off()), add = TRUE, after = FALSE)
   plot.new()
-  tmp <- xspline(x=c(x,xm,xend), y = c(y,ym,y), spline_shape, TRUE, TRUE, draw = FALSE)
-  data.frame(x=tmp$x, y=tmp$y)
+  create_splice_internal(x, y, xend, height, spline_shape)
 }
 
 ## #' @importFrom grid unit is.unit gTree

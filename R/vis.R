@@ -1,9 +1,19 @@
+# Safe font family: fall back to system default if Helvetica is not available
+.fbt_family <- function() {
+  if (nzchar(system.file(package = "systemfonts"))) {
+    avail <- systemfonts::system_fonts()$family
+    if ("Helvetica" %in% avail) return("Helvetica")
+  }
+  ""  # ggplot2 default sans-serif
+}
+
 fbt_theme <- function() {
+  family <- .fbt_family()
   theme(
-    legend.text = element_text(face = "italic",color = "black",family = "Helvetica",size = rel(1.5)),
-    axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
-    axis.title.x = element_text(color = "black", family = "Helvetica",size = rel(1.5)),
-    axis.text = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
+    legend.text = element_text(face = "italic",color = "black",family = family,size = rel(1.5)),
+    axis.title.y = element_text(color = "black", family = family,size = rel(1)),
+    axis.title.x = element_text(color = "black", family = family,size = rel(1.5)),
+    axis.text = element_text(family = family,color = "black",size = rel(1.5)),
     axis.line = element_blank(),
     axis.ticks = element_line(linewidth = rel(1), color = "black"),
     panel.border = element_rect(color = "black", fill = NA, linewidth = rel(2), linetype = "solid"),
@@ -11,8 +21,8 @@ fbt_theme <- function() {
     panel.grid.minor = element_blank(),
     panel.background = element_rect(fill = "whitesmoke"),
     legend.key = element_rect(fill = "whitesmoke"),
-    legend.title = element_text(size = rel(1.5),family = "Helvetica"),
-    plot.title = element_text(color = "black",face = "bold",size = rel(1.7),family = "Helvetica")
+    legend.title = element_text(size = rel(1.5),family = family),
+    plot.title = element_text(color = "black",face = "bold",size = rel(1.7),family = family)
   )
 }
 
@@ -21,6 +31,23 @@ fbt_theme <- function() {
 #'@importFrom viridis scale_color_viridis scale_fill_viridis
 #'@import ggrepel
 #'@importFrom scales label_comma
+
+# Internal helper: add discrete or continuous fill scale
+.add_fill_scale <- function(p, data, col.by, cols) {
+  if (is.numeric(data[[col.by]])) {
+    return(p + scale_fill_viridis())
+  }
+  n <- length(unique(data[[col.by]]))
+  if (n < 15) {
+    cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A",
+                        "#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00",
+                        "#CAB2D6","#6A3D9A","#FFFF99","#B15928")
+  } else {
+    cols <- cols %||% colours(distinct = TRUE)[seq_len(n)]
+  }
+  p + scale_fill_manual(values = cols)
+}
+
 FbtPlot0 <- function(tab = NULL,
                      col.by = NULL,
                      cols = NULL,
@@ -96,34 +123,11 @@ FbtPlot0 <- function(tab = NULL,
   if (!is.null(col.by)) {
     if (is.null(shape.by)) {
       p <- p + geom_point(aes(x=bp_cum, y=qval, fill=.data[[col.by]]), shape=21, size = pt.size)
-      if (is.numeric(data[[col.by]])) {
-        p <- p + scale_fill_viridis()
-      } else {
-        n <- length(unique(data[[col.by]]))
-        
-        if (n < 15) {
-          cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
-        } else {
-          cols <- cols %||% colours(distinct = TRUE)[seq_len(n)]
-        }
-
-        p <- p + scale_fill_manual(values = cols) 
-      }
+      p <- .add_fill_scale(p, data, col.by, cols)
     } else {
       p <- p + geom_point(aes(x=bp_cum, y=qval, fill=.data[[col.by]], shape=.data[[shape.by]]), size = pt.size)
-      p <- p + scale_shape_manual(values = c(21, 24, 22, 23, 25)) 
-      if (is.numeric(data[[col.by]])) {
-        p <- p + scale_fill_viridis()
-      } else {
-        n <- length(unique(data[[col.by]]))
-        if (n < 15) {
-          cols <- cols %||% c("#131313","blue","#A6CEE3","#1F78B4","#B2DF8A","#33A02C","#FB9A99","#E31A1C","#FDBF6F","#FF7F00","#CAB2D6","#6A3D9A","#FFFF99","#B15928")
-        } else {
-          cols <- cols %||% colours(distinct = TRUE)[seq_len(n)]
-        }
-
-        p <- p + scale_fill_manual(values = cols)
-      }
+      p <- p + scale_shape_manual(values = c(21, 24, 22, 23, 25))
+      p <- .add_fill_scale(p, data, col.by, cols)
       p <- p + guides(fill = guide_legend(override.aes = list(shape=21)))
     }
   } else {
@@ -377,11 +381,12 @@ FbtPlot <- function(object = NULL,
 }
 
 theme_cov <- function(...) {
+  family <- .fbt_family()
   theme(
-    axis.title.y = element_text(color = "black", family = "Helvetica",size = rel(1)),
+    axis.title.y = element_text(color = "black", family = family, size = rel(1)),
     axis.title.x = element_blank(),
-    axis.text.y = element_text(family = "Helvetica",color = "black",size = rel(0.8)),
-    axis.text.x = element_text(family = "Helvetica",color = "black",size = rel(1.5)),
+    axis.text.y = element_text(family = family, color = "black", size = rel(0.8)),
+    axis.text.x = element_text(family = family, color = "black", size = rel(1.5)),
     axis.line = element_blank(),
     axis.ticks = element_blank(),
     panel.background = element_rect(fill = "whitesmoke"),
@@ -422,12 +427,12 @@ plot.genes <- function(x = NULL, chr = NULL, start = NULL, end = NULL, gtf = NUL
   }
 
   idx <- which(tracks$start < start)
-  tracks[idx,"start"] <- start
-  idx <- which(tracks$end >end)
+  tracks[idx, "start"] <- start
   if (end > 0) {
-    tracks[idx,"end"] <- end
-    tracks <- subset(tracks, start < end)
+    idx <- which(tracks$end > end)
+    tracks[idx, "end"] <- end
   }
+  tracks <- subset(tracks, start < end)
 
   mi <- as.integer(max(tracks$idx)/3 *4)
   if (mi < max(tracks$idx)+1) {
@@ -709,6 +714,10 @@ TrackPlot <- function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
   if (is.null(bamfile)) stop("No bam file specified.")
 
   strand <- match.arg(strand)
+  # ensure layout.heights has at least the 3 elements expected below
+  if (length(layout.heights) < 3) {
+    layout.heights <- rep(layout.heights, length.out = 3)
+  }
   df <- NULL
   if (!is.null(highlights)) {
     if (is.list(highlights)) {
