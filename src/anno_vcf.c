@@ -941,7 +941,9 @@ struct csq *predict_func(const char *chr, int pos, int strand, const char *ref, 
             if (pos > g->start - 1000) {
                 if (n_csq == m_csq) {
                     m_csq = m_csq*2;
-                    csq = realloc(csq, sizeof(struct csq)*m_csq);
+                    struct csq *new_csq = realloc(csq, sizeof(struct csq)*m_csq);
+                    if (!new_csq) { free(csq); error("Out of memory in anno_conseq."); }
+                    csq = new_csq;
                 }
                 struct csq *csq0 = &csq[n_csq++];
                 if (g->strand == strand) {
@@ -955,7 +957,9 @@ struct csq *predict_func(const char *chr, int pos, int strand, const char *ref, 
             if (pos < g->end + 1000) {
                 if (n_csq == m_csq) {
                     m_csq = m_csq*2;
-                    csq = realloc(csq, sizeof(struct csq)*m_csq);
+                    struct csq *new_csq = realloc(csq, sizeof(struct csq)*m_csq);
+                    if (!new_csq) { free(csq); error("Out of memory in anno_conseq."); }
+                    csq = new_csq;
                 }
                 struct csq *csq0 = &csq[n_csq++];
                 if (g->strand == strand) {
@@ -976,7 +980,9 @@ struct csq *predict_func(const char *chr, int pos, int strand, const char *ref, 
                 
                 if (n_csq == m_csq) {
                     m_csq = m_csq*2;
-                    csq = realloc(csq, sizeof(struct csq)*m_csq);
+                    struct csq *new_csq = realloc(csq, sizeof(struct csq)*m_csq);
+                    if (!new_csq) { free(csq); error("Out of memory in anno_conseq."); }
+                    csq = new_csq;
                 }
                 struct csq *csq0 = &csq[n_csq++];
                 csq0->csq = predict_func0(chr, pos, strand, ref, alt, G, tx, fasta, fai, debug);

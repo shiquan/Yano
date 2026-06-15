@@ -63,8 +63,17 @@ void index_bin_push(struct region_index *idx, uint32_t start, uint32_t end, void
     }
     if (l->m == l->n) {
         if (l->m > INT_MAX/2) { errno = ENOMEM; return; }
-        l->m <<=1;
-        l->a = realloc(l->a, l->m*sizeof(void*));
+        int new_m = l->m<<1;
+        void **new_a = realloc(l->a, new_m*sizeof(void*));
+        if (!new_a) {
+            /* cannot recover in a void function — leak old l->a
+               but avoid the NULL-deref on the next line */
+            errno = ENOMEM;
+            l->m = l->n;  /* prevent further growth attempts */
+            return;
+        }
+        l->a = new_a;
+        l->m = new_m;
     }
     l->a[l->n++] = new;
 }

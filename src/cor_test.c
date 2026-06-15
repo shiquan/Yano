@@ -155,10 +155,12 @@ SEXP D_test_v1(SEXP _A,
     
     R_CheckUserInterrupt();
 
+    volatile int oom_error = 0;
     int i;
-    
+
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < N_feature; ++i) {
+        if (oom_error) continue;
         int ii = INTEGER(idx)[i]  -1;
         int ij = INTEGER(bidx)[i] -1;
         if (ap[ii] == ap[ii+1] || bp[ij] == bp[ij+1]) {
@@ -301,7 +303,10 @@ SEXP D_test_v1(SEXP _A,
         for (int k = 0; k < perm; ++k) {
             if (method == 1 || method == 3) {
                 // shuffle A → recompute Lx, rb1; Ly,rb2 stay at observed
-                shuffle_index(tmpa, k, n_cell);
+                if (shuffle_index(tmpa, k, n_cell)) {
+                    oom_error = 1;
+                    break;
+                }
                 // shuffle(tmpa, ris[k], n_cell);
                 smooth_W(tmpa, tmpa_s, n_cell, W);
                 mna_s = 0;
@@ -323,7 +328,10 @@ SEXP D_test_v1(SEXP _A,
             }
             if (method == 2) {
                 // shuffle B → recompute Ly, rb2; Lx,rb1 stay at observed
-                shuffle_index(tmpb, k, n_cell);
+                if (shuffle_index(tmpb, k, n_cell)) {
+                    oom_error = 1;
+                    break;
+                }
                 // shuffle(tmpb, ris[k], n_cell);
                 smooth_W(tmpb, tmpb_s, n_cell, W);
                 mnb_s = 0;
@@ -387,11 +395,15 @@ SEXP D_test_v1(SEXP _A,
     }
 
     random_index_free();
-    
+
     M_cholmod_free_sparse(&A, &c);
     M_cholmod_free_sparse(&B, &c);
 
     M_cholmod_finish(&c);
+
+    if (oom_error)
+        error("shuffle: memory allocation failed in parallel D test");
+
     SEXP ta = PROTECT(allocVector(VECSXP, 2));
     SET_VECTOR_ELT(ta, 0, Dval);
     SET_VECTOR_ELT(ta, 1, Tval);
@@ -519,9 +531,11 @@ SEXP D_test_v2(SEXP _A,
         buf_D[t]      = (double*) R_Calloc(perm + 1, double);
     }
 
+    volatile int oom_error = 0;
     int i;
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < N_feature; ++i) {
+        if (oom_error) continue;
         int tid = 0;
 #ifdef _OPENMP
         tid = omp_get_thread_num();
@@ -542,7 +556,10 @@ SEXP D_test_v2(SEXP _A,
         }
 
         /* ---- Extract X as sparse vector (O(nz), not O(n_cell)) ---- */
-        sparse_vec_from_csc(v, ap, ai, ax, ii);
+        if (sparse_vec_from_csc(v, ap, ai, ax, ii)) {
+            oom_error = 1;
+            continue;
+        }
         int fl = v->nz;
         double mx = 0;
         for (int k = 0; k < fl; ++k) mx += v->val[k];
@@ -622,7 +639,10 @@ SEXP D_test_v2(SEXP _A,
 
         /* ---- Columns 1..perm: shuffled X ---- */
         for (j = 1; j < perm + 1; ++j) {
-            sparse_vec_copy(v_perm, v);     /* restore original ordering       */
+            if (sparse_vec_copy(v_perm, v)) {  /* restore original ordering */
+                oom_error = 1;
+                break;
+            }
             sparse_vec_shuffle(v_perm, get_perm_array(j - 1));  /* apply j-th permutation */
             sparse_smooth(v_perm, wp, wi, wx, X_s, n_cell, filter);
 
@@ -658,6 +678,23 @@ SEXP D_test_v2(SEXP _A,
 
         REAL(Dval)[i] = D[0];
         REAL(Tval)[i] = t;
+    }
+
+    if (oom_error) {
+        /* Clean up before longjmp through Rf_error */
+        for (int t = 0; t < n_thread; t++) {
+            sparse_vec_destroy(buf_v[t]);      free(buf_v[t]);
+            sparse_vec_destroy(buf_v_perm[t]); free(buf_v_perm[t]);
+            R_Free(buf_X_s[t]);
+            R_Free(buf_Y[t]);
+            R_Free(buf_Yi[t]);
+            R_Free(buf_D[t]);
+        }
+        random_index_free();
+        M_cholmod_free_sparse(&A, &c);
+        M_cholmod_free_sparse(&B, &c);
+        M_cholmod_finish(&c);
+        error("Memory allocation failed during parallel D-test.");
     }
 
     /* ---- Cleanup thread buffers ---- */
@@ -946,11 +983,17 @@ SEXP D_distribution_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
     }
     PutRNGstate();
 
+    volatile int oom_error = 0;
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < perm; ++i) {
+        if (oom_error) continue;
         double *s = R_Calloc(N, double);
         memcpy(s, a, N * sizeof(double));
-        shuffle(s, ris[i], N);
+        if (shuffle(s, ris[i], N)) {
+            oom_error = 1;
+            R_Free(s);
+            continue;
+        }
         double *tmpa_s = R_Calloc(N, double);
         smooth_W(s, tmpa_s, N, W);
         double mna_s = 0;
@@ -989,6 +1032,10 @@ SEXP D_distribution_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
     R_Free(tmpb_s);
     R_Free(a);
     R_Free(b);
+
+    if (oom_error)
+        error("shuffle: memory allocation failed in parallel D-distribution test");
+
     UNPROTECT(1);
     return X;
 }
@@ -1083,11 +1130,17 @@ SEXP D_distribution_test2(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads
     }
     PutRNGstate();
 
+    volatile int oom_error = 0;
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < perm; ++i) {
+        if (oom_error) continue;
         double *s = R_Calloc(N, double);
         memcpy(s, a, N * sizeof(double));
-        shuffle(s, ris[i], N);
+        if (shuffle(s, ris[i], N)) {
+            oom_error = 1;
+            R_Free(s);
+            continue;
+        }
         double *tmpa_s = R_Calloc(N, double);
         smooth_W2(s, tmpa_s, N, W);
         double mna_s = 0;
@@ -1126,6 +1179,10 @@ SEXP D_distribution_test2(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads
     R_Free(tmpb_s);
     R_Free(a);
     R_Free(b);
+
+    if (oom_error)
+        error("shuffle: memory allocation failed in parallel D-distribution test 2");
+
     UNPROTECT(1);
     return X;
 }

@@ -53,13 +53,16 @@ SEXP knn2snn(SEXP _knn, SEXP prune)
                 if (n == m) {
                     m = m *2;
                     int *new_xj = realloc(xj, m*sizeof(int));
-                    double *new_xx = realloc(xx, m*sizeof(double));
-                    if (new_xj == NULL || new_xx == NULL) {
-                        free(new_xj); free(new_xx);
-                        free(xj); free(xx); R_Free(xi); R_Free(labels);
+                    if (!new_xj) {
+                        free(xx); R_Free(xi); R_Free(labels);
                         error("Failed to reallocate memory for SNN construction.");
                     }
                     xj = new_xj;
+                    double *new_xx = realloc(xx, m*sizeof(double));
+                    if (!new_xx) {
+                        free(xj); R_Free(xi); R_Free(labels);
+                        error("Failed to reallocate memory for SNN construction.");
+                    }
                     xx = new_xx;
                 }
                 xj[n] = j;

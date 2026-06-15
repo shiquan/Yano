@@ -43,9 +43,12 @@ SEXP gene_tracks0(const char *chr, int start, int end, struct gtf_spec *G, struc
                 if (n == 0) {
                     m = 4;
                     pool = malloc(m*sizeof(void*));
+                    if (!pool) { free(itr); return R_NilValue; }
                 } else {
                     m = m *2;
-                    pool = realloc(pool, m*sizeof(void *));
+                    struct gtf **new_pool = realloc(pool, m*sizeof(void *));
+                    if (!new_pool) { free(pool); free(itr); return R_NilValue; }
+                    pool = new_pool;
                 }
             }
             pool[n++] = g->gtf[j];

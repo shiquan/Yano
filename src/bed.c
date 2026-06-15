@@ -355,9 +355,11 @@ static int parse_str(struct bed_spec *B, kstring_t *str)
 
     if (B->n == B->m) {
         if (B->m > INT_MAX/2) { errno = ENOMEM; return 1; }
-        B->m = B->m == 0 ? 32 : B->m<<1;
-        B->bed = realloc(B->bed, sizeof(struct bed)*B->m);
-        if (B->bed == NULL) { errno = ENOMEM; return 1; }
+        int new_m = B->m == 0 ? 32 : B->m<<1;
+        struct bed *new_bed = realloc(B->bed, sizeof(struct bed)*new_m);
+        if (new_bed == NULL) { errno = ENOMEM; return 1; }
+        B->bed = new_bed;
+        B->m = new_m;
     }
     struct bed *bed = &B->bed[B->n];
     bed->seqname = seqname;
@@ -395,9 +397,11 @@ int bed_spec_push0(struct bed_spec *B, const char *seqname, int start, int end, 
     
     if (B->n == B->m) {
         if (B->m > INT_MAX/2) { errno = ENOMEM; return 1; }
-        B->m = B->m == 0 ? 32 : B->m<<1;
-        B->bed = realloc(B->bed, sizeof(struct bed)*B->m);
-        if (B->bed == NULL) { errno = ENOMEM; return 1; }
+        int new_m = B->m == 0 ? 32 : B->m<<1;
+        struct bed *new_bed = realloc(B->bed, sizeof(struct bed)*new_m);
+        if (new_bed == NULL) { errno = ENOMEM; return 1; }
+        B->bed = new_bed;
+        B->m = new_m;
     }
     
     int seqname_id = dict_push(B->seqname, seqname);
@@ -418,9 +422,11 @@ int bed_spec_push1(struct bed_spec *B, int seqname, int start, int end, int stra
 {
     if (B->n == B->m) {
         if (B->m > INT_MAX/2) { errno = ENOMEM; return 1; }
-        B->m = B->m == 0 ? 32 : B->m<<1;
-        B->bed = realloc(B->bed, sizeof(struct bed)*B->m);
-        if (B->bed == NULL) { errno = ENOMEM; return 1; }
+        int new_m = B->m == 0 ? 32 : B->m<<1;
+        struct bed *new_bed = realloc(B->bed, sizeof(struct bed)*new_m);
+        if (new_bed == NULL) { errno = ENOMEM; return 1; }
+        B->bed = new_bed;
+        B->m = new_m;
     }
     
     struct bed *b = &B->bed[B->n];
@@ -437,9 +443,11 @@ int bed_spec_push(struct bed_spec *B, struct bed *bed)
 {
     if (B->n == B->m) {
         if (B->m > INT_MAX/2) { errno = ENOMEM; return 1; }
-        B->m = B->m == 0 ? 32 : B->m<<1;
-        B->bed = realloc(B->bed, sizeof(struct bed)*B->m);
-        if (B->bed == NULL) { errno = ENOMEM; return 1; }
+        int new_m = B->m == 0 ? 32 : B->m<<1;
+        struct bed *new_bed = realloc(B->bed, sizeof(struct bed)*new_m);
+        if (new_bed == NULL) { errno = ENOMEM; return 1; }
+        B->bed = new_bed;
+        B->m = new_m;
     }
     struct bed *bed0 = &B->bed[B->n];
     memcpy(bed0, bed, sizeof(struct bed));
@@ -516,8 +524,11 @@ struct bed_spec *bed_read_vcf(const char *fn)
         const char *name = bcf_hdr_int2id(hdr, BCF_DT_CTG, v->rid);
         int seqname = dict_push(B->seqname, name);
         if (B->n == B->m) {
-            B->m = B->m == 0 ? 32 : B->m<<1;
-            B->bed = realloc(B->bed, sizeof(struct bed)*B->m);
+            int new_m = B->m == 0 ? 32 : B->m<<1;
+            struct bed *new_bed = realloc(B->bed, sizeof(struct bed)*new_m);
+            if (!new_bed) { errno = ENOMEM; return NULL; }
+            B->bed = new_bed;
+            B->m = new_m;
         }
         struct bed *bed = &B->bed[B->n];
         bed->seqname = seqname;
@@ -730,14 +741,18 @@ struct bed_spec *bed_spec_flatten(struct bed_spec *B0, int offset)
                 // push start
                 if (n == m) {
                     m = m == 0 ? 4 : m *2;
-                    bps = realloc(bps, sizeof(int)*m);
+                    int *new_bps = realloc(bps, sizeof(int)*m);
+                    if (!new_bps) { free(bps); return NULL; }
+                    bps = new_bps;
                 }
                 bps[n++] = bed->start;
             }
 
             if (n == m) {
                 m = m == 0 ? 4 : m *2;
-                bps = realloc(bps, sizeof(int)*m);
+                int *new_bps = realloc(bps, sizeof(int)*m);
+                if (!new_bps) { free(bps); return NULL; }
+                bps = new_bps;
             }
             if (bed0->end < bed->end) {
                 bed0->end = bed->end;

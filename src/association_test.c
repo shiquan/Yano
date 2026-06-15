@@ -7,7 +7,7 @@
 #include <Matrix.h>
 
 extern int *random_idx(const int n);
-extern void shuffle(double tmp[], int const idx[], const int n);
+extern int shuffle(double tmp[], int const idx[], const int n);
 
 SEXP association_test1(SEXP A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP return_arr)
 {
@@ -102,7 +102,8 @@ SEXP association_test1(SEXP A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP return_
     SEXP ds = PROTECT(allocVector(REALSXP, n_perm));
 
     for (i = 0; i < n_perm; ++i) {
-        shuffle(tmpa, ris[i], n_cell);
+        if (shuffle(tmpa, ris[i], n_cell))
+            error("shuffle: memory allocation failed");
         int ii, jj;
         double i1 = 0, i2 = 0;
         for (ii = 0; ii < n_cell; ++ii) {
@@ -229,9 +230,11 @@ SEXP association_test2(SEXP _A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP _threa
 
     R_CheckUserInterrupt();
 
+    volatile int oom_error = 0;
     int k;
-#pragma omp parallel for num_threads(n_thread)    
+#pragma omp parallel for num_threads(n_thread)
     for (k = 0; k < n_feature; ++k) {
+        if (oom_error) continue;
         double tmpa[n_cell];
         memset(tmpa, 0, sizeof(double)*n_cell);
         double sd1 = 0;
@@ -272,7 +275,10 @@ SEXP association_test2(SEXP _A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP _threa
         memset(ds, 0, sizeof(double)*n_perm);
         double mn = 0, sd = 0;
         for (i = 0; i < n_perm; ++i) {
-            shuffle(tmpa, ris[i], n_cell);
+            if (shuffle(tmpa, ris[i], n_cell)) {
+                oom_error = 1;
+                break;
+            }
             int ii, jj;
             double i1 = 0, i2 = 0;
             for (ii = 0; ii < n_cell; ++ii) {
@@ -307,6 +313,9 @@ SEXP association_test2(SEXP _A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP _threa
 
     for (j = 0; j < n_perm; ++j) R_Free(ris[j]);
     if (n_perm) R_Free(ris);
+
+    if (oom_error)
+        error("shuffle: memory allocation failed in parallel association test");
 
     SEXP ta = PROTECT(allocVector(VECSXP, 3));
     SET_VECTOR_ELT(ta, 0, I1);

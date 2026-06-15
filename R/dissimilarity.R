@@ -239,8 +239,10 @@ RunBlockCorr <- function(object = NULL,
   }
 
   tab <- tab[features,]
-  
+
   bidx <- match(tab[[bind.name]],rownames(y))
+  if (anyNA(bidx))
+    stop("Some bind.feature names were not found in rownames(y). Check bind.assay and bind.name.")
   idx <- match(features, rownames(x))
   if (isTRUE(verbose)) {
     message("Using ", threads, " threads.")
@@ -504,9 +506,11 @@ RunSDT <- function(object = NULL,
   tab <- tab[features,]
   
   bidx <- match(tab[[bind.name]],rownames(y))
+  if (anyNA(bidx))
+    stop("Some bind.feature names were not found in rownames(y). Check bind.assay and bind.name.")
   idx <- match(features, rownames(x))
   if (mode != 1) {
-    cs <- library.size %||% colSums(object, slot = "counts")      
+    cs <- library.size %||% colSums(object, slot = "counts")
     y <- makeModeData(y, x, idx, bidx, mode)
     y0 <- lognorm(y, cs[cells], scale.factor)
     rm(y)

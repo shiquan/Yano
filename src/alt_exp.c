@@ -6,10 +6,9 @@
 #include<Rdefines.h>
 #include <Matrix.h>
 // # nocov end
-static cholmod_common c;
 
 extern int *random_idx(const int n);
-extern void shuffle(double tmp[], int const idx[], const int n);
+extern int shuffle(double tmp[], int const idx[], const int n);
 
 SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEXP _threads)
 {
@@ -22,11 +21,14 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
     int mode = asInteger(_mode);
     if (A->stype) return mkString("A cannot be symmetric");
     if (B->stype) return mkString("B cannot be symmetric");
-    
+
     if (A->ncol != B->ncol) return mkString("A column and B column do not match.");
     if (A->nrow != B->nrow) return mkString("A row and B row do not match.");
 
     if (A->ncol < 2) return mkString("Too few cells."); // to do
+
+    cholmod_common c;
+    M_R_cholmod_start(&c);
 
     A = M_cholmod_transpose(A, (int)A->xtype, &c);
     B = M_cholmod_transpose(B, (int)B->xtype, &c);
@@ -59,9 +61,11 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
     for (int pi = 0; pi < perm; ++pi) {
         ris[pi] = random_idx(n_cell);
     }
-        
+    volatile int oom_error = 0;
+
 #pragma omp parallel for num_threads(n_thread)
     for (int i = 0; i < N_feature; ++i) {
+        if (oom_error) continue;
         double *tmpa = R_Calloc(n_cell, double);
         double *tmpb = R_Calloc(n_cell, double);
         memset(tmpa, 0, sizeof(double)*n_cell);
@@ -116,7 +120,10 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
 
         double *es = R_Calloc(perm, double);
         for (int k = 0; k < perm; ++k) {
-            shuffle(tmpa, ris[k], n_cell);
+            if (shuffle(tmpa, ris[k], n_cell)) {
+                oom_error = 1;
+                break;
+            }
             // shuffle(tmpb, ris[k], n_cell);
             g11 = 0;
             // g21 = 0;
@@ -176,7 +183,14 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
 
     M_cholmod_free_sparse(&A, &c);
     M_cholmod_free_sparse(&B, &c);
-    
+
+    if (oom_error) {
+        M_cholmod_finish(&c);
+        error("Memory allocation failed during parallel alt-exp test.");
+    }
+
+    M_cholmod_finish(&c);
+
     SEXP ta = PROTECT(allocVector(VECSXP, 6));
     SET_VECTOR_ELT(ta, 0, Dval);
     SET_VECTOR_ELT(ta, 1, Tval);

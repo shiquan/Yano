@@ -9,18 +9,25 @@ static int ensure_cap(struct sparse_vec *v, int need)
     if (v->n_alloc >= need) return 0;
     int newcap = v->n_alloc ? v->n_alloc * 2 : 64;
     if (newcap < need) newcap = need;
-    int    *old_idx = v->idx;
-    double *old_val = v->val;
-    int    *new_idx = realloc(v->idx,  newcap * sizeof(int));
-    double *new_val = realloc(v->val, newcap * sizeof(double));
+
+    /* Allocate new buffers first; on failure the old buffers remain valid */
+    int    *new_idx = malloc(newcap * sizeof(int));
+    double *new_val = malloc(newcap * sizeof(double));
     if (!new_idx || !new_val) {
-        /* restore original pointers in case one realloc succeeded
-           and freed the old block, leaving v->idx or v->val dangling */
-        v->idx = old_idx;
-        v->val = old_val;
-        free(new_idx); free(new_val);
+        free(new_idx);
+        free(new_val);
         return 1;
     }
+
+    /* Copy existing data into new buffers */
+    if (v->nz > 0) {
+        memcpy(new_idx, v->idx, v->nz * sizeof(int));
+        memcpy(new_val, v->val, v->nz * sizeof(double));
+    }
+
+    /* Swap in new buffers and free old ones */
+    free(v->idx);
+    free(v->val);
     v->idx = new_idx;
     v->val = new_val;
     v->n_alloc = newcap;

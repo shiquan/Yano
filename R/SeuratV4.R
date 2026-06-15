@@ -12,7 +12,7 @@ GetAssayData1 <- function(object, assay = NULL, layer = "counts")
       l <- layers[i]
       data0 <- LayerData(object[[assay]], layer = l)
       if (inherits(data0, "RenameDims")) {
-        data0 <- as.sparse(data0)
+        data0 <- SeuratObject::as.sparse(data0)
       }
       data <- mergeMatrix(data0, data)
     }

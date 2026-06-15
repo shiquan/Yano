@@ -194,8 +194,11 @@ static struct ret **rets = NULL;
 static void write_out(struct ret *ret)
 {
     if (n_ret == m_ret) {
-        m_ret = m_ret *2;
-        rets = realloc(rets, m_ret*sizeof(struct ret*));
+        int new_m = m_ret ? m_ret * 2 : 4;
+        struct ret **new_rets = realloc(rets, new_m*sizeof(struct ret*));
+        if (!new_rets) error("Out of memory in write_out.");
+        rets = new_rets;
+        m_ret = new_m;
     }
     if (ret) rets[n_ret++] = ret;
 }
@@ -344,7 +347,8 @@ static struct ret *run_it(bcf_hdr_t *hdr, bcf1_t *v, int n_unit, struct dict *sa
     int k;
     double mean = 0;
     for (k = 0; k < perm; ++k) {
-        shuffle_index(tmpa, k, n_unit);
+        if (shuffle_index(tmpa, k, n_unit))
+            error("shuffle: memory allocation failed");
         smooth_W(tmpa, tmpa_s, n_unit, W);
         mna_s = 0;
         for (j = 0; j < n_unit; ++j) {

@@ -31,7 +31,7 @@
   keys <- paste0(round(data[, 1], 4), "_", round(data[, 2], 4))
   ch <- concaveman::concaveman(data)
   ch_keys <- paste0(round(ch[, 1], 4), "_", round(ch[, 2], 4))
-  idx[keys %in% ch_keys]
+  keys %in% ch_keys
 }
 
 # Internal: mark selected cells and re-plot

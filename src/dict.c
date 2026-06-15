@@ -146,17 +146,21 @@ static int dict_push0(struct dict *D, char const *key, int idx)
     }
     if (D->n == D->m) {
         if (D->m > INT_MAX/2) { errno = ENOMEM; return -1; }
-        D->m = D->m == 0 ? 1024 : D->m<<1;
-        D->count = realloc(D->count, sizeof(uint32_t)*D->m);
-        if (!D->count) return 0;
-        int i;
-        for (i = D->n; i < D->m; ++i) D->count[i] = 0;
-        D->name = realloc(D->name, sizeof(char*)*D->m);
+        int new_m = D->m == 0 ? 1024 : D->m<<1;
+        uint32_t *new_count = realloc(D->count, sizeof(uint32_t)*new_m);
+        if (!new_count) { errno = ENOMEM; return -1; }
+        D->count = new_count;
+        for (int i = D->n; i < new_m; ++i) D->count[i] = 0;
+        char **new_name = realloc(D->name, sizeof(char*)*new_m);
+        if (!new_name) { errno = ENOMEM; return -1; }
+        D->name = new_name;
         if (D->assign_value_flag) {
-            D->value = realloc(D->value, sizeof(void *)*D->m);
-            int j;
-            for (j = D->n; j < D->m; ++j) D->value[j] = NULL; // reset  
+            void **new_value = realloc(D->value, sizeof(void *)*new_m);
+            if (!new_value) { errno = ENOMEM; return -1; }
+            D->value = new_value;
+            for (int j = D->n; j < new_m; ++j) D->value[j] = NULL;
         }
+        D->m = new_m;
     }
 
     ret = idx >= 0 ? idx : D->n;

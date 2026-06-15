@@ -132,7 +132,13 @@ static struct attr_pair *split_gff(kstring_t *str, int *_n)
         if (i >= str->l) break;
         if (n == m) {
             m += 4;
-            pair = realloc(pair, sizeof(struct attr_pair)*m);
+            struct attr_pair *new_pair = realloc(pair, sizeof(struct attr_pair)*m);
+            if (!new_pair) {
+                for (int k = 0; k < n; k++) { free(pair[k].key); free(pair[k].val); }
+                free(pair);
+                return NULL;
+            }
+            pair = new_pair;
         }
         
         kstring_t name = {0,0,0};
@@ -201,8 +207,11 @@ static int gtf_push(struct gtf_spec *G, struct gtf_ctg *ctg, struct gtf *gtf, in
     
     if (gene_gtf == NULL) { // set new gene record
         if (ctg->n_gtf == ctg->m_gtf) {
-            ctg->m_gtf = ctg->m_gtf == 0 ? 4: ctg->m_gtf*2;
-            ctg->gtf = realloc(ctg->gtf, sizeof(struct gtf*)*ctg->m_gtf);
+            int new_m = ctg->m_gtf == 0 ? 4 : ctg->m_gtf*2;
+            struct gtf **new_gtf = realloc(ctg->gtf, sizeof(struct gtf*)*new_m);
+            if (!new_gtf) return -1;
+            ctg->gtf = new_gtf;
+            ctg->m_gtf = new_m;
         }
         ctg->gtf[ctg->n_gtf] = gtf_create();
         gene_gtf = ctg->gtf[ctg->n_gtf++];
@@ -252,8 +261,11 @@ static int gtf_push(struct gtf_spec *G, struct gtf_ctg *ctg, struct gtf *gtf, in
     // setup transcript record
     if (tx_gtf == NULL) {
         if (gene_gtf->n_gtf == gene_gtf->m_gtf) {
-            gene_gtf->m_gtf = gene_gtf->m_gtf == 0? 4 : gene_gtf->m_gtf*2;
-            gene_gtf->gtf = realloc(gene_gtf->gtf, gene_gtf->m_gtf *sizeof(struct gtf*));
+            int new_m = gene_gtf->m_gtf == 0 ? 4 : gene_gtf->m_gtf*2;
+            struct gtf **new_gtf = realloc(gene_gtf->gtf, sizeof(struct gtf*)*new_m);
+            if (!new_gtf) return -1;
+            gene_gtf->gtf = new_gtf;
+            gene_gtf->m_gtf = new_m;
         }
         gene_gtf->gtf[gene_gtf->n_gtf] = gtf_create();
         tx_gtf = gene_gtf->gtf[gene_gtf->n_gtf++];
@@ -305,8 +317,11 @@ static int gtf_push(struct gtf_spec *G, struct gtf_ctg *ctg, struct gtf *gtf, in
             );        
     }
     if (tx_gtf->n_gtf == tx_gtf->m_gtf) {
-        tx_gtf->m_gtf = tx_gtf->m_gtf == 0 ? 4 : tx_gtf->m_gtf*2;
-        tx_gtf->gtf = realloc(tx_gtf->gtf, tx_gtf->m_gtf*sizeof(struct gtf*));
+        int new_m = tx_gtf->m_gtf == 0 ? 4 : tx_gtf->m_gtf*2;
+        struct gtf **new_gtf = realloc(tx_gtf->gtf, sizeof(struct gtf*)*new_m);
+        if (!new_gtf) return -1;
+        tx_gtf->gtf = new_gtf;
+        tx_gtf->m_gtf = new_m;
     }
     tx_gtf->gtf[tx_gtf->n_gtf] = gtf_create();
     struct gtf *exon_gtf = tx_gtf->gtf[tx_gtf->n_gtf++];
@@ -710,23 +725,34 @@ char *GTF_transid(struct gtf_spec *G, int id)
 
 void write_gtf_fp(struct gtf_spec *G, struct gtf *gtf, FILE *fp, struct dict *keys)
 {
-    fputs(dict_name(G->name,gtf->seqname), fp);
-    if (gtf->source == -1)fputs("\t.\t", fp);
-    else fprintf(fp, "\t%s\t", dict_name(G->sources, gtf->source));
-    fputs(feature_type_names[gtf->type], fp);
+    const char *nm = dict_name(G->name, gtf->seqname);
+    fputs(nm ? nm : ".", fp);
+    if (gtf->source == -1) fputs("\t.\t", fp);
+    else {
+        const char *src = dict_name(G->sources, gtf->source);
+        fprintf(fp, "\t%s\t", src ? src : ".");
+    }
+    if (gtf->type >= 0 && gtf->type < (int)(sizeof(feature_type_names)/sizeof(feature_type_names[0])))
+        fputs(feature_type_names[gtf->type], fp);
+    else
+        fputs("unknown", fp);
     fprintf(fp,"\t%d\t%d\t.\t%c\t.\t", gtf->start, gtf->end, "+-"[gtf->strand]);
-    fprintf(fp, "gene_name \"%s\"; gene_id \"%s\";", dict_name(G->gene_name, gtf->gene_name),
-            dict_name(G->gene_id, gtf->gene_id));
+    {
+        const char *gn = dict_name(G->gene_name, gtf->gene_name);
+        const char *gi = dict_name(G->gene_id, gtf->gene_id);
+        fprintf(fp, "gene_name \"%s\"; gene_id \"%s\";", gn ? gn : ".", gi ? gi : ".");
+    }
 
     if (gtf->transcript_id >= 0) {
-        fprintf(fp, " transcript_id \"%s\";", dict_name(G->transcript_id, gtf->transcript_id));
+        const char *tx = dict_name(G->transcript_id, gtf->transcript_id);
+        if (tx) fprintf(fp, " transcript_id \"%s\";", tx);
     }
-    
+
     if (gtf->attr) {
         struct attr *tmp = gtf->attr;
         for (tmp = gtf->attr; tmp; tmp = tmp->next) {
-            char *name = dict_name(G->attrs, tmp->id);
-            fprintf(fp, " %s", name);
+            const char *name = dict_name(G->attrs, tmp->id);
+            fprintf(fp, " %s", name ? name : ".");
             if (tmp->val) fprintf(fp, " \"%s\";", tmp->val);
             else fputc(';', fp);
         }

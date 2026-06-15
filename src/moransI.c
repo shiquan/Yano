@@ -13,7 +13,7 @@
 #define MIN_HIT 1
 
 extern int *random_idx(const int n);
-extern void shuffle(double tmp[], int const idx[], const int n);
+extern int shuffle(double tmp[], int const idx[], const int n);
 
 double *sp_colsums(CHM_SP A, Rboolean mn)
 {
@@ -245,6 +245,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
     if (n_step < 1) n_step = 1;
     
     for (int step = 0; step < n_step; ++step) {
+        volatile int oom_error = 0;
         int **ris = NULL;
         if (perm > 1) {
             ris = R_Calloc(CACHE_PER_BATCH,int*);
@@ -256,6 +257,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
         int i;
 #pragma omp parallel for num_threads(n_thread)
         for (i = 0; i < N; ++i) {
+            if (oom_error) continue;
             int idx = steps[i];
             if (ap[idx] == ap[idx+1]) {
                 REAL(Ival)[idx] = 0;
@@ -298,7 +300,10 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
                 xij = 0;
                 
                 for (int pi = 0; pi < CACHE_PER_BATCH; ++pi) {
-                    shuffle(tmp, ris[pi], n_cell);
+                    if (shuffle(tmp, ris[pi], n_cell)) {
+                        oom_error = 1;
+                        continue;
+                    }
                     for (int k = 0; k < n_cell; ++k) {
                         for (j = wp[k]; j < wp[k+1]; ++j) {
                             if (ISNAN(wx[j])) continue;
@@ -421,10 +426,11 @@ SEXP moransi_perm_test(SEXP _A, SEXP _W, SEXP _scaled, SEXP _threads, SEXP _bina
         }
     }
 
-    double t = 0;
-    
+    volatile int oom_error = 0;
+
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < nc; ++i) {
+        if (oom_error) continue;
         if (ap[i] == ap[i+1]) {
             REAL(Ival)[i] = 0;
             REAL(Tval)[i] = 0;
@@ -476,11 +482,15 @@ SEXP moransi_perm_test(SEXP _A, SEXP _W, SEXP _scaled, SEXP _threads, SEXP _bina
             }
         }
 
+        double t = 0;
         if (perm > 0) {
             double *Cs = R_Calloc(perm, double);
             double mn = 0;
             for (int k = 0; k < perm; ++k) {
-                shuffle(tmpa, ris[k], N);
+                if (shuffle(tmpa, ris[k], N)) {
+                    oom_error = 1;
+                    break;
+                }
                 Cs[k] = 0;
                 for (int wi = 0; wi < N; ++wi) {
                     if (bp[wi] == bp[wi+1]) continue;         

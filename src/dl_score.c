@@ -7,7 +7,7 @@
 #include <Matrix.h>
 
 extern int *random_idx(const int n);
-extern void shuffle(double tmp[], int const idx[], const int n);
+extern int shuffle(double tmp[], int const idx[], const int n);
 extern void smooth_W(double * const a, double *s, const int N, CHM_SP W);
 
 struct val {
@@ -68,11 +68,14 @@ SEXP dl_score(SEXP _A, SEXP _B, SEXP _W, SEXP _perm, SEXP _threads)
     SEXP val6 = PROTECT(allocVector(REALSXP, n_record)); // d
     SEXP val7 = PROTECT(allocVector(REALSXP, n_record)); // t_d
     
+    volatile int oom_error = 0;
+
     if (n_feature1 >= n_feature2) {
         void **dat = R_Calloc(n_feature1, void*);
-        
+
 #pragma omp parallel for num_threads(n_thread)
         for (int i = 0; i < n_feature1; ++i) {
+            if (oom_error) continue;
             struct val *vs = R_Calloc(n_feature2, struct val);
             for (int j = 0; j < n_feature2; ++j) {
 
@@ -150,8 +153,11 @@ SEXP dl_score(SEXP _A, SEXP _B, SEXP _W, SEXP _perm, SEXP _threads)
                 double *Ds = R_Calloc(perm, double);
                 
                 for (int k = 0; k < perm; ++k) {
-                    shuffle(tmpa, ris[k], n_cell);
-                    shuffle(tmpb, ris[k], n_cell);
+                    if (shuffle(tmpa, ris[k], n_cell) ||
+                        shuffle(tmpb, ris[k], n_cell)) {
+                        oom_error = 1;
+                        break;
+                    }
 
                     smooth_W(tmpa, tmpa_s, n_cell, W);
                     smooth_W(tmpb, tmpb_s, n_cell, W);
@@ -241,9 +247,10 @@ SEXP dl_score(SEXP _A, SEXP _B, SEXP _W, SEXP _perm, SEXP _threads)
         R_Free(dat);
     } else {
         void **dat = R_Calloc(n_feature2, void*);
-                
+
 #pragma omp parallel for num_threads(n_thread)
         for (int i = 0; i < n_feature2; ++i) {
+            if (oom_error) continue;
             struct val *vs = R_Calloc(n_feature1, struct val);
             for (int j = 0; j < n_feature1; ++j) {
                 struct val *v = &vs[j];
@@ -320,8 +327,11 @@ SEXP dl_score(SEXP _A, SEXP _B, SEXP _W, SEXP _perm, SEXP _threads)
                 double *Ds = R_Calloc(perm, double);
                 
                 for (int k = 0; k < perm; ++k) {
-                    shuffle(tmpa, ris[k], n_cell);
-                    shuffle(tmpb, ris[k], n_cell);
+                    if (shuffle(tmpa, ris[k], n_cell) ||
+                        shuffle(tmpb, ris[k], n_cell)) {
+                        oom_error = 1;
+                        break;
+                    }
 
                     smooth_W(tmpa, tmpa_s, n_cell, W);
                     smooth_W(tmpb, tmpb_s, n_cell, W);
@@ -412,7 +422,10 @@ SEXP dl_score(SEXP _A, SEXP _B, SEXP _W, SEXP _perm, SEXP _threads)
 
     for (int pi = 0; pi < perm; ++pi) R_Free(ris[pi]);
     R_Free(ris);
-    
+
+    if (oom_error)
+        error("shuffle: memory allocation failed in parallel DL-score test");
+
     SEXP ta = PROTECT(allocVector(VECSXP, 7));
     SET_VECTOR_ELT(ta, 0, val1);
     SET_VECTOR_ELT(ta, 1, val2);

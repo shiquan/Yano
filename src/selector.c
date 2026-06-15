@@ -68,8 +68,12 @@ SEXP selector()
 
         if (n == m) {
             m = m*2;
-            x = realloc(x, m*sizeof(double));
-            y = realloc(y, m*sizeof(double));
+            double *new_x = realloc(x, m*sizeof(double));
+            if (!new_x) { free(y); error("Failed to allocate memory for selector."); }
+            x = new_x;
+            double *new_y = realloc(y, m*sizeof(double));
+            if (!new_y) { free(x); error("Failed to allocate memory for selector."); }
+            y = new_y;
         }
 
     

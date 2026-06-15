@@ -108,7 +108,7 @@ SEXP depth2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end, SEXP _strand,
 
         int n3 = Rf_length(_group_names);
         for (i = 0; i < n_cell; ++i) {
-            if (alias[i] < 1 || alias[i] - 1 > n3) {
+            if (alias[i] < 1 || alias[i] - 1 >= n3) {
                 R_Free(alias);
                 error_return("Inconsistance alias names.");
             }
@@ -261,7 +261,7 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
 
         int n3 = Rf_length(_group_names);
         for (int i = 0; i < n_cell; ++i) {
-            if (alias[i] < 1 || alias[i] - 1 > n3) {
+            if (alias[i] < 1 || alias[i] - 1 >= n3) {
                 Rprintf("Inconsistance alias names.");
                 R_Free(alias);
                 return R_NilValue;

@@ -9,7 +9,10 @@ static void
 _finalizer(SEXP ext)
 {
     struct gtf_spec *G = (struct gtf_spec*)R_ExternalPtrAddr(ext);
-    anno_bed_cleanup();
+    /* NOTE: do NOT call anno_bed_cleanup() here — wnames is a shared
+       gene-name cache used across all GTF objects.  Destroying it when
+       one GTF is garbage-collected would corrupt annotation for the
+       remaining GTF objects.  wnames lives for the session lifetime. */
     gtf_destroy(G);
 }
 

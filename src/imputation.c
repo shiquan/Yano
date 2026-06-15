@@ -75,13 +75,16 @@ SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
             if (x0[k] < filter) continue;
             if (n == m) {
                 m = m*2;
-                yi = realloc(yi, sizeof(int)*m);
-                yx = realloc(yx, sizeof(double)*m);
-                if (yi == NULL || yx == NULL) {
-                    free(yi); free(yx);
+                int    *new_yi = realloc(yi, sizeof(int)*m);
+                if (!new_yi) { free(yx);
                     M_cholmod_finish(&c);
-                    error("Failed to allocate data.");
-                }
+                    error("Failed to allocate data."); }
+                yi = new_yi;
+                double *new_yx = realloc(yx, sizeof(double)*m);
+                if (!new_yx) { free(yi);
+                    M_cholmod_finish(&c);
+                    error("Failed to allocate data."); }
+                yx = new_yx;
             }
 
             yi[n] = k;
@@ -165,12 +168,14 @@ CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter, cholmod_common *c)
         for (j = 0; j < n1; ++j) {
             int k = i0[j];
             if (x0[k] < filter) continue;
-            if (n ==m) {
+            if (n == m) {
                 m = m*2;
-                yi = realloc(yi, sizeof(int)*m);
-                yx = realloc(yx, sizeof(double)*m);
-                if (yi == NULL || yx == NULL)
-                    error("Failed to allocate data.");
+                int    *new_yi = realloc(yi, sizeof(int)*m);
+                if (!new_yi) { free(yx); error("Failed to allocate data."); }
+                yi = new_yi;
+                double *new_yx = realloc(yx, sizeof(double)*m);
+                if (!new_yx) { free(yi); error("Failed to allocate data."); }
+                yx = new_yx;
             }
 
             yi[n] = k;

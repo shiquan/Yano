@@ -14,14 +14,15 @@ int *random_idx(const int n)
     }
     return idx;
 }
-void shuffle(double tmp[], int const idx[], const int n)
+int shuffle(double tmp[], int const idx[], const int n)
 {
     double *aux = (double*) calloc(n, sizeof(double));
-    if (aux == NULL) error("shuffle: memory allocation failed");
+    if (aux == NULL) return 1;  /* signal OOM to caller; safe inside OpenMP */
     int i;
     for (i = 0; i < n; i++) aux[idx[i]] = tmp[i];
     for (i = 0; i < n; i++) tmp[i] = aux[i];
     free(aux);
+    return 0;
 }
 
 static int **ris = NULL;
@@ -46,10 +47,9 @@ void random_index_free()
     ris = NULL;
 }
 
-double *shuffle_index(double *tmp, int index, int length)
+int shuffle_index(double *tmp, int index, int length)
 {
-    shuffle(tmp, ris[index], length);
-    return tmp;
+    return shuffle(tmp, ris[index], length);
 }
 
 int get_perm_idx(int i, int j) {
