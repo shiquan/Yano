@@ -1,0 +1,8 @@
+^\.claude$
+^\.git$
+^.*\.Rproj$
+^\.Rhistory$
+^\.RData$
+^\.Ruserdata$
+^Yano\.Rcheck$
+^Yano_.*\.tar\.gz$
