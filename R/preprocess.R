@@ -156,15 +156,18 @@ getCores <- function(threads = 0)
 #' @param object Seurat object.
 #' @param assay Exon assay name. Default use current actived assay.
 #' @examples
+#' \dontrun{
+#' library(Seurat)
 #' data("glbt_small")
 #' DefaultAssay(glbt_small) <- "exon"
 #' # Check the meta table before parsing
 #' head(glbt_small[['exon']][[]])
-#' 
+#'
 #' glbt_small <- ParseExonName(glbt_small)
 #'
 #' # Now see the meta table after parsing
 #' head(glbt_small[['exon']][[]])
+#' }
 #' 
 #' @export
 ParseExonName <- function(object = NULL, assay = NULL)

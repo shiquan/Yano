@@ -1,3 +1,4 @@
+#' @importFrom stats sd
 DScore <- function(x = NULL, y = NULL, W = NULL, perm = 100, filter = 0, seed = 999, debug = FALSE)
 {
   set.seed(seed)
@@ -332,6 +333,7 @@ lognorm <- function(mat = NULL, cs = NULL, scale.factor = 1e5)
 #' @param verbose Print log message. Default is TRUE.
 #' @param debug Print debug message. Will auto set thread to 1. Default is FALSE.
 #' @examples
+#' \dontrun{
 #' data("glbt_small")
 #' DefaultAssay(glbt_small) <- "RNA"
 #' glbt_small <- NormalizeData(glbt_small) %>% RunUMAP(dim = 1:20)
@@ -340,6 +342,7 @@ lognorm <- function(mat = NULL, cs = NULL, scale.factor = 1e5)
 #' glbt_small <- ParseExonName(glbt_small)
 #' glbt_small <- RunAutoCorr(glbt_small)
 #' glbt_small <- RunSDT(glbt_small, bind.name = "gene_name", bind.assay = "RNA")
+#' }
 #'
 #' @importFrom Matrix sparseMatrix
 #' @export

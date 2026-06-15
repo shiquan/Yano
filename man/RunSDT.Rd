@@ -64,6 +64,7 @@ RunSDT(
 Run spatial dissimilarity test for features and their binding features in parallel.
 }
 \examples{
+\dontrun{
 data("glbt_small")
 DefaultAssay(glbt_small) <- "RNA"
 glbt_small <- NormalizeData(glbt_small) \%>\% RunUMAP(dim = 1:20)
@@ -72,5 +73,6 @@ glbt_small <- NormalizeData(glbt_small)
 glbt_small <- ParseExonName(glbt_small)
 glbt_small <- RunAutoCorr(glbt_small)
 glbt_small <- RunSDT(glbt_small, bind.name = "gene_name", bind.assay = "RNA")
+}
 
 }

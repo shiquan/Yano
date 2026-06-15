@@ -1,9 +1,13 @@
 Package: Yano
 Title: Yet Another Package for Single Cell Omics
-Version: 1.2
-Author: Quan Shi
-Maintainer: Quan Shi <shiquan.biomed@icloud.com>
-Description: A toolkit to perform spatial dissimilarity analysis for single cell transcriptomics.
+Version: 1.5
+Authors@R: person(given = "Quan",
+                  family = "Shi",
+                  role = c("aut", "cre"),
+                  email = "shiquan.biomed@icloud.com")
+Description: A toolkit to perform spatial dissimilarity analysis for single
+    cell transcriptomics, including alternative splicing detection via spatial
+    autocorrelation and permutation-based dissimilarity tests.
 URL: https://github.com/shiquan/Yano
 License: MIT + file LICENSE
 Encoding: UTF-8
@@ -16,7 +20,6 @@ Imports:
     Seurat,
     ggplot2,
     Matrix,
-    R.utils,
     viridis,
     data.table,
     RColorBrewer,
@@ -36,6 +39,7 @@ Imports:
     stringr
 Suggests:
     DEXSeq,
+    systemfonts,
     RcppAnnoy,
     ape,
     concaveman

@@ -654,34 +654,6 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
   return(p1)
 }
 
-#' @title TrackPlot
-#' @description Plot read/UMI coverage and transcript tracks from BAM(s).
-#' @param bamfile A path to a BAM file or a list to BAM files. BAM file(s) should be indexed.
-#' @param chr Chromosome name.
-#' @param start Start position.
-#' @param end End position.
-#' @param strand Plot reads on strand. Default is bot strands. Can be one of c("both", "forward", "reverse", "ignore"). When set to ignore, read strand information will be discarded.
-#' @param split.bc Split coverage by barcode. Default is FALSE, bulk mode.
-#' @param bin Divide plot region into bins. Save plot time. Default is 1000.
-#' @param cell.tag Tag for cell barcode in the BAM. Default is "CB".
-#' @param umi.tag Tag for UMI in the BAM. Default is "UB".
-#' @param gtf GTF database, load by gtf2db.
-#' @param max.depth Max depth capped to plot. Default is 0, no capping.
-#' @param group.title.size Font size for track group titles. Default is rel(2).
-#' @param cell.group Vector or list of cell group IDs. Name for the ID is the cell name. If bamfile is a list, the cell.group can also be a list with the same length of bamfile list, and binding cell.group to bam file by the name or order in both lists. See manual online for real cases. <https://shiquan.github.io/Yano.html>
-#' @param display.genes Vector of genes to plot in the target region. Other genes in this region will not print in transcript track plot.
-#' @param meta.features Meta table for features. If set the regions will be also plot on top of track plot. Meta table can be accessed by object[[assay]][[]].
-#' @param log.scaled Log scaled the coverage depth per group. Only used if the depth is super high. Disabled in default.
-#' @param upstream Flank the target region with upstream to plot. Default is 1000.
-#' @param downstream Flank the target region with downstream to plot. Default is 1000.
-#' @param fragfile Fragment file for ATAC data.
-#' @param atac.log.scaled Log scaled the coverage depth per group for ATAC tracks.
-#' @param atac.max.depth Capped depth to plot for ATAC tracks.
-#' @param col.by Color bed regions by value. The specified name should be a colname in meta table. Only support discrete value.
-#' @param layout.heights Layout for track plots. Default is c(10,2) or c(1,10,2) if meta.features specified or c(1,10,10,2) if fragment file also specified.
-#' @param highlights A region of a list of regions to hightlight. The region is format as c(start,end).
-#' @param junc Also plot the junction reads.
-#' @param junc.min.depth Filter out junctions if low than this cutoff. This parameter used to remove noise background. Default is 5.
 # Add cross-panel highlight rectangles and boundary lines to a gtable using grid primitives.
 #
 # After patchwork assembles sub-plots into a combined gtable, this function finds all
@@ -746,6 +718,35 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
   gt
 }
 
+#' @title TrackPlot
+#' @description Plot read/UMI coverage and transcript tracks from BAM(s).
+#' @param bamfile A path to a BAM file or a list to BAM files. BAM file(s) should be indexed.
+#' @param chr Chromosome name.
+#' @param start Start position.
+#' @param end End position.
+#' @param gene Gene name. If provided, chr/start/end are auto-detected from the GTF.
+#' @param strand Plot reads on strand. Default is both strands.
+#' @param split.bc Split coverage by barcode. Default is FALSE, bulk mode.
+#' @param bin Divide plot region into bins. Default is 1000.
+#' @param cell.tag Tag for cell barcode in the BAM. Default is "CB".
+#' @param umi.tag Tag for UMI in the BAM. Default is "UB".
+#' @param gtf GTF database, loaded by gtf2db.
+#' @param max.depth Max depth capped to plot. Default is 0 (no capping).
+#' @param group.title.size Font size for track group titles.
+#' @param cell.group Vector or list of cell group IDs.
+#' @param display.genes Vector of genes to display in the gene track.
+#' @param meta.features Meta table for feature annotations.
+#' @param log.scaled Log-scale the coverage depth. Default FALSE.
+#' @param upstream Flank the region upstream. Default 1000.
+#' @param downstream Flank the region downstream. Default 1000.
+#' @param fragfile Fragment file for ATAC data.
+#' @param atac.log.scaled Log-scale ATAC coverage. Default FALSE.
+#' @param atac.max.depth Capped depth for ATAC tracks.
+#' @param col.by Color BED regions by a metadata column.
+#' @param layout.heights Layout heights for the combined plot.
+#' @param highlights A region (c(start,end)) or list of regions to highlight.
+#' @param junc Also plot junction reads. Default FALSE.
+#' @param junc.min.depth Filter junctions below this depth cutoff. Default 5.
 #' @importFrom patchwork plot_layout
 #' @export
 TrackPlot <- function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
