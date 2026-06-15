@@ -9,7 +9,8 @@ GetWeightsFromSpatial(
   diag.value = 0,
   k.param = 20,
   image = NULL,
-  prune.SNN = 1/30
+  prune.SNN = 1/30,
+  cells = NULL
 )
 }
 \arguments{
@@ -19,12 +20,16 @@ GetWeightsFromSpatial(
 
 \item{k.param}{K-nearest neighbors. Default is 20.}
 
-\item{image}{Name of the spatial image. If NULL, uses the first image.}
+\item{image}{Name of the spatial image. If NULL, uses all images in the object.
+If multiple images are available, each generates a separate weight matrix which
+are then merged.}
 
 \item{prune.SNN}{Jaccard index cutoff for SNN pruning. Default is 1/30.}
+
+\item{cells}{Cell list to subset. Default uses all cells.}
 }
 \value{
-A sparse weight matrix.
+A column-wise normalized sparse weight matrix.
 }
 \description{
 Calculate cell-cell weight matrix from spatial coordinates.

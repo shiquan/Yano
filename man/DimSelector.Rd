@@ -15,12 +15,12 @@ DimSelector(
 \arguments{
 \item{object}{Seurat object.}
 
-\item{return.object}{Return Seurat object. Default return selected cell IDs.}
+\item{return.object}{Return Seurat object. Default returns selected cell IDs.}
 
 \item{plot.selected}{Plot the selected cells.}
 
-\item{...}{Parameters pass to DimPlot()}
+\item{...}{Parameters passed to Seurat::DimPlot().}
 }
 \description{
-Select cells from dimension plot. Parameters most inhert from Seurat::DimPlot().
+Select cells from dimension plot.
 }

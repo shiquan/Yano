@@ -118,7 +118,7 @@ FbtPlot0 <- function(tab = NULL,
   if  (isFALSE(zoom.in)) {
     xi <- data_cum$bp_add
     xi <- xi[-1]
-    p <- p + geom_vline(xintercept = xi, color="red", linetype="dotted")
+    p <- p + geom_vline(xintercept = xi, color="grey60", linetype="dotted")
   }
   if (!is.null(col.by)) {
     if (is.null(shape.by)) {
@@ -421,7 +421,7 @@ plot.genes <- function(x = NULL, chr = NULL, start = NULL, end = NULL, gtf = NUL
     if (!is.null(highlights)) {
       df <- as.data.frame(highlights)
       p <- p + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax), ymin=-Inf, ymax=Inf, fill="grey", alpha=0.2)
-      p <- p + geom_vline(data=df, inherit.aes = F, mapping=aes(xintercept=xmin), color="red", linewidth=0.6, alpha=0.9)
+      p <- p + geom_vline(data=df, inherit.aes = F, mapping=aes(xintercept=xmin), color="darkorange", linewidth=0.6, alpha=0.9)
     }
     p <- p + fbt_theme()
     return(p)
@@ -464,7 +464,7 @@ plot.genes <- function(x = NULL, chr = NULL, start = NULL, end = NULL, gtf = NUL
   if (!is.null(highlights)) {
     df <- as.data.frame(highlights)
     p <- p + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax), ymin=-Inf, ymax=Inf, fill="grey", alpha=0.2)
-    p <- p + geom_vline(data=df, inherit.aes = F, mapping=aes(xintercept=xmin), color="red", linewidth=0.6, alpha=0.9)
+    p <- p + geom_vline(data=df, inherit.aes = F, mapping=aes(xintercept=xmin), color="darkorange", linewidth=0.6, alpha=0.9)
   }
   if (max.genes > 0 || !is.null(print.genes)) {
     p <- p + geom_text_repel(data=gname,aes(x=med,y=idx, label=gene), nudge_y = gname$nudge_y, size=5, max.overlaps=Inf, segment.color = "grey50")
@@ -496,7 +496,7 @@ plot.bed <- function(x = NULL, start = NULL, end = NULL, peaks = NULL, col.by = 
   if (!is.null(highlights)) {
     df <- as.data.frame(highlights)
     p <- p + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax), ymin=-Inf, ymax=Inf, fill="grey", alpha=0.2)
-    p <- p + geom_vline(data=df, inherit.aes = F, mapping=aes(xintercept=xmin), color="red", linewidth=0.6, alpha=0.9)
+    p <- p + geom_vline(data=df, inherit.aes = F, mapping=aes(xintercept=xmin), color="darkorange", linewidth=0.6, alpha=0.9)
   }
 
   p <- p + facet_wrap(facets = ~strand, strip.position = 'right', ncol = 1)
@@ -606,7 +606,7 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   if (!is.null(highlights)) {
     df <- as.data.frame(highlights)
     p1 <- p1 + geom_rect(data=df, inherit.aes = F, mapping=aes(xmin=xmin, xmax=xmax), ymin=-Inf, ymax=Inf, fill="grey", alpha=0.2)
-    p1 <- p1 + geom_vline(data=df, inherit.aes = F, mapping=aes(xintercept=xmin), color="red", linewidth=0.6, alpha=0.9)
+    p1 <- p1 + geom_vline(data=df, inherit.aes = F, mapping=aes(xintercept=xmin), color="darkorange", linewidth=0.6, alpha=0.9)
   }
 
   p1 <- p1 + scale_y_continuous(breaks = pretty_breaks(n = 4), labels = label_comma(), guide = guide_axis(check.overlap = TRUE), expand = expansion(mult = c(0.06, 0.06)))
@@ -694,68 +694,54 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
 #                sub-panels (panel-1-1, panel-1-2, ...).  Span them all.
 #   2. gTree   – non-faceted sub-plot (e.g., plot.genes): add highlight grobs as
 #                children of the panel gTree.
-#
-# @param gt A gtable (from patchworkGrob).
-# @param highlights Data frame with columns xmin, xmax in genomic coordinates.
-# @param start,end Genomic window boundaries (used to map to npc).
-# @noRd
+#' @noRd
 .add_grid_highlights_to_gtable <- function(gt, highlights, start, end) {
   layout <- gt$layout
-  # Find panel entries (match "panel" but not "panel-area")
+
+  # Find ALL panel entries at the top level (across all sub-plots)
   panel_idx <- which(grepl("^panel", layout$name) & !grepl("panel-area", layout$name))
   if (length(panel_idx) == 0L || nrow(highlights) == 0L) return(gt)
 
+  # Combined bounding box of ALL panels from ALL sub-plots
+  t_all <- min(layout$t[panel_idx])
+  b_all <- max(layout$b[panel_idx])
+  l_all <- min(layout$l[panel_idx])
+  r_all <- max(layout$r[panel_idx])
+
+  # Protrude beyond panels for visual prominence
+  extend_rows <- 2L
+  t_span <- max(1L, t_all - extend_rows)
+  b_span <- b_all + extend_rows
+
   window <- end - start
 
-  # Build highlight rect + boundary-line grobs (npc x, npc y)
-  make_hl_grobs <- function() {
-    grobs <- vector("list", nrow(highlights) * 2L)
-    for (i in seq_len(nrow(highlights))) {
-      x0 <- (highlights$xmin[i] - start) / window
-      x1 <- (highlights$xmax[i] - start) / window
-      grobs[[2L * i - 1L]] <- rectGrob(
-        x      = unit(x0, "npc"),
-        width  = unit(x1 - x0, "npc"),
-        y      = unit(0, "npc"),
-        height = unit(1, "npc"),
-        just   = c("left", "bottom"),
-        gp     = gpar(fill = "grey", alpha = 0.2, col = NA)
-      )
-      grobs[[2L * i]] <- segmentsGrob(
-        x0 = unit(x0, "npc"), x1 = unit(x0, "npc"),
-        y0 = unit(0, "npc"),  y1 = unit(1, "npc"),
-        gp = gpar(col = "red", lwd = 0.6, alpha = 0.9)
-      )
-    }
-    grobs
+  # Build highlight rect + boundary-line grobs once
+  y_extend <- 0.03  # 3% overhang on each side
+  hl_grobs <- vector("list", nrow(highlights) * 2L)
+  for (i in seq_len(nrow(highlights))) {
+    x0 <- (highlights$xmin[i] - start) / window
+    x1 <- (highlights$xmax[i] - start) / window
+
+    hl_grobs[[2L * i - 1L]] <- rectGrob(
+      x      = unit(x0, "npc"),
+      width  = unit(x1 - x0, "npc"),
+      y      = unit(-y_extend, "npc"),
+      height = unit(1 + 2 * y_extend, "npc"),
+      just   = c("left", "bottom"),
+      gp     = gpar(fill = "grey", alpha = 0.2, col = NA)
+    )
+    hl_grobs[[2L * i]] <- segmentsGrob(
+      x0 = unit(x0, "npc"), x1 = unit(x0, "npc"),
+      y0 = unit(-y_extend, "npc"), y1 = unit(1 + y_extend, "npc"),
+      gp = gpar(col = "darkorange", lwd = 0.6, alpha = 0.9)
+    )
   }
+  hl_tree <- do.call(grobTree, hl_grobs)
 
-  for (pi in panel_idx) {
-    pg <- gt$grobs[[pi]]
-
-    if (inherits(pg, "gtable")) {
-      # ---- Faceted sub-plot ----
-      inner_lo <- pg$layout
-      inner_panels <- which(grepl("^panel-", inner_lo$name))
-      if (length(inner_panels) == 0L) next
-
-      t_row <- min(inner_lo$t[inner_panels])
-      b_row <- max(inner_lo$b[inner_panels])
-      l_col <- min(inner_lo$l[inner_panels])
-      r_col <- max(inner_lo$r[inner_panels])
-
-      hl_grobs <- make_hl_grobs()
-      pg <- gtable::gtable_add_grob(pg, do.call(grobTree, hl_grobs),
-                t = t_row, l = l_col, b = b_row, r = r_col,
-                clip = "off", name = "hl_span_grid")
-      gt$grobs[[pi]] <- pg
-
-    } else if (inherits(pg, "gTree")) {
-      # ---- Non-faceted sub-plot ----
-      hl_grobs <- make_hl_grobs()
-      gt$grobs[[pi]] <- grobTree(pg, do.call(grobTree, hl_grobs))
-    }
-  }
+  # Single spanning grob across ALL panels from ALL tracks
+  gt <- gtable::gtable_add_grob(gt, hl_tree,
+    t = t_span, l = l_all, b = b_span, r = r_all,
+    clip = "off", name = "hl_span_all")
 
   gt
 }
@@ -802,13 +788,25 @@ TrackPlot <- function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
   }
   df <- NULL
   if (!is.null(highlights)) {
-    if (is.list(highlights)) {
+    if (is.data.frame(highlights)) {
+      # data.frame with (xmin, xmax) or (start, end) columns
+      if (all(c("xmin", "xmax") %in% colnames(highlights))) {
+        df <- highlights[, c("xmin", "xmax")]
+      } else if (all(c("start", "end") %in% colnames(highlights))) {
+        df <- data.frame(xmin = highlights$start, xmax = highlights$end)
+      } else {
+        stop("highlights data.frame must have columns 'xmin' and 'xmax', or 'start' and 'end'")
+      }
+    } else if (is.list(highlights)) {
+      # list of vectors: list(c(s1, e1), c(s2, e2))
       highlights <- lapply(highlights, function(x) x[c(1,2)])
+      df <- matrix(unlist(highlights), nrow = 2)
+      df <- as.data.frame(t(df))
+      colnames(df) <- c("xmin", "xmax")
+    } else {
+      # single vector: c(start, end)
+      df <- data.frame(xmin = highlights[1], xmax = highlights[2])
     }
-
-    df <- matrix(unlist(highlights),nrow=2)
-    df <- as.data.frame(t(df))
-    colnames(df) <- c("xmin","xmax")
 
     df <- subset(df, xmin > start & xmax < end)
   }
@@ -851,7 +849,7 @@ TrackPlot <- function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
   } else {
     combined <- p1 / p2 + plot_layout(heights=layout.heights[c(2,3)])
   }
-  combined & theme(panel.spacing = unit(0, "lines"), plot.margin = margin(0, 0, 0, 0))
+  combined <- combined & theme(panel.spacing = unit(0, "lines"), plot.margin = margin(0, 0, 0, 0))
 
   if (!is.null(df) && nrow(df) > 0L) {
     gt <- patchwork::patchworkGrob(combined)
@@ -866,6 +864,7 @@ TrackPlot <- function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
 
 # S3 print method so TrackPlot objects render correctly
 #' @export
+#' @method print TrackPlot
 print.TrackPlot <- function(x, ...) {
   grid.newpage()
   grid.draw(x)

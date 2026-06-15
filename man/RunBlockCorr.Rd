@@ -57,11 +57,11 @@ RunBlockCorr(
 
 \item{threads}{Threads. If set to 0 (default), will auto check the CPU cores and set threads = number of CPU cores -1.}
 
+\item{verbose}{Print log message. Default is TRUE.}
+
 \item{debug}{Print debug message. Will auto set thread to 1. Default is FALSE.}
 
 \item{force}{Force to use this function.}
-
-\item{versbose}{Print log message. Default is TRUE.}
 }
 \description{
 Run spatial dissimilarity test for features and their binding features in parallel.

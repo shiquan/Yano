@@ -4,40 +4,16 @@
 \alias{DimConcaveHull}
 \title{DimConcaveHull}
 \usage{
-DimConcaveHull(
-  object,
-  dims = c(1, 2),
-  cells = NULL,
-  cols = NULL,
-  pt.size = NULL,
-  reduction = NULL,
-  group.by = NULL,
-  shape.by = NULL,
-  order = NULL,
-  shuffle = FALSE,
-  seed = 1,
-  label = FALSE,
-  label.size = 4,
-  label.color = "black",
-  label.box = FALSE,
-  repel = FALSE,
-  alpha = 1,
-  cells.highlight = NULL,
-  cols.highlight = "#DE2D26",
-  sizes.highlight = 1,
-  na.value = "grey50",
-  raster = NULL,
-  raster.dpi = c(512, 512),
-  return.object = FALSE,
-  plot.selected = TRUE
-)
+DimConcaveHull(object, return.object = FALSE, plot.selected = TRUE, ...)
 }
 \arguments{
 \item{object}{Seurat object.}
 
-\item{return.object}{Return Seurat object. Default return selected cell IDs.}
+\item{return.object}{Return Seurat object. Default returns selected cell IDs.}
 
 \item{plot.selected}{Plot the selected cells.}
+
+\item{...}{Parameters passed to Seurat::DimPlot().}
 }
 \description{
 Select cells from dimension reduction plot using concave hull lasso.

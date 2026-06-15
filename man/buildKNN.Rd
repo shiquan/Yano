@@ -13,9 +13,18 @@ buildKNN(
 )
 }
 \arguments{
-\item{k.param}{K-nearest neighbors, for calculating weight matrix with emb. Default is 20.}
+\item{data}{Reference data matrix (rows = items, columns = features).}
 
-\item{n.trees}{Number of trees during index build time. More trees gives higher accuracy}
+\item{query}{Query data matrix. Defaults to data.}
+
+\item{k.param}{Number of nearest neighbors. Default is 20.}
+
+\item{metric}{Distance metric. One of "euclidean", "cosine", "manhattan", or "hamming".}
+
+\item{n.trees}{Number of trees during index build time. More trees gives higher accuracy. Default is 50.}
+}
+\value{
+A list with \code{idx} (neighbor indices) and \code{dist} (neighbor distances).
 }
 \description{
 Compute KNN with RcppAnnoy.

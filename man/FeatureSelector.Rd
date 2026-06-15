@@ -18,12 +18,14 @@ FeatureSelector(
 \arguments{
 \item{object}{Seurat object.}
 
-\item{return.object}{Return Seurat object. Default return selected cell IDs.}
+\item{feature}{Feature to plot.}
+
+\item{return.object}{Return Seurat object. Default returns selected cell IDs.}
 
 \item{plot.selected}{Plot the selected cells.}
 
-\item{...}{Parameters pass to FeaturePlot.}
+\item{...}{Parameters passed to Seurat::DimPlot().}
 }
 \description{
-Select cells from Feature plot. Parameters most inhert from Seurat::FeaturePlot().
+Select cells from Feature plot.
 }

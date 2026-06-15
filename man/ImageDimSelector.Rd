@@ -16,12 +16,14 @@ ImageDimSelector(
 \arguments{
 \item{object}{Seurat object.}
 
-\item{return.object}{Return Seurat object. Default return selected cell IDs.}
+\item{group.by}{Grouping variable.}
+
+\item{return.object}{Return Seurat object. Default returns selected cell IDs.}
 
 \item{plot.selected}{Plot the selected cells.}
 
-\item{...}{Parameters pass to ImageDimPlot.}
+\item{...}{Parameters passed to Seurat::ImageDimPlot().}
 }
 \description{
-Select cells from Image dimension plot. Parameters most inhert from Seurat::SpatialPlot().
+Select cells from Image dimension plot.
 }

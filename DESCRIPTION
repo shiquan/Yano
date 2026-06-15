@@ -25,6 +25,7 @@ Imports:
     cowplot,
     dplyr,
     ggrepel,
+    gtable,
     gtools,
     magrittr,
     methods,

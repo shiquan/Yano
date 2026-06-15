@@ -10,20 +10,21 @@ SpatialConcaveHull(
   return.object = FALSE,
   plot.selected = TRUE,
   knn = 3,
-  combine = FALSE,
   ...
 )
 }
 \arguments{
 \item{object}{Seurat object.}
 
-\item{return.object}{Return Seurat object. Default return selected cell IDs.}
+\item{group.by}{Grouping variable.}
+
+\item{return.object}{Return Seurat object. Default returns selected cell IDs.}
 
 \item{plot.selected}{Plot the selected cells.}
 
 \item{knn}{Number of nearest neighbors for concave hull. Default is 3.}
 
-\item{...}{Parameters pass to DimPlot()}
+\item{...}{Parameters passed to Seurat::SpatialPlot().}
 }
 \description{
 Select cells from spatial plot using concave hull lasso.

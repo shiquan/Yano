@@ -10,32 +10,31 @@ GetWeights(
   order.cells = NULL,
   emb = NULL,
   k.param = 20,
-  prune.distance = -1,
   prune.SNN = 1/30,
   diag.value = 0,
   cells = NULL
 )
 }
 \arguments{
-\item{snn}{Shared nearest neighbour graph, usually can found at object[["RNA_snn"]]. This graph can be calculate by Seurat::FindNeighbors().}
+\item{snn}{Shared nearest neighbour graph, usually found at object[["RNA_snn"]]. This graph can be calculated by Seurat::FindNeighbors().}
 
-\item{pos}{Manually setup cell coordinates, in a matrix format. This matrix requires at least 2 dimensions.}
+\item{pos}{Manually set cell positions, as a data.frame or matrix with at least 2 numeric columns and rownames as cell names.}
 
 \item{order.cells}{Predefined cell ranks, used for cell lineage analysis.}
 
-\item{emb}{Cell dimesional space (i.e. PCA/ICA/harmony).}
+\item{emb}{Cell embedding space (i.e. PCA/ICA/harmony).}
 
 \item{k.param}{K-nearest neighbors, for calculating weight matrix with emb/pos/order.cells. Default is 20.}
 
 \item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Default is 1/30.}
 
-\item{diag.value}{Diagnoal value in the weight matrix.}
+\item{diag.value}{Diagonal value in the weight matrix. Default is 0.}
 
-\item{cells}{Cell list. Default use all cells. If set, pre-defined SNN is not appliable.}
+\item{cells}{Cell list to subset. Default uses all cells.}
 }
 \value{
 A column-wise normalised sparse matrix.
 }
 \description{
-Calcualte cell-cell weight matrix by one of shared nearest neighbour matrix, spatial locations, cell embedding and linear trajectory. In default, if no snn/pos/order.cells/emb set, the weight matrix will be generated with PCA.
+Calculate cell-cell weight matrix from one of: shared nearest neighbour graph, spatial positions, cell embeddings, or linear order. Exactly one source must be specified.
 }

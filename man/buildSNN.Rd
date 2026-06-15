@@ -2,13 +2,18 @@
 % Please edit documentation in R/weights.R
 \name{buildSNN}
 \alias{buildSNN}
-\title{buildKNN}
+\title{buildSNN}
 \usage{
 buildSNN(knn, prune.SNN = 1/30)
 }
 \arguments{
-\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/50.}
+\item{knn}{A list with \code{idx} matrix, as returned by \code{buildKNN}.}
+
+\item{prune.SNN}{Sets the cutoff for acceptable Jaccard index when computing the neighborhood overlap for the SNN construction. Any edges with values less than or equal to this will be set to 0 and removed from the SNN graph. Essentially sets the stringency of pruning (0 --- no pruning, 1 --- prune everything). Default is 1/30.}
+}
+\value{
+A sparse symmetric SNN matrix (\code{dgCMatrix}).
 }
 \description{
-Convert a knn object into a shared nearest neighbors adjacency matrix.
+Convert a KNN object into a shared nearest neighbors adjacency matrix.
 }

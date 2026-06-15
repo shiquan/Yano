@@ -15,12 +15,14 @@ SpatialSelector(
 \arguments{
 \item{object}{Seurat object.}
 
-\item{return.object}{Return Seurat object. Default return selected cell IDs.}
+\item{group.by}{Grouping variable.}
+
+\item{return.object}{Return Seurat object. Default returns selected cell IDs.}
 
 \item{plot.selected}{Plot the selected cells.}
 
-\item{...}{Parameters pass to SpatialPlot.}
+\item{...}{Parameters passed to Seurat::SpatialPlot().}
 }
 \description{
-Select cells from Spatial plot. Parameters most inhert from Seurat::SpatialPlot().
+Select cells from Spatial plot.
 }
