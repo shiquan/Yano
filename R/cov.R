@@ -1,5 +1,42 @@
 #' @importFrom reshape2 melt
 ## #' @useDynLib Yano depth2matrix
+
+# Fill a complete pos x label grid for one strand, defaulting uncovered
+# positions to depth 0. Duplicate (pos, label) hits are summed via
+# sparseMatrix before matching back onto the dense grid.
+.fill_cov_grid <- function(pos.v = NULL, lab.v = NULL, depth.v = NULL, x = NULL, y = NULL, strand.lab = ".", max.grid = 5e6)
+{
+  if (length(x) * length(y) > max.grid) {
+    warning("Dense coverage grid is large (", length(x) * length(y),
+            " rows); consider a larger bin or subsetting labels.")
+  }
+  grid <- expand.grid(pos = x, label = y)
+  grid$depth <- 0
+  grid$strand <- strand.lab
+  if (length(depth.v) > 0) {
+    ii <- match(pos.v, x)
+    jj <- match(lab.v, y)
+    bad <- is.na(ii) | is.na(jj)
+    if (any(bad)) {
+      warning("Dropping ", sum(bad), " out-of-range coverage record(s).")
+      ii <- ii[!bad]
+      jj <- jj[!bad]
+      depth.v <- depth.v[!bad]
+    }
+    if (length(ii) > 0) {
+      m <- Matrix::sparseMatrix(i = ii, j = jj, x = depth.v,
+                                dims = c(length(x), length(y)))
+      mt <- as(m, "TsparseMatrix")
+      key.grid <- paste(grid$pos, grid$label, sep = "\r")
+      key.hit <- paste(x[mt@i + 1], y[mt@j + 1], sep = "\r")
+      hit <- match(key.grid, key.hit)
+      ok <- !is.na(hit)
+      grid$depth[ok] <- mt@x[hit[ok]]
+    }
+  }
+  grid
+}
+
 bamcov0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "both", split.bc = FALSE, cell.group = NULL, bin=1000, cell.tag = "CB", umi.tag = "UB")
 {
   if (is.null(bamfile)) stop("No BAM.")
@@ -38,43 +75,24 @@ bamcov0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "
   }
 
   if (is.null(dlst)) return(NULL) ##stop("No cell found in the bam. Check cell names.")
-  
+
   idx.0 <- which(dlst[[3]] == 0)
   idx.1 <- which(dlst[[3]] == 1)
 
   dlst[[1]] <- as.integer(dlst[[1]]/win)*win
 
   x <- seq(as.integer(start/win)*win, as.integer(end/win)*win, win)
-  y <- unique(dlst[[5]])
+  # Complete label set: prefer declared group levels so zero-coverage
+  # groups still get a facet; otherwise use labels observed in the BAM.
+  y <- if (!is.null(cell.group)) groups else unique(dlst[[5]])
 
-  tab <- data.frame()
-  
-  nr <- length(x)
-  nc <- length(y)
-  
-  if (length(idx.0) > 0) {
-    m0 <- Matrix::sparseMatrix(
-      i = match(dlst[[1]][idx.0], x),
-      j = match(dlst[[5]][idx.0], y),
-      x = dlst[[4]][idx.0],
-      dims=c(nr,nc))
-    s0 <- summary(m0)
-    tab1 <- data.frame(pos = x[s0$i], label = y[s0$j], depth = s0$x, strand = '+')
-    tab <- rbind(tab, tab1)
-  }
+  # Full pos x label grids for BOTH strands, uncovered positions filled
+  # with depth 0 so downstream plots keep the whole x axis.
+  tab <- rbind(
+    .fill_cov_grid(dlst[[1]][idx.0], dlst[[5]][idx.0], dlst[[4]][idx.0], x, y, strand.lab = '+', max.grid = 2.5e6),
+    .fill_cov_grid(dlst[[1]][idx.1], dlst[[5]][idx.1], dlst[[4]][idx.1], x, y, strand.lab = '-', max.grid = 2.5e6)
+  )
 
-  if (length(idx.1) > 0) {
-    m1 <- Matrix::sparseMatrix(
-      i = match(dlst[[1]][idx.1], x),
-      j = match(dlst[[5]][idx.1], y),
-      x = dlst[[4]][idx.1],
-      dims=c(nr,nc))
-    s1 <- summary(m1)
-    tab2 <- data.frame(pos = x[s1$i], label = y[s1$j], depth = s1$x, strand = '-')
-    tab <- rbind(tab, tab2)
-  }
-
-  colnames(tab) <- c("pos","label","depth","strand")
   tab$depth <- tab$depth/win
 
   return(tab)
@@ -236,20 +254,13 @@ fragcov0 <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc
   dlst[[1]] <- as.integer(dlst[[1]]/win)*win
 
   x <- seq(as.integer(start/win)*win, as.integer(end/win)*win, win)
-  y <- unique(dlst[[4]])
+  # Complete label set: prefer declared group levels so zero-coverage
+  # groups still get a facet; otherwise use labels observed in the fragments.
+  y <- if (!is.null(cell.group)) groups else unique(dlst[[4]])
 
-  nr <- length(x)
-  nc <- length(y)
-  
-  m0 <- Matrix::sparseMatrix(
-    i = match(dlst[[1]], x),
-    j = match(dlst[[4]], y),
-    x = dlst[[3]],
-    dims=c(nr,nc))
-  s <- summary(m0)
-  tab <- data.frame(pos = x[s$i], label = y[s$j], depth = s$x, strand = '.')
-
-  colnames(tab) <- c("pos","label","depth","strand")
+  # Full pos x label grid, uncovered positions filled with depth 0 so
+  # downstream plots keep the whole x axis.
+  tab <- .fill_cov_grid(dlst[[1]], dlst[[4]], dlst[[3]], x, y, strand.lab = '.', max.grid = 5e6)
   tab$depth <- as.integer(tab$depth/win)
 
   return(tab)
