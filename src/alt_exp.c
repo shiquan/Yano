@@ -66,8 +66,10 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
 #pragma omp parallel for num_threads(n_thread)
     for (int i = 0; i < N_feature; ++i) {
         if (oom_error) continue;
-        double *tmpa = R_Calloc(n_cell, double);
-        double *tmpb = R_Calloc(n_cell, double);
+        /* malloc/free: R allocator is not thread-safe inside OpenMP */
+        double *tmpa = malloc(n_cell * sizeof(double));
+        double *tmpb = malloc(n_cell * sizeof(double));
+        if (!tmpa || !tmpb) { free(tmpa); free(tmpb); oom_error = 1; continue; }
         memset(tmpa, 0, sizeof(double)*n_cell);
         memset(tmpb, 0, sizeof(double)*n_cell);
 
@@ -118,7 +120,8 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
         double mean = 0;
         double var = 0;
 
-        double *es = R_Calloc(perm, double);
+        double *es = malloc(perm * sizeof(double));
+        if (!es) { free(tmpa); free(tmpb); oom_error = 1; continue; }
         for (int k = 0; k < perm; ++k) {
             if (shuffle(tmpa, ris[k], n_cell)) {
                 oom_error = 1;
@@ -153,8 +156,8 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
             es[k] = g11/g12;
             mean = mean + es[k];
         }
-        R_Free(tmpa);
-        R_Free(tmpb);
+        free(tmpa);
+        free(tmpb);
         
         mean = mean/perm;
         
@@ -165,7 +168,7 @@ SEXP alt_exp(SEXP _A, SEXP _B, SEXP idx1, SEXP idx2, SEXP _mode, SEXP _perm, SEX
 
         double t = (ratio1 - mean)/var;
 
-        R_Free(es);
+        free(es);
         
 #pragma omp critical
         {

@@ -121,6 +121,9 @@ StatSplice <- ggproto("StatSplice", Stat,
 
   compute_panel = function(data, scales, spline_shape = -0.25) {
     cols_to_keep <- setdiff(names(data), c("x", "y", "xend", "height"))
+    # honor na.rm: an NA in any required aesthetic would reach xspline() and error
+    data <- data[complete.cases(data[, c("x", "y", "xend", "height")]), , drop = FALSE]
+    if (nrow(data) == 0) return(data.frame())
     # Open ONE temporary device for the entire batch of splines,
     # avoiding per-splice device open/close overhead
     pdf(file = NULL)

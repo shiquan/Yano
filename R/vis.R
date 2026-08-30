@@ -297,23 +297,23 @@ FbtPlot <- function(object = NULL,
     if (val %ni% colnames(tab0)) stop("No val name found.")
 
     if (isTRUE(zoom.in)) {
-      tab0 %>% filter(chr %in% chr1 & start >= start1) -> tab0
+      tab0 <- base::subset(tab0, tab0[[chr.name]] %in% chr1 & tab0[[start.name]] >= start1)
       if (end1 > 0) {
-        tab0 <- base::subset(tab0, start <=end1)
+        tab0 <- base::subset(tab0, tab0[[start.name]] <= end1)
       }
     }
 
     if (isTRUE(remove.chr)) {
-      tab0$chr <- gsub("^chr", "", as.character(tab0$chr))
+      tab0[[chr.name]] <- gsub("^chr", "", as.character(tab0[[chr.name]]))
       if (!is.null(sel.chrs)) {
         sel.chrs <- gsub("^chr", "", as.character(sel.chrs))
       }
     }
     if (!is.null(sel.chrs)) {
-      tab0$chr <- as.character(tab0$chr)
+      tab0[[chr.name]] <- as.character(tab0[[chr.name]])
       sel.chrs <- as.character(sel.chrs)
-      tab0 <- tab0 %>% filter (chr %in% sel.chrs)
-      levels(tab0[[chr.name]]) <- sel.chrs
+      tab0 <- tab0 %>% filter(.data[[chr.name]] %in% sel.chrs)
+      tab0[[chr.name]] <- factor(tab0[[chr.name]], levels = sel.chrs)
     }
     
     ## if (!is.null(types)) {
@@ -435,6 +435,10 @@ plot.genes <- function(x = NULL, chr = NULL, start = NULL, end = NULL, gtf = NUL
   }
   tracks <- subset(tracks, start < end)
 
+  if (nrow(tracks) == 0) {
+    return(ggplot() + theme_void())
+  }
+
   mi <- as.integer(max(tracks$idx)/3 *4)
   if (mi < max(tracks$idx)+1) {
     mi <-  max(tracks$idx)+1
@@ -540,15 +544,26 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
   bc <- bamcov(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
                split.bc=split.bc,
                cell.group=cell.group, bin=bin, cell.tag=cell.tag, umi.tag=umi.tag)
+  if (is.null(bc)) {
+    message("No reads found in region ", chr, ":", start, "-", end, ".")
+    return(ggplot())
+  }
   if (junc) {
     juncs <- bamjunc(bamfile=bamfile, chr=as.character(chr), start=start, end=end, strand=strand,
                      split.bc=split.bc,
                      cell.group=cell.group, cell.tag=cell.tag, umi.tag=umi.tag)
+    if (is.null(juncs)) {
+      juncs <- data.frame(start = integer(0), end = integer(0),
+                          label = character(0), depth = numeric(0),
+                          strand = character(0))
+    }
   }
-  
+
   if (!is.null(cell.group)) {
     ss <- table(unlist(cell.group))
-    bc$depth <- bc$depth/as.vector(ss[as.character(bc$label)])
+    ss0 <- ss[as.character(bc$label)]
+    ss0[is.na(ss0)] <- 1  # group absent from table (unused factor level)
+    bc$depth <- bc$depth/as.vector(ss0)
   }
   
   if (isTRUE(log.scaled)) {
@@ -573,6 +588,10 @@ plot.cov <- function(bamfile=NULL, chr=NULL, start=-1, end =-1,
 
   if (strand == "ignore") {
     bc$depth <- abs(bc$depth)
+    # Collapse the two per-strand records into one summed value per
+    # (pos, label). Keeping both would make geom_area draw a
+    # self-intersecting polygon and leave alternating unfilled bands.
+    bc <- bc %>% group_by(pos, label) %>% summarise(depth = sum(depth), .groups = "drop")
     bc["strand"] <- "."
   }
 
@@ -630,9 +649,16 @@ plot.cov2 <- function(fragfile=NULL, chr=NULL, start=-1, end =-1,
   bc <- fragcov(fragfile=fragfile, chr=as.character(chr), start=start, end=end,
                 split.bc=split.bc, cell.group=cell.group, bin=bin)
 
+  if (is.null(bc)) {
+    message("No fragments found in region ", chr, ":", start, "-", end, ".")
+    return(ggplot())
+  }
+
   if (!is.null(cell.group)) {
     ss <- table(unlist(cell.group))
-    bc$depth <- bc$depth/as.vector(ss[as.character(bc$label)])
+    ss0 <- ss[as.character(bc$label)]
+    ss0[is.na(ss0)] <- 1  # group absent from table (unused factor level)
+    bc$depth <- bc$depth/as.vector(ss0)
   }
   
   if (isTRUE(log.scaled)) {

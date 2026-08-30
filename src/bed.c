@@ -967,11 +967,11 @@ static int query_trans(int start, int end, struct gtf const *G, struct anno0 *a)
         int ret = query_exon(start, end, g0, &a0[j]);
         if (a0[j].type != BAT_INTRON) {
             if (end < g0->cstart) {
-                if (g0->type == GTF_STRAND_REV) a0[j].type = BAT_UTR3;
+                if (g0->strand == GTF_STRAND_REV) a0[j].type = BAT_UTR3;
                 else a0[j].type = BAT_UTR5;
             }
             if (start > g0->cend) {
-                if (g0->type == GTF_STRAND_REV) a0[j].type = BAT_UTR5;
+                if (g0->strand == GTF_STRAND_REV) a0[j].type = BAT_UTR5;
                 else a0[j].type = BAT_UTR3;
             }
         }

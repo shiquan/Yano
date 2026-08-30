@@ -27,6 +27,8 @@ SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
     const int * Wi = (int*)W->i;
     const double * Wx = (double*)W->x;
 
+    R_CheckStack();
+
     int nl = length(idx);
     int n_cell = W->nrow;
     int n_feature = X->nrow;
@@ -50,6 +52,15 @@ SEXP imputation1(SEXP _X, SEXP idx, SEXP _W, SEXP _filter)
     memset(x0, 0, sizeof(double)*n_feature);
     memset(i0, 0, sizeof(int)*n_feature);
     int i;
+    /* validate idx up front: out-of-range values read Wp[ii] out of bounds */
+    for (i = 0; i < nl; ++i) {
+        int ii = INTEGER(idx)[i]-1;
+        if (ii < 0 || ii >= W->ncol) {
+            free(yi); free(yx);
+            M_cholmod_finish(&c);
+            error("idx contains out-of-range cell indices.");
+        }
+    }
     for (i = 0; i < nl; ++i) { // foreach cell
         yp[i] = n;
         int ii = INTEGER(idx)[i]-1;
@@ -133,12 +144,24 @@ CHM_SP imputation0(CHM_SP x, CHM_SP W, double filter, cholmod_common *c)
 
     int n_cell = W->nrow;
     int n_feature = x->nrow;
-    
+
     size_t n = 0, m = 1000;
     int *yi = malloc(m*sizeof(int));
     double *yx = malloc(m*sizeof(double));
-    
-    int yp[n_cell+1];    
+    if (yi == NULL || yx == NULL) {
+        free(yi); free(yx);
+        error("Failed to allocate memory for imputation.");
+    }
+
+    /* validate W row indices: wi[j] indexes columns of x below */
+    for (int j = 0; j < wp[W->ncol]; ++j) {
+        if (wi[j] < 0 || wi[j] >= x->ncol) {
+            free(yi); free(yx);
+            error("W contains out-of-range row indices.");
+        }
+    }
+
+    int yp[n_cell+1];
     int w0[n_feature];
     double x0[n_feature];
     int i0[n_feature];

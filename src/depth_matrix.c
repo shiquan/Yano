@@ -301,7 +301,7 @@ SEXP fragment2matrix(SEXP _fname, SEXP _name, SEXP _start, SEXP _end,
         if (r->id == -1) {
             SET_STRING_ELT(label, i, mkChar("."));
         } else {
-            if (alias)
+            if (n_cell > 0) /* group mode: r->id indexes _group_names */
                 SET_STRING_ELT(label, i, mkChar(translateChar(STRING_ELT(_group_names,r->id))));
             else
                 SET_STRING_ELT(label, i, mkChar((const char*)dict_name(bc, r->id)));

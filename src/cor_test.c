@@ -754,8 +754,8 @@ SEXP D_distribution_test_v2(SEXP _A,
     random_index_init(perm, n_cell);
 
     int i, j, s, p, k;
-    double X[n_cell];
-    double Y[n_cell];
+    double *X = (double*)R_alloc(n_cell, sizeof(double));
+    double *Y = (double*)R_alloc(n_cell, sizeof(double));
     double mx = 0;
     int nl = 0;
     for (i = 0; i < n_cell; ++i) {
@@ -820,7 +820,7 @@ SEXP D_distribution_test_v2(SEXP _A,
      * DO NOT remove this smoothing step.
      */
     /* ---- Smooth Y through W ---- */
-    double Yi[n_cell];
+    double *Yi = (double*)R_alloc(n_cell, sizeof(double));
     memset(Yi, 0, sizeof(double)*n_cell);
     for (s = 0; s < n_cell; ++s) {
         if (Y[s] == 0.0) continue;
@@ -850,7 +850,7 @@ SEXP D_distribution_test_v2(SEXP _A,
     }
 
     double D[perm+1];
-    double Xi[n_cell];
+    double *Xi = (double*)R_alloc(n_cell, sizeof(double));
     for (j = 0; j < perm+1; ++j) {
         double Xi2 = 0;//, Xi3 = 0;
         double msx = 0;
@@ -987,14 +987,18 @@ SEXP D_distribution_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < perm; ++i) {
         if (oom_error) continue;
-        double *s = R_Calloc(N, double);
+        /* malloc/free instead of R_Calloc: R allocator is not thread-safe
+           and must not be called inside the OpenMP region. */
+        double *s = malloc(N * sizeof(double));
+        if (!s) { oom_error = 1; continue; }
         memcpy(s, a, N * sizeof(double));
         if (shuffle(s, ris[i], N)) {
             oom_error = 1;
-            R_Free(s);
+            free(s);
             continue;
         }
-        double *tmpa_s = R_Calloc(N, double);
+        double *tmpa_s = malloc(N * sizeof(double));
+        if (!tmpa_s) { free(s); oom_error = 1; continue; }
         smooth_W(s, tmpa_s, N, W);
         double mna_s = 0;
         int j;
@@ -1014,8 +1018,8 @@ SEXP D_distribution_test(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads)
 
         rb1 = sqrt(rb1);
 
-        R_Free(tmpa_s);
-        R_Free(s);
+        free(tmpa_s);
+        free(s);
 
         double Lx = Lx1 / Lx2_obs;
         double r  = ra / (rb1 * rb2_obs);
@@ -1134,14 +1138,18 @@ SEXP D_distribution_test2(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads
 #pragma omp parallel for num_threads(n_thread)
     for (i = 0; i < perm; ++i) {
         if (oom_error) continue;
-        double *s = R_Calloc(N, double);
+        /* malloc/free instead of R_Calloc: R allocator is not thread-safe
+           and must not be called inside the OpenMP region. */
+        double *s = malloc(N * sizeof(double));
+        if (!s) { oom_error = 1; continue; }
         memcpy(s, a, N * sizeof(double));
         if (shuffle(s, ris[i], N)) {
             oom_error = 1;
-            R_Free(s);
+            free(s);
             continue;
         }
-        double *tmpa_s = R_Calloc(N, double);
+        double *tmpa_s = malloc(N * sizeof(double));
+        if (!tmpa_s) { free(s); oom_error = 1; continue; }
         smooth_W2(s, tmpa_s, N, W);
         double mna_s = 0;
         int j;
@@ -1161,8 +1169,8 @@ SEXP D_distribution_test2(SEXP _A, SEXP _B, SEXP _W, SEXP _permut, SEXP _threads
 
         rb1 = sqrt(rb1);
 
-        R_Free(tmpa_s);
-        R_Free(s);
+        free(tmpa_s);
+        free(s);
 
         double Lx = Lx1 / Lx2_obs;
         double r  = ra / (rb1 * rb2_obs);

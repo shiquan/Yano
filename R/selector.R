@@ -28,6 +28,8 @@
   data <- p$data[idx, data_cols, drop = FALSE]
   data[] <- lapply(data, as.numeric)
   data <- as.matrix(data)
+  # concaveman needs >= 3 points; keep the points as-is for tiny selections
+  if (nrow(data) < 3) return(rep(TRUE, nrow(data)))
   keys <- paste0(round(data[, 1], 4), "_", round(data[, 2], 4))
   ch <- concaveman::concaveman(data)
   ch_keys <- paste0(round(ch[, 1], 4), "_", round(ch[, 2], 4))

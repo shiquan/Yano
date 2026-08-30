@@ -69,8 +69,8 @@ RunAutoCorr <- function(object = NULL,
   }
 
   if (!is.null(ident)) {
-    cells <- colnames(object)[which(Idents(object) == ident)]
-    if (is.null(cells)) stop("No ident found")
+    cells <- colnames(object)[Idents(object) %in% ident]
+    if (length(cells) == 0) stop("No ident found")
   } else {
     cells <- order.cells %||% cells
     cells <- cells %||% colnames(object)

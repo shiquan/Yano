@@ -235,7 +235,10 @@ SEXP association_test2(SEXP _A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP _threa
 #pragma omp parallel for num_threads(n_thread)
     for (k = 0; k < n_feature; ++k) {
         if (oom_error) continue;
-        double tmpa[n_cell];
+        /* heap instead of VLA: n_cell x 8 bytes per thread would blow the
+           thread stack on large datasets */
+        double *tmpa = malloc(n_cell * sizeof(double));
+        if (!tmpa) { oom_error = 1; continue; }
         memset(tmpa, 0, sizeof(double)*n_cell);
         double sd1 = 0;
         int i, j;
@@ -271,7 +274,8 @@ SEXP association_test2(SEXP _A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP _threa
         i2 = i2/(n_cell * sd1 * sd3);
         
         double delta = i1 - i2;
-        double ds[n_perm];
+        double *ds = malloc(n_perm * sizeof(double));
+        if (!ds) { free(tmpa); oom_error = 1; continue; }
         memset(ds, 0, sizeof(double)*n_perm);
         double mn = 0, sd = 0;
         for (i = 0; i < n_perm; ++i) {
@@ -309,6 +313,9 @@ SEXP association_test2(SEXP _A, SEXP B, SEXP C, SEXP _W, SEXP _perm, SEXP _threa
         REAL(T)[k] = (delta-mn)/sd;
         /* REAL(M)[k] = mn; */
         /* REAL(S)[k] = sd; */
+
+        free(ds);
+        free(tmpa);
     }
 
     for (j = 0; j < n_perm; ++j) R_Free(ris[j]);

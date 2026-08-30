@@ -54,6 +54,19 @@ SDT <- function(x, y, idx, bidx, W, cs, threads, perm, scale.factor, mode, scale
   ta
 }
 
+# Validate library.size: unnamed or partially named vectors would produce
+# all-NA column sums via cs[cells] and poison the C-side test.
+checkCS <- function(cs, cells) {
+  if (is.null(names(cs))) {
+    stop("library.size must be a named vector with names of cells.")
+  }
+  bad <- setdiff(cells, names(cs))
+  if (length(bad) > 0) {
+    stop("library.size is missing ", length(bad), " cell(s).")
+  }
+  cs
+}
+
 #' @title RunBlockCorr
 #' @description Run spatial dissimilarity test for features and their binding features in parallel.
 #' @param object Seurat object
@@ -181,6 +194,7 @@ RunBlockCorr <- function(object = NULL,
   }
 
   cs <- library.size %||% colSums(object, slot = "counts")
+  cs <- checkCS(cs, cells)
 
   norm <- TRUE
   if (bind.assay %ni% names(object)) {
@@ -466,6 +480,7 @@ RunSDT <- function(object = NULL,
       x <- GetAssayData1(object, assay = assay, layer = "data")
       x <- x[features, cells]
       cs <- library.size %||% colSums(object, slot = "counts")
+      cs <- checkCS(cs, cells)
       y0 <- lognorm(y, cs[cells], scale.factor)
       rm(y)
       y <- y0
@@ -514,6 +529,7 @@ RunSDT <- function(object = NULL,
   idx <- match(features, rownames(x))
   if (mode != 1) {
     cs <- library.size %||% colSums(object, slot = "counts")
+    cs <- checkCS(cs, cells)
     y <- makeModeData(y, x, idx, bidx, mode)
     y0 <- lognorm(y, cs[cells], scale.factor)
     rm(y)

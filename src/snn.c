@@ -36,6 +36,15 @@ SEXP knn2snn(SEXP _knn, SEXP prune)
     int *labels = (int*) R_Calloc(ncell, int);
     int i, j;
     int l;
+    /* Validate all neighbor indices up front: out-of-range values would
+       write labels[-1] / labels[wild] below. */
+    for (i = 0; i < ncell*k; ++i) {
+        int idx = knn[i]-1;
+        if (idx < 0 || idx >= ncell) {
+            free(xj); free(xx); R_Free(xi); R_Free(labels);
+            error("'knn' contains indices out of range 1..%d.", ncell);
+        }
+    }
     for (i = 0; i < ncell; ++i) {
         memset(labels, 0, sizeof(int)*ncell);
         xi[i] = n;

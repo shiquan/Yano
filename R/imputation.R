@@ -27,7 +27,12 @@ ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.001)
   X <- X[,wcells]
   
   cells <- cells %||% colnames(W)
-  cells0 <- intersect(cells, colnames(X))
+  bad <- setdiff(cells, colnames(W))
+  if (length(bad) > 0) {
+    warning("Dropping ", length(bad), " cell name(s) not present in the weight matrix.")
+    cells <- intersect(cells, colnames(W))
+  }
+  if (length(cells) == 0) stop("No cells found in the weight matrix.")
   idx <- match(cells, colnames(W))
   names(idx) <- cells
   idx <- sort(idx)

@@ -1,4 +1,3 @@
-#' @importFrom reshape2 melt
 ## #' @useDynLib Yano depth2matrix
 
 # Fill a complete pos x label grid for one strand, defaulting uncovered
@@ -126,6 +125,8 @@ bamcov <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "b
       })
     }
     
+    dl <- Filter(Negate(is.null), dl)
+    if (length(dl) == 0) return(NULL)
     bc <- bind_rows(dl) %>% group_by(pos, label, strand) %>% summarise(sum(depth, na.rm = TRUE))
     colnames(bc) <- c("pos", "label", "strand", "depth")
   } else {
@@ -208,6 +209,8 @@ bamjunc <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "
       })
     }
     
+    dl <- Filter(Negate(is.null), dl)
+    if (length(dl) == 0) return(NULL)
     juncs <- bind_rows(dl) %>%  group_by(start, end , label, strand) %>% summarise(sum(depth, na.rm = TRUE))
     colnames(juncs) <- c("start", "end", "label", "strand", "depth")
 
@@ -250,7 +253,9 @@ fragcov0 <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc
   } else {
     dlst <- .Call("fragment2matrix", fragfile, chr, start, end,  NULL, 0, NULL, NULL)
   }
-  
+
+  if (is.null(dlst)) return(NULL) ##stop("No cell found in the fragment file. Check cell names.")
+
   dlst[[1]] <- as.integer(dlst[[1]]/win)*win
 
   x <- seq(as.integer(start/win)*win, as.integer(end/win)*win, win)
@@ -292,6 +297,8 @@ fragcov <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc 
       })
     }
 
+    dl <- Filter(Negate(is.null), dl)
+    if (length(dl) == 0) return(NULL)
     bc <- bind_rows(dl) %>%  group_by(pos, label, strand) %>% summarise(sum(depth, na.rm = TRUE))
     colnames(bc) <- c("pos", "label", "strand", "depth")
   } else {

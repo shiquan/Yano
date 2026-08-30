@@ -2,7 +2,7 @@
 #' @import dplyr
 #' @importFrom RColorBrewer brewer.pal
 #' @importFrom SeuratObject Layers LayerData
-#' @importFrom grDevices colours dev.off png
+#' @importFrom grDevices colours dev.off pdf png
 #' @importFrom graphics abline hist plot.new
 #' @importFrom methods new
 #' @importFrom stats cor dist p.adjust pnorm pt var

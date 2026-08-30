@@ -389,9 +389,13 @@ RenameVARs <- function(counts = NULL, strategy = 1) {
       }
     }))
     
-    idx <- names(which(table(locs) > 1))    
+    idx <- names(which(table(locs) > 1))
+    if (length(idx) == 0) {
+      warning("No locus with more than one variant, return the input matrix.")
+      return(counts)
+    }
     sel <- rn[which(locs %in% idx)]
-    
+
     counts <- counts[sel,]
 
     rm <- rowMeans(counts)

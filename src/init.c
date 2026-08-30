@@ -32,6 +32,7 @@ SEXP parse_exon_names(SEXP);
 SEXP parse_var_names(SEXP);
 SEXP points_in_polygen(SEXP);
 SEXP selector(void);
+SEXP tx2gene(SEXP, SEXP);
 
 static const R_CallMethodDef CallEntries[] = {
     {"alt_exp",                    (DL_FUNC) &alt_exp,                    -1},
@@ -63,6 +64,7 @@ static const R_CallMethodDef CallEntries[] = {
     {"parse_var_names",            (DL_FUNC) &parse_var_names,                    -1},
     {"points_in_polygen",          (DL_FUNC) &points_in_polygen,                    -1},
     {"selector",                   (DL_FUNC) &selector,                    -1},
+    {"tx2gene",                    (DL_FUNC) &tx2gene,                    -1},
     {NULL, NULL, 0}
 };
 

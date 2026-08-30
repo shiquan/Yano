@@ -115,7 +115,7 @@ SEXP autocorrelation_test(SEXP _A, SEXP _W, SEXP _random, SEXP _threads)
     M_cholmod_free_sparse(&Wt, &c);
     
     double *WWtx = (double*)WWt->x;
-    for (i = 0; i < WWt->nzmax; ++i) S1 += pow(WWtx[i],2);
+    for (i = 0; i < ((int*)WWt->p)[WWt->ncol]; ++i) S1 += pow(WWtx[i],2);
     S1 = S1/2;
 
     for (i = 0; i < W->ncol; ++i) S2 += pow((cs[i]+rs[i]),2);
@@ -304,6 +304,7 @@ SEXP moransi_mc_test(SEXP _A, SEXP _W, SEXP _trans, SEXP _permut, SEXP _threads)
                         oom_error = 1;
                         continue;
                     }
+                    xij = 0; /* reset per permutation: xij must not accumulate */
                     for (int k = 0; k < n_cell; ++k) {
                         for (j = wp[k]; j < wp[k+1]; ++j) {
                             if (ISNAN(wx[j])) continue;

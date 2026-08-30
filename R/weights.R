@@ -12,8 +12,11 @@ spatialDistTest <- function(coord = NULL, n = 8) {
     warning("More than 10000 coordinates, truncating to first 10000 rows.")
     coord <- coord[1:10000,]
   }
-  m <- .Call("min_Dist_N_Nearest_Neighbors", coord, n)
-  m
+  if (!PackageCheck('RcppAnnoy', error = FALSE)) {
+    stop("Install RcppAnnoy package first. BiocManager::install('RcppAnnoy')")
+  }
+  knn <- buildKNN(coord, coord, k.param = n)
+  knn$dist
 }
 
 ##

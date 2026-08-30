@@ -1054,6 +1054,7 @@ SEXP anno_conseq(SEXP _chr, SEXP _pos, SEXP _ref, SEXP _alt, SEXP _strand, SEXP 
     }
 
     dict_destroy(wnames);
+    wnames = NULL; /* avoid dangling pointer: next call re-inits before dict_query */
     fai_destroy(fai);
 
     memory_release();

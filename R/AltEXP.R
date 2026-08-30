@@ -60,6 +60,11 @@ DEXSeqTest <- function(x, y, cells.1 = NULL, cells.2 = NULL, pseudo.group = 3, r
   n1 <- length(cells.1)
   n2 <- length(cells.2)
 
+  if (n1 < pseudo.group || n2 < pseudo.group) {
+    stop("Each group must have at least pseudo.group (", pseudo.group,
+         ") cells for DEXSeq pseudo-bulk aggregation.")
+  }
+
   new.group1 <- rep(1:pseudo.group,(n1/pseudo.group+1), length.out = n1)
   new.group2 <- rep((pseudo.group+1):(pseudo.group*2),(n2/pseudo.group+1), length.out = n2)
   
@@ -291,12 +296,14 @@ FindAltExp <- function(object = NULL,
   }
 
   if (!is.null(ident.1)) {
-    cells.1 <- colnames(object)[which(Idents(object) == ident.1)]
+    # %in% instead of ==: == recycles ident.1 when it holds multiple
+    # cluster names (FindAllAltExp node mode) and silently picks wrong cells
+    cells.1 <- colnames(object)[Idents(object) %in% ident.1]
     if (length(cells.1) == 0) stop("No ident.1 found")
   }
 
   if (!is.null(ident.2)) {
-    cells.2 <- colnames(object)[which(Idents(object) == ident.2)]
+    cells.2 <- colnames(object)[Idents(object) %in% ident.2]
     if (length(cells.2) == 0) stop("No ident.2 found")
   }
 
