@@ -35,7 +35,7 @@ setMethod(f = "mergeMatrix",
             if (is.null(y)) return(x)
 
             mlst <- MMerge0(x, y, ...)
-            O <- .Call("merge_matrix", mlst)
+            O <- .Call(merge_matrix, mlst)
             as(O, "CsparseMatrix")
           }
           )
@@ -45,7 +45,7 @@ setMethod(f = "mergeMatrix",
           signature = signature(x="list"),
           definition = function(x = NULL, ...) {
             if (is.null(x)) stop("x is empty.")
-            O <- .Call("merge_matrix", x)
+            O <- .Call(merge_matrix, x)
             as(O, "CsparseMatrix")
           }
           )

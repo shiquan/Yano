@@ -279,7 +279,7 @@ ggplot_selector <- function() {
 
   sl <- deviceLoc(unit(x0, "npc"), unit(y0, "npc"))
 
-  ta <- .Call("selector")
+  ta <- .Call(selector)
   n <- ta[[3]]
   if (n == 0) {
     stop("No location selected.")
@@ -295,7 +295,7 @@ ggplot_selector <- function() {
   rl[["x"]] <- x1 * diff(xrange) + xrange[1]
   rl[["y"]] <- y1 * diff(yrange) + yrange[1]
 
-  idx <- .Call("points_in_polygen", ta[[1]], ta[[2]],
+  idx <- .Call(points_in_polygen, ta[[1]], ta[[2]],
                as.numeric(sl$x), as.numeric(sl$y))
   rl[["idx"]] <- idx
   rl

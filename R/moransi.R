@@ -152,7 +152,7 @@ RunAutoCorr <- function(object = NULL,
   if (isTRUE(verbose)) {
     message(paste0("Run autocorrelation test for ", length(features), " features."))
   }
-  moransi.vals <- .Call("autocorrelation_test", x0, W, TRUE, threads)
+  moransi.vals <- .Call(autocorrelation_test, x0, W, TRUE, threads)
 
   if (length(moransi.vals) == 1) stop(moransi.vals[[1]])
 

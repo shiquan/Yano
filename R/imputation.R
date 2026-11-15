@@ -38,7 +38,7 @@ ImputationByWeight <- function(X = NULL, cells = NULL, W = NULL, filter = 0.001)
   idx <- sort(idx)
   new.cells <- names(idx)
 
-  X0 <- .Call("imputation1", X, idx, W, filter)
+  X0 <- .Call(imputation1, X, idx, W, filter)
   rownames(X0) <- rownames(X)
   colnames(X0) <- new.cells
   

@@ -78,7 +78,7 @@ buildSNN <- function(knn, prune.SNN = 1/30) {
   }
   idx <- knn$idx
   storage.mode(idx) <- "integer"
-  snn <- .Call("knn2snn", idx, prune.SNN)
+  snn <- .Call(knn2snn, idx, prune.SNN)
   snn <- snn + t(snn)
   diag(snn) <- 1
   colnames(snn) <- rownames(knn$idx)

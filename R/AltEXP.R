@@ -143,7 +143,7 @@ PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode =
   idx.2 <- match(cells.2, cells)
 
   set.seed(seed)
-  df <- .Call("alt_exp", x, y, idx.1, idx.2, mode[1L], perm, threads)
+  df <- .Call(alt_exp, x, y, idx.1, idx.2, mode[1L], perm, threads)
 
   if (length(df) == 1) {
     stop(df)

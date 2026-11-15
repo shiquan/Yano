@@ -22,7 +22,7 @@ annoGene <- function(object = NULL, assay = NULL, gtf = NULL, gene.name = NULL)
     object[[assay]][["gene_name"]] <- genes
   }
   
-  sl <- .Call("gene_locs", genes, gtf)
+  sl <- .Call(gene_locs, genes, gtf)
   
   if (is.character(sl)) {
     warning("No genes found. Make sure you use the gene assay and right GTF database.")

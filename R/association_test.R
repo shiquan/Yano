@@ -147,9 +147,9 @@ AssociationTest <- function(object = NULL,
 
   if (length(test.features) == 1) {
     if (length(features) == 1) {
-      ta <- .Call("association_test1", x, y, z, W, perm, FALSE)
+      ta <- .Call(association_test1, x, y, z, W, perm, FALSE)
     } else {
-      ta <- .Call("association_test2", x, y, z, W, perm, threads)
+      ta <- .Call(association_test2, x, y, z, W, perm, threads)
     }
     if (length(ta) == 1) stop(ta[[1]])
     pval <- pt(ta[[3]], df = perm - 1, lower.tail = FALSE)
@@ -158,9 +158,9 @@ AssociationTest <- function(object = NULL,
     sl <- lapply(X = seq_along(test.features),
                  FUN = function(i) {
                    if (length(features) == 1) {
-                     ta <- .Call("association_test1", x, y[,i], z, W, perm, FALSE)
+                     ta <- .Call(association_test1, x, y[,i], z, W, perm, FALSE)
                    } else {
-                     ta <- .Call("association_test2", x, y[,i], z, W, perm, threads)
+                     ta <- .Call(association_test2, x, y[,i], z, W, perm, threads)
                    }
                    if (length(ta) == 1) stop(ta[[1]])
                    pval <- pt(ta[[3]], df = perm - 1, lower.tail = FALSE)

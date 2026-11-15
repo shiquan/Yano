@@ -16,7 +16,7 @@ _finalizer(SEXP ext)
     gtf_destroy(G);
 }
 
-SEXP gtf2db(SEXP filename, SEXP utr)
+SEXP C_gtf2db(SEXP filename, SEXP utr)
 {
     if (!Rf_isString(filename)) error_return("Input is not String");
     const char *file = translateChar(STRING_ELT(filename, 0));

@@ -139,7 +139,7 @@ setMethod(f = "QuickRecipe",
 #' @export
 getCores <- function(threads = 0)
 {
-  check <- .Call("openmp_support")
+  check <- .Call(openmp_support)
   if (isTRUE(check)) {
     if (threads > 0) return(threads)
     threads <- detectCores() - 1
@@ -178,7 +178,7 @@ ParseExonName <- function(object = NULL, assay = NULL)
   DefaultAssay(object) <- assay
 
   rn <- rownames(object)
-  sl <- .Call("parse_exon_names", rn)
+  sl <- .Call(parse_exon_names, rn)
 
   chr <- sl[[1]]
   start <- sl[[2]]  
@@ -266,7 +266,7 @@ ParseVarName <- function(object = NULL, assay = NULL)
   DefaultAssay(object) <- assay
 
   rn <- rownames(object)
-  sl <- .Call("parse_var_names", rn)
+  sl <- .Call(parse_var_names, rn)
 
   if (is.null(sl)) {
     message("Failed to parse variant name.")
@@ -316,7 +316,7 @@ ParseBED <- function(object = NULL, assay = NULL)
   DefaultAssay(object) <- assay
   rn <- rownames(object)
 
-  sl <- .Call("parse_bed_names", rn)
+  sl <- .Call(parse_bed_names, rn)
 
   if (is.null(sl)) return(NULL);
   chr <- sl[[1]]

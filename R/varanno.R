@@ -1,6 +1,6 @@
 anno_vcf <- function(chr, start, end, ref, alt, strand, vcf, tags, check.alt.only)
 {
-  sl <- .Call("anno_vcf", chr, start, end, ref, alt, strand, vcf, tags, check.alt.only)
+  sl <- .Call(C_anno_vcf, chr, start, end, ref, alt, strand, vcf, tags, check.alt.only)
 
   sl
 }
@@ -33,12 +33,12 @@ varanno <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL
 }
 
 anno_gene <- function(chr = NULL, start = NULL, end = NULL, ref = NULL, alt = NULL, strand = NULL, gtf = NULL) {
-  sl <- .Call("anno_gene", chr, start, end, ref, alt, strand, gtf)
+  sl <- .Call(C_anno_gene, chr, start, end, ref, alt, strand, gtf)
   sl
 }
 
 anno_conseq <- function(chr = NULL, pos = NULL, ref = NULL, alt = NULL, strand = NULL, gtf = NULL, fasta=NULL, debug=FALSE) {
-  sl <- .Call("anno_conseq", chr, as.integer(pos), ref, alt, strand, gtf, normalizePath(fasta), debug)
+  sl <- .Call(C_anno_conseq, chr, as.integer(pos), ref, alt, strand, gtf, normalizePath(fasta), debug)
   sl
 }
 

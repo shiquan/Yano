@@ -278,7 +278,7 @@ FbtPlot <- function(object = NULL,
   if (!is.null(gtf)) {
     if (!isGTF(gtf)) stop("Not like a GTF database, use gtf2db to read GTF first.")
     if (!is.null(gene)) {
-      sl <- .Call("G_query_gene", gtf, gene)
+      sl <- .Call(G_query_gene, gtf, gene)
       if (is.null(sl)) stop(paste0("No gene ", gene, " found in the database!!"))
       chr1 <- sl[[1]]
       start1 <- sl[[2]]
@@ -408,7 +408,7 @@ plot.genes <- function(x = NULL, chr = NULL, start = NULL, end = NULL, gtf = NUL
     end = -1;
   }
   
-  tracks <- .Call("gene_tracks", as.character(chr), start, end, gtf, genes)
+  tracks <- .Call(gene_tracks, as.character(chr), start, end, gtf, genes)
   
   if (is.null(tracks)) {
     p <- ggplot()
@@ -791,7 +791,7 @@ TrackPlot <- function(bamfile=NULL, chr=NULL, start=NULL, end =NULL, gene=NULL,
   if (!is.null(gene)) {
     if (is.null(gtf)) stop("gtf is not specified.")
     if (!isGTF(gtf)) stop("Not like a GTF database, use gtf2db to read GTF first.")
-    sl <- .Call("G_query_gene", gtf, gene)
+    sl <- .Call(G_query_gene, gtf, gene)
     if (is.null(sl)) stop(paste0("No gene ", gene, " found in the database!!"))
     
     chr <- sl[[1]]

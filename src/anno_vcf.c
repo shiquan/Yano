@@ -74,7 +74,7 @@ int process_fmt_array(kstring_t *s, int n, int type, void *data)
     return e == 0 ? 0 : -1;
 }
 
-SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand, SEXP _vcf, SEXP _tags, SEXP check_alt_only)
+SEXP C_anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand, SEXP _vcf, SEXP _tags, SEXP check_alt_only)
 {
     int l = Rf_length(_chr);
     if (Rf_length(_st) != l) {
@@ -434,7 +434,7 @@ SEXP anno_vcf(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand,
     return sl;
 }
 
-SEXP anno_gene(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand, SEXP _db)
+SEXP C_anno_gene(SEXP _chr, SEXP _st, SEXP _ed, SEXP _ref, SEXP _alt, SEXP _strand, SEXP _db)
 {
     int l = Rf_length(_chr);
     if (Rf_length(_st) != l) {
@@ -1003,7 +1003,7 @@ struct csq *predict_func(const char *chr, int pos, int strand, const char *ref, 
     
     return csq;
 }
-SEXP anno_conseq(SEXP _chr, SEXP _pos, SEXP _ref, SEXP _alt, SEXP _strand, SEXP _db, SEXP _fa, SEXP _debug)
+SEXP C_anno_conseq(SEXP _chr, SEXP _pos, SEXP _ref, SEXP _alt, SEXP _strand, SEXP _db, SEXP _fa, SEXP _debug)
 {
     int l = Rf_length(_chr);
     if (Rf_length(_pos) != l) {

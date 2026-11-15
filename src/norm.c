@@ -9,7 +9,7 @@
 extern int M_cholmod_free_sparse(CHM_SP *A, cholmod_common *Common);
 
 
-SEXP lognorm(SEXP _X, SEXP cs, SEXP _sf)
+SEXP C_lognorm(SEXP _X, SEXP cs, SEXP _sf)
 {
     double sf = asReal(_sf);
     CHM_SP X = AS_CHM_SP__(_X);

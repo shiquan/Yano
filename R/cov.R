@@ -68,9 +68,9 @@ bamcov0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = "
     group.ids <- match(cell.group, groups)
     n <- length(cell.group)
     split.bc <- TRUE    
-    dlst <- .Call("depth2matrix", bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, cell.names, n, group.ids, groups, FALSE)
+    dlst <- .Call(depth2matrix, bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, cell.names, n, group.ids, groups, FALSE)
   } else {
-    dlst <- .Call("depth2matrix", bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, NULL, 0, NULL, NULL, FALSE)
+    dlst <- .Call(depth2matrix, bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, NULL, 0, NULL, NULL, FALSE)
   }
 
   if (is.null(dlst)) return(NULL) ##stop("No cell found in the bam. Check cell names.")
@@ -167,9 +167,9 @@ bamjunc0 <- function(bamfile = NULL, chr = NULL, start = -1, end = -1, strand = 
     group.ids <- match(cell.group, groups)
     n <- length(cell.group)
     split.bc <- TRUE    
-    dlst <- .Call("depth2matrix", bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, cell.names, n, group.ids, groups, TRUE)
+    dlst <- .Call(depth2matrix, bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, cell.names, n, group.ids, groups, TRUE)
   } else {
-    dlst <- .Call("depth2matrix", bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, NULL, 0, NULL, NULL, TRUE)
+    dlst <- .Call(depth2matrix, bamfile, chr, start, end, strand.flag, split.bc, cell.tag, umi.tag, 20, NULL, 0, NULL, NULL, TRUE)
   }
 
   if (is.null(dlst)) return(NULL) ##stop("No cell found in the bam. Check cell names.")
@@ -249,9 +249,9 @@ fragcov0 <- function(fragfile = NULL, chr = NULL, start = -1, end = -1, split.bc
     group.ids <- match(cell.group, groups)
     n <- length(cell.group)
     split.bc <- TRUE    
-    dlst <- .Call("fragment2matrix", fragfile, chr, start, end, cell.names, n, group.ids, groups)
+    dlst <- .Call(fragment2matrix, fragfile, chr, start, end, cell.names, n, group.ids, groups)
   } else {
-    dlst <- .Call("fragment2matrix", fragfile, chr, start, end,  NULL, 0, NULL, NULL)
+    dlst <- .Call(fragment2matrix, fragfile, chr, start, end,  NULL, 0, NULL, NULL)
   }
 
   if (is.null(dlst)) return(NULL) ##stop("No cell found in the fragment file. Check cell names.")

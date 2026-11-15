@@ -1,6 +1,6 @@
 bedanno <- function(chr = NULL, start = NULL, end = NULL, strand = NULL, gtf = NULL, upstream = 1000, downstream = 1000)
 {
-  sl <- .Call("anno_bed", chr, start, end, strand, gtf, upstream, downstream)
+  sl <- .Call(anno_bed, chr, start, end, strand, gtf, upstream, downstream)
   sl
 }
 #' @title annoBED

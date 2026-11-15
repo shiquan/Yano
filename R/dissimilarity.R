@@ -2,7 +2,7 @@
 DScore <- function(x = NULL, y = NULL, W = NULL, perm = 100, filter = 0, seed = 999, debug = FALSE)
 {
   set.seed(seed)
-  d <- .Call("D_distribution_test_v2", x, y, W, perm, filter, debug)
+  d <- .Call(D_distribution_test_v2, x, y, W, perm, filter, debug)
   hist(d[2:(perm+1)])
   abline(v=d[1], col="red")
 
@@ -50,7 +50,7 @@ SDT <- function(x, y, idx, bidx, W, cs, threads, perm, scale.factor, mode, scale
 {
   set.seed(seed)
   cells <- colnames(W)
-  ta <- .Call("D_test_v1", x[,cells], y[,cells], W, 1, perm, threads, idx, bidx, cs[cells], scale.factor, mode, scale, norm, debug)
+  ta <- .Call(D_test_v1, x[,cells], y[,cells], W, 1, perm, threads, idx, bidx, cs[cells], scale.factor, mode, scale, norm, debug)
   ta
 }
 
@@ -268,7 +268,7 @@ RunBlockCorr <- function(object = NULL,
 
   tab <- object0[[]]
 
-  ta <- .Call("D_test_v1", x, y, W, 1, perm, threads, idx, bidx, cs[cells], scale.factor, mode, FALSE, norm, debug)
+  ta <- .Call(D_test_v1, x, y, W, 1, perm, threads, idx, bidx, cs[cells], scale.factor, mode, FALSE, norm, debug)
   if (length(ta) == 1) stop(ta[[1]])
   
   e <- ta[[1]]
@@ -320,7 +320,7 @@ lognorm <- function(mat = NULL, cs = NULL, scale.factor = 1e5)
   if ("dgCMatrix" %ni% class(mat)) {
     mat <- as(mat, 'CsparseMatrix')
   }
-  nor <- .Call("lognorm", mat, cs, scale.factor)
+  nor <- .Call(C_lognorm, mat, cs, scale.factor)
   colnames(nor) <- colnames(mat)
   rownames(nor) <- rownames(mat)
   nor
@@ -548,7 +548,7 @@ RunSDT <- function(object = NULL,
 
   tab <- object0[[]]
 
-  ta <- .Call("D_test_v2", x, y, W, perm, threads, idx, bidx, 0, debug)
+  ta <- .Call(D_test_v2, x, y, W, perm, threads, idx, bidx, 0, debug)
   if (length(ta) == 1) stop(ta[[1]])
   
   d <- ta[[1]]
@@ -580,12 +580,12 @@ RunSDT <- function(object = NULL,
 
 cor_dist <- function(x = NULL, y = NULL, W = NULL, perm = 1000, thread = 1)
 {
-  ta <- .Call("D_distribution_test", x, y, W, perm, thread)
+  ta <- .Call(D_distribution_test, x, y, W, perm, thread)
   ta
 }
 cor_dist2 <- function(x = NULL, y = NULL, W = NULL, perm = 1000, thread = 1)
 {
-  ta <- .Call("D_distribution_test2", x, y, W, perm, thread)
+  ta <- .Call(D_distribution_test2, x, y, W, perm, thread)
   ta
 }
 
