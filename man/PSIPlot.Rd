@@ -61,13 +61,9 @@ PSIPlot(
 
 \item{combine}{Combine plots into a single patchwork ggplot object. If \code{FALSE}, return a list of ggplot objects.}
 
+\item{raster}{If true, plot with geom_raster, else use geom_tile. geom_raster may look blurry on some viewing applications such as Preview due to how the raster is interpolated. Set this to FALSE if you are encountering that issue (note that plots may take longer to produce/render).}
+
 \item{raster.dpi}{Pixel resolution for rasterized plots, passed to geom_scattermore(). Default is c(512, 512).}
-
-\item{min.cutoff, max.cutoff}{Vector of minimum and maximum cutoff values for each feature}
-
-\item{mode}{Test mode. For mode 1, X (test feature) vs Y (binding feature). For mode 2, X vs (Y-X). For mode 3, X vs (Y+X). Please note, when set to mode 2 or 3, will use raw counts to update expression value of binding features. Then normalise the counts before testing. For mode 1, will use Layer 'data'. Default is mode 1.}
-
-\item{group.by}{Name of one or more metadata columns to group (color) cells by (for example, orig.ident); pass 'ident' to group by identity class}
 }
 \value{
 A patchwork ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects

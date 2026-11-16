@@ -39,6 +39,8 @@ RatioPlot(
 
 \item{bind.assay}{Binding assay name.}
 
+\item{bind.name}{Title name for binding features in the meta table.}
+
 \item{features}{Features to plot.}
 
 \item{cells}{Vector of cells to plot (default is all cells)}
@@ -78,8 +80,6 @@ RatioPlot(
 \item{legend.title}{Legend title. Default is 'ratio'.}
 
 \item{figure_plot}{Whether to remove the axes and plot with legend on left of plot denoting axes labels.  (Default is FALSE). This parameter is modified from scCustumize::Figure_Plot, credit to original authors.}
-
-\item{group.by}{Name of one or more metadata columns to group (color) cells by (for example, orig.ident); pass 'ident' to group by identity class}
 }
 \value{
 A patchwork ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects

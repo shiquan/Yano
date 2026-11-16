@@ -2,6 +2,9 @@
 #' @description A ggplot2 geom for drawing splice junction arcs.
 #' @inheritParams ggplot2::layer
 #' @param spline_shape Spline shape parameter, default -0.25.
+#' @param lineend Line end style.
+#' @param na.rm If \code{FALSE} (the default), missing values are removed with a warning. If \code{TRUE}, missing values are silently removed.
+#' @param ... Additional parameters passed to \code{ggplot2::layer()}.
 #' @export
 geom_splice <- function(mapping = NULL,
                         data = NULL, 
@@ -85,6 +88,8 @@ geom_splice <- function(mapping = NULL,
 #' @param spline_shape Spline shape parameter, default -0.25.
 #' @param open Whether the spline is open, default TRUE.
 #' @param rep_ends Whether to repeat ends, default TRUE.
+#' @param na.rm If \code{FALSE}, missing values are removed with a warning. If \code{TRUE}, missing values are silently removed. Default is TRUE.
+#' @param ... Additional parameters passed to \code{ggplot2::layer()}.
 #' @export
 stat_splice <- function(mapping = NULL, data = NULL, geom = "splice",
                         position = "identity", na.rm = TRUE, show.legend = NA, inherit.aes = TRUE,

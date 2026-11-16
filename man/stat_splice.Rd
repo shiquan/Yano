@@ -83,6 +83,10 @@ the default plot specification, e.g. \code{\link[ggplot2:annotation_borders]{ann
 \item{open}{Whether the spline is open, default TRUE.}
 
 \item{rep_ends}{Whether to repeat ends, default TRUE.}
+
+\item{na.rm}{If \code{FALSE}, missing values are removed with a warning. If \code{TRUE}, missing values are silently removed. Default is TRUE.}
+
+\item{...}{Additional parameters passed to \code{ggplot2::layer()}.}
 }
 \description{
 A ggplot2 stat for computing splice junction paths.

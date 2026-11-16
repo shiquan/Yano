@@ -180,6 +180,7 @@ PermTest <- function(x, y, cells.1, cells.2, rst, perm = 100, seed = 999, mode =
 #' @param pseudo.group Aggregate single cells into pseudo groups, because DEXSeq is designed for bulk RNA-seq. At least 3 cells are required for each group. Default is 3.
 #' @param mode Test mode, default is 1. See online manual for the difference between modes. <https://shiquan.github.io/Yano.html>
 #' @param threads Threads passed to DEXSeq. Default is 1.
+#' @param debug Print debug logs. Will auto set thread to 1. Default is FALSE.
 #' @return Data frame containing p values and pct for test features and their binding features.
 #' @export
 RunDEXSeq <- function(object = NULL, bind.name = "gene_name",
@@ -245,6 +246,7 @@ RunDEXSeq <- function(object = NULL, bind.name = "gene_name",
 #' @param cells.2 Vector of cell names for comparsion. Conflict with ident.2
 #' @param assay Test assay (X). Default assay will be used if not set.
 #' @param bind.name Title name for binding features in the meta table. Consider most users start Yano to perform alternative splicing analysis, the default bind.name set to "gene_name".
+#' @param test.use Test method, either "DEXSeq" or "PermTest". Default is "DEXSeq".
 #' @param bind.assay Bind assay (Y). If not set, will aggregate all X values of the same block.
 #' @param features Candidate list to test. If not set, will use AutoCorrFeatures(object, assay = assay).
 #' @param bind.features Candidate list for bind features to test. If not set, will test all covered.

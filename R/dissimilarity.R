@@ -76,6 +76,7 @@ checkCS <- function(cs, cells) {
 #' @param bind.assay Name of binding assay. If the binding assay is not set, raw counts of features from the same block will be aggregated first, followed by normalization.
 #' @param bind.features List of bind features. If set, bind features will be subset with this list.
 #' @param min.cells.bind Binding features detected in few than minimal number of cells will be skipped. Default is 10.
+#' @param min.features.per.block Minimal number of test features per binding block required to run the test. Default is 1.
 #' @param prefix Prefix name for output scores and values. Default is same with bind.name.
 ## @param subset Rules for subsetting meta table before selecting features to perform test.
 #' @param scale.factor The scale factor used to normalize counts is set to a default of 1e4. The raw counts from "counts" layer are further normalized by sample size and scale factor for the spatial dissimilarity test.
@@ -335,6 +336,7 @@ lognorm <- function(mat = NULL, cs = NULL, scale.factor = 1e5)
 #' @param bind.assay Name of binding assay. If the binding assay is not set, raw counts of features from the same block will be aggregated first, followed by normalization.
 #' @param bind.features List of bind features. If set, bind features will be subset with this list.
 #' @param min.cells.bind Binding features detected in few than minimal number of cells will be skipped. Default is 10.
+#' @param min.features.per.block Minimal number of test features per binding block required to run the test. Default is 1.
 #' @param prefix Prefix name for output scores and values. Default is same with bind.name.
 ## @param subset Rules for subsetting meta table before selecting features to perform test.
 #' @param scale.factor The scale factor used to normalize counts is set to a default of 1e4. The raw counts from "counts" layer are further normalized by sample size and scale factor for the spatial dissimilarity test.

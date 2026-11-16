@@ -42,6 +42,8 @@ RunSDT(
 
 \item{min.cells.bind}{Binding features detected in few than minimal number of cells will be skipped. Default is 10.}
 
+\item{min.features.per.block}{Minimal number of test features per binding block required to run the test. Default is 1.}
+
 \item{prefix}{Prefix name for output scores and values. Default is same with bind.name.}
 
 \item{scale.factor}{The scale factor used to normalize counts is set to a default of 1e4. The raw counts from "counts" layer are further normalized by sample size and scale factor for the spatial dissimilarity test.}

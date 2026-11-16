@@ -59,6 +59,8 @@ RunDEXSeq(
 \item{mode}{Test mode, default is 1. See online manual for the difference between modes. <https://shiquan.github.io/Yano.html>}
 
 \item{threads}{Threads passed to DEXSeq. Default is 1.}
+
+\item{debug}{Print debug logs. Will auto set thread to 1. Default is FALSE.}
 }
 \value{
 Data frame containing p values and pct for test features and their binding features.

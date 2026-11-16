@@ -96,6 +96,7 @@
 #' @param object Seurat object.
 #' @param return.object Return Seurat object. Default returns selected cell IDs.
 #' @param plot.selected Plot the selected cells.
+#' @param combine Combine multiple plots into one patchwork object.
 #' @param ... Parameters passed to Seurat::DimPlot().
 #' @importFrom Seurat DimPlot
 #' @importFrom grid grid.draw
@@ -117,6 +118,8 @@ DimSelector <- function(object,
 #' @description Select cells from Feature plot.
 #' @param object Seurat object.
 #' @param feature Feature to plot.
+#' @param reduction Dimensionality reduction to use for the feature plot.
+#' @param cells Cells to plot. Default is all cells.
 #' @inheritParams DimSelector
 #' @export
 FeatureSelector <- function(object,

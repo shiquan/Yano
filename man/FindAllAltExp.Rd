@@ -32,6 +32,8 @@ FindAllAltExp(
 
 \item{bind.name}{Title name for binding features in the meta table. Consider most users start Yano to perform alternative splicing analysis, the default bind.name set to "gene_name".}
 
+\item{test.use}{Test method, either "DEXSeq" or "PermTest". Default is "DEXSeq".}
+
 \item{bind.assay}{Bind assay (Y). If not set, will aggregate all X values of the same block.}
 
 \item{bind.features}{Candidate list for bind features to test. If not set, will test all covered.}

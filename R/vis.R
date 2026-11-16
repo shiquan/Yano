@@ -1309,6 +1309,7 @@ RatioPlot0 <- function(object = NULL,
 #' @param object Seurat object.
 #' @param assay Test assay name.
 #' @param bind.assay Binding assay name.
+#' @param bind.name Title name for binding features in the meta table.
 #' @param features Features to plot.
 #' @param dims Dimensions to plot, must be a two-length numeric vector specifying x- and y-dimensions
 #' @param cells Vector of cells to plot (default is all cells)
@@ -1319,7 +1320,6 @@ RatioPlot0 <- function(object = NULL,
 #' @param min.cutoff,max.cutoff Vector of minimum and maximum cutoff values for each feature
 #' @param mode Test mode. For mode 1, X (test feature) vs Y (binding feature). For mode 2, X vs (Y-X). For mode 3, X vs (Y+X). Please note, when set to mode 2 or 3, will use raw counts to update expression value of binding features. Then normalise the counts before testing. For mode 1, will use Layer 'data'. Default is mode 1.
 #' @param reduction Which dimensionality reduction to use. If not specified, first searches for umap, then tsne, then pca
-#' @param group.by Name of one or more metadata columns to group (color) cells by (for example, orig.ident); pass 'ident' to group by identity class
 #' @param split.by A factor in object metadata to split the plot by, pass 'ident' to split by cell identity
 #' @param shape.by If NULL, all points are circles (default). You can specify any cell attribute (that can be pulled with FetchData) allowing for both different colors and different shapes on cells.  Only applicable if \code{raster = FALSE}.
 #' @param ncol Number of columns to combine multiple features plots to
@@ -1414,21 +1414,18 @@ RatioPlot <- function(object = NULL,
 #' @param features Features to plot.
 #' @param dims Dimensions to plot, must be a two-length numeric vector specifying x- and y-dimensions
 #' @param cells Vector of cells to plot (default is all cells)
-#' @param cols Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by RColorBrewer::brewer.pal.info. 
+#' @param cols Vector of colors, each color corresponds to an identity class. This may also be a single character or numeric value corresponding to a palette as specified by RColorBrewer::brewer.pal.info.
 #' @param pt.size Adjust point size for plotting
 #' @param alpha Alpha value for points
 #' @param order Boolean determing whether to plot cells in order of PSI score.
-#' @param min.cutoff,max.cutoff Vector of minimum and maximum cutoff values for each feature
-#' @param mode Test mode. For mode 1, X (test feature) vs Y (binding feature). For mode 2, X vs (Y-X). For mode 3, X vs (Y+X). Please note, when set to mode 2 or 3, will use raw counts to update expression value of binding features. Then normalise the counts before testing. For mode 1, will use Layer 'data'. Default is mode 1.
 #' @param reduction Which dimensionality reduction to use. If not specified, first searches for umap, then tsne, then pca
-#' @param group.by Name of one or more metadata columns to group (color) cells by (for example, orig.ident); pass 'ident' to group by identity class
 #' @param split.by A factor in object metadata to split the plot by, pass 'ident' to split by cell identity
 #' @param shape.by If NULL, all points are circles (default). You can specify any cell attribute (that can be pulled with FetchData) allowing for both different colors and different shapes on cells.  Only applicable if \code{raster = FALSE}.
 #' @param ncol Number of columns to combine multiple features plots to
 #' @param coord.fixed Plot cartesian coordinates with fixed aspect ratio
-#' @param by.col If splitting by a factor, plot the splits per column with the features as rows 
+#' @param by.col If splitting by a factor, plot the splits per column with the features as rows
 #' @param combine Combine plots into a single patchwork ggplot object. If \code{FALSE}, return a list of ggplot objects.
-# @param raster If true, plot with geom_raster, else use geom_tile. geom_raster may look blurry on some viewing applications such as Preview due to how the raster is interpolated. Set this to FALSE if you are encountering that issue (note that plots may take longer to produce/render).
+#' @param raster If true, plot with geom_raster, else use geom_tile. geom_raster may look blurry on some viewing applications such as Preview due to how the raster is interpolated. Set this to FALSE if you are encountering that issue (note that plots may take longer to produce/render).
 #' @param raster.dpi Pixel resolution for rasterized plots, passed to geom_scattermore(). Default is c(512, 512).
 #' @return A patchwork ggplot object of \code{combine = TRUE}; otherwise, a list of ggplot objects
 #' @export

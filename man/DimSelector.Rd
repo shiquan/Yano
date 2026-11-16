@@ -19,6 +19,8 @@ DimSelector(
 
 \item{plot.selected}{Plot the selected cells.}
 
+\item{combine}{Combine multiple plots into one patchwork object.}
+
 \item{...}{Parameters passed to Seurat::DimPlot().}
 }
 \description{

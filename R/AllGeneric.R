@@ -16,6 +16,9 @@ setGeneric("QuickRecipe", function(counts = NULL, meta.data = NULL, min.cells = 
 #' @param meta.data Optional meta data.
 #' @param min.cells Minimum cells for feature filtering.
 #' @param min.features Minimum features for cell filtering.
+#' @param assay Working assay name. Default is the Seurat default assay.
+#' @param verbose Print log message. Default is TRUE.
+#' @param scale.factor Scale factor used by Seurat::NormalizeData. Default is 10000.
 #' @param ... Additional arguments.
 #' @export
 setGeneric("QuickRecipe0", function(counts = NULL, meta.data = NULL, min.cells = 20, min.features = 200,

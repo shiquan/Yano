@@ -33,6 +33,12 @@ QuickRecipe0(
 
 \item{min.features}{Minimum features for cell filtering.}
 
+\item{assay}{Working assay name. Default is the Seurat default assay.}
+
+\item{verbose}{Print log message. Default is TRUE.}
+
+\item{scale.factor}{Scale factor used by Seurat::NormalizeData. Default is 10000.}
+
 \item{...}{Additional arguments.}
 }
 \description{

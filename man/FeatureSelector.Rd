@@ -20,9 +20,15 @@ FeatureSelector(
 
 \item{feature}{Feature to plot.}
 
+\item{reduction}{Dimensionality reduction to use for the feature plot.}
+
+\item{cells}{Cells to plot. Default is all cells.}
+
 \item{return.object}{Return Seurat object. Default returns selected cell IDs.}
 
 \item{plot.selected}{Plot the selected cells.}
+
+\item{combine}{Combine multiple plots into one patchwork object.}
 
 \item{...}{Parameters passed to Seurat::DimPlot().}
 }
