@@ -5,10 +5,14 @@ HTSLIB_CPPFLAGS = -I$(HTSDIR)
 PKG_CFLAGS = @PKG_CFLAGS@ @openmp_cflags@ $(HTSLIB_CPPFLAGS) -I.
 PKG_LIBS = @PKG_LIBS@ @openmp_cflags@ $(HTSDIR)/libhts.a -lz -lm -lcurl
 
+# Redirect libc entry points that R's compiled-code check rejects.  The
+# replacements are implemented in hts_r_shim.c.
+HTS_CFLAGS = -fPIC -DNDEBUG -include $(CURDIR)/hts_r_shim.h
+
 all: HTS
 
 HTS:
-	cd $(HTSDIR) && rm -f config.h htscodecs.mk *.o */*.o && $(MAKE) lib-static CC="$(CC)" CFLAGS="$(CFLAGS) -fPIC" && cd -
+	cd $(HTSDIR) && rm -f config.h htscodecs.mk *.o */*.o && $(MAKE) lib-static CC="$(CC)" CFLAGS="$(CFLAGS) $(HTS_CFLAGS)" && cd -
 
 clean:
 	rm -f $(HTSDIR)/*.o $(HTSDIR)/*/*.o $(HTSDIR)/libhts.a

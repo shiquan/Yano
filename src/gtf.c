@@ -7,6 +7,7 @@
 #include "gtf.h"
 #include "region_index.h"
 #include "number.h"
+#include "hts_r_shim.h"
 #include <zlib.h>
 
 KSTREAM_INIT(gzFile, gzread, 8193)
@@ -766,7 +767,7 @@ void write_gtf_fp(struct gtf_spec *G, struct gtf *gtf, FILE *fp, struct dict *ke
 
 void gtf_dump(struct gtf_spec *G, const char *fname, struct dict *keys)
 {
-    FILE *fp = fname == NULL ? stdout : fopen(fname, "w");
+    FILE *fp = fname == NULL ? yano_stdout : fopen(fname, "w");
     if (fp == NULL) error("%s : %s.", fname, strerror(errno));
     int i, j;
     for (i = 0; i < dict_size(G->name); ++i) {
@@ -776,7 +777,7 @@ void gtf_dump(struct gtf_spec *G, const char *fname, struct dict *keys)
             write_gtf_fp(G, gtf, fp, keys);
         }
     }
-    if (fp != stdout) fclose(fp);
+    if (fp != yano_stdout) fclose(fp);
 }
 
 struct gtf *gtf_query_gene(struct gtf_spec *G, const char *name)

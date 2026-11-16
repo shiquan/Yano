@@ -491,7 +491,9 @@ SEXP D_test_v2(SEXP _A,
         Rprintf("n_cell, %d, n_feature, %d\n", n_cell, N_feature);
         n_thread = 1;
     }
-    assert(length(bidx) == N_feature);
+    if (length(bidx) != N_feature)
+        error("length of bidx (%d) does not match number of test features (%d)",
+              length(bidx), N_feature);
 
     const int *ap = (int*)A->p;
     const int *ai = (int*)A->i;

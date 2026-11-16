@@ -2,6 +2,8 @@
 #include <Rinternals.h>
 #include <R_ext/Rdynload.h>
 
+#include "hts_r_shim.h"
+
 /* Declare all .Call entry points.  Argument counts must match the
    definitions in the corresponding source files. */
 SEXP alt_exp(SEXP, SEXP, SEXP, SEXP, SEXP, SEXP, SEXP);
@@ -75,6 +77,7 @@ static const R_CallMethodDef CallEntries[] = {
 
 void R_init_Yano(DllInfo *dll)
 {
+    yano_shim_init();
     R_registerRoutines(dll, NULL, CallEntries, NULL, NULL);
     R_useDynamicSymbols(dll, FALSE);
     R_forceSymbols(dll, TRUE);

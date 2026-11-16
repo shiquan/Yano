@@ -7,6 +7,7 @@
 #include "htslib/vcf.h"
 #include "bed.h"
 #include "number.h"
+#include "hts_r_shim.h"
 #include <zlib.h>
 
 KSTREAM_INIT(gzFile, gzread, 8193)
@@ -683,7 +684,7 @@ void bed_spec_write0(struct bed_spec *B, FILE *out, int ext, int gene_as_name)
 void bed_spec_write(struct bed_spec *B, const char *fn, int ext, int gene_as_name)
 {
     FILE *fp;
-    if (fn == NULL) fp = stdout;
+    if (fn == NULL) fp = yano_stdout;
     else {
         fp = fopen(fn, "w");
         if (fp == NULL) error("%s : %s", fn, strerror(errno));
