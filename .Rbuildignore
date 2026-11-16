@@ -6,3 +6,4 @@
 ^\.Ruserdata$
 ^Yano\.Rcheck$
 ^Yano_.*\.tar\.gz$
+^src/htslib-1\.10\.2/\.claude$
